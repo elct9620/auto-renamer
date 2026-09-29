@@ -53,3 +53,11 @@ A format stage rewrites the file name of the plan out of a template and leaves t
 | Given | a format stage for `{show}` and a record whose `show` is `..` |
 | When | the stage is applied |
 | Then | the record is refused, naming the stage `format` |
+
+## `FMT-007` The name field follows the format
+
+| Step | Statement |
+| --- | --- |
+| Given | a format stage for `{show}` and a record for `x.mkv` with `show` Alpha |
+| When | the stage is applied |
+| Then | the field `name` is `Alpha` |

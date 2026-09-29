@@ -333,3 +333,17 @@ impl Stage {
     pub fn apply(&self, record: Record) -> Outcome {}
 }
 ```
+
+## `Pipeline::plan`
+
+Run the stages that only rewrite the plan on one record, up to the first stage that touches the filesystem.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Pipeline {
+    pub fn plan(&self, record: Record) -> Outcome {}
+}
+```

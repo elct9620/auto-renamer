@@ -1,17 +1,27 @@
-use super::{Case, CaseKind, Fields, Outcome, Replace, Strip};
+use super::{Case, CaseKind, Fields, Outcome, Replace, Strip, write_field};
 use crate::record::{Record, Value};
 
-pub(super) fn set(fields: &Fields, mut record: Record) -> Outcome {
-    for (name, value) in fields {
-        record.set_field(name, value.clone());
-    }
-    Outcome::Continue(record)
+pub(super) fn set(fields: &Fields, record: Record) -> Outcome {
+    write_all("set", fields, record, |_, _| true)
 }
 
-pub(super) fn default(fields: &Fields, mut record: Record) -> Outcome {
+pub(super) fn default(fields: &Fields, record: Record) -> Outcome {
+    write_all("default", fields, record, |record, name| {
+        record.field(name).is_none()
+    })
+}
+
+fn write_all(
+    stage: &str,
+    fields: &Fields,
+    mut record: Record,
+    wanted: impl Fn(&Record, &str) -> bool,
+) -> Outcome {
     for (name, value) in fields {
-        if record.field(name).is_none() {
-            record.set_field(name, value.clone());
+        if wanted(&record, name)
+            && let Err(refused) = write_field(stage, &mut record, name, value.clone())
+        {
+            return refused;
         }
     }
     Outcome::Continue(record)
@@ -55,8 +65,10 @@ fn rewrite(
         Some(_) => return Outcome::rejected(stage, format!("the field `{field}` is not text")),
         None => return Outcome::rejected(stage, format!("the field `{field}` does not exist")),
     };
-    record.set_field(field, Value::Text(rewritten));
-    Outcome::Continue(record)
+    match write_field(stage, &mut record, field, Value::Text(rewritten)) {
+        Ok(()) => Outcome::Continue(record),
+        Err(refused) => refused,
+    }
 }
 
 fn title_case(text: &str) -> String {

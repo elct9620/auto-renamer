@@ -101,3 +101,29 @@ A record is one file as it moves through a pipeline: a plan path together with n
 | Given | a record for `Alpha - 12.mkv` and a variable `name` set to `other` |
 | When | the variables are added to the record |
 | Then | the field `name` is still `Alpha - 12` |
+
+## `REC-013` Writing the name rewrites the file name of the plan
+
+| Step | Statement |
+| --- | --- |
+| Given | a record for `Series/Alpha/x.mkv` |
+| When | the field `name` is written as `y` |
+| Then | the plan is `Series/Alpha/y.mkv` |
+
+
+## `REC-014` Writing the extension rewrites the file name of the plan
+
+| Step | Statement |
+| --- | --- |
+| Given | a record for `Series/Alpha/x.mkv` |
+| When | the field `ext` is written as `mp4` |
+| Then | the plan is `Series/Alpha/x.mp4` |
+
+
+## `REC-015` A name that cannot be a file name leaves the plan alone
+
+| Step | Statement |
+| --- | --- |
+| Given | a record for `Series/Alpha/x.mkv` |
+| When | the field `name` is written as `a/b` |
+| Then | the plan is still `Series/Alpha/x.mkv` |

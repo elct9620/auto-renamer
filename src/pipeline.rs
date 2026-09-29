@@ -2,7 +2,8 @@ use std::fmt;
 
 use toml::Value as Toml;
 
-use crate::stages::{DeclareError, Stage};
+use crate::record::Record;
+use crate::stages::{DeclareError, Outcome, Stage};
 
 /// The ordered stages a watch applies to the files it claims.
 #[derive(Debug, Clone)]
@@ -67,6 +68,18 @@ impl Pipeline {
             Some(Toml::Array(values)) => Pipeline::declare(values),
             _ => Err(PipelineError::NotAList),
         }
+    }
+
+    /// Runs the stages that only rewrite the plan, up to the first stage that touches the filesystem.
+    pub fn plan(&self, record: Record) -> Outcome {
+        let mut record = record;
+        for stage in self.stages.iter().take_while(|stage| !stage.is_effect()) {
+            match stage.apply(record) {
+                Outcome::Continue(next) => record = next,
+                stopped => return stopped,
+            }
+        }
+        Outcome::Continue(record)
     }
 
     /// The declared stages in the order they were written.

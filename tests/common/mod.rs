@@ -13,6 +13,14 @@ pub fn record(path: &str) -> Record {
     )
 }
 
+/// The record of a file modified at noon UTC on the given day.
+pub fn record_on(path: &str, year: i32, month: u32, day: u32) -> Record {
+    Record::new(
+        Path::new(path),
+        Utc.with_ymd_and_hms(year, month, day, 12, 0, 0).unwrap(),
+    )
+}
+
 pub fn with(mut record: Record, field: &str, value: Value) -> Record {
     record.set_field(field, value);
     record

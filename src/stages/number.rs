@@ -3,7 +3,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use super::{Number, Outcome, Prefix, field_text};
+use super::{Number, Outcome, Prefix, field_text, write_field};
 use crate::record::{Record, Value};
 
 /// Markers that say outright which number is the episode, in the order they are tried.
@@ -70,8 +70,10 @@ pub(super) fn apply(number: &Number, mut record: Record) -> Outcome {
         (None, nth) => pick(scan(&text, &excluded), nth),
     };
 
-    if let Some(found) = found {
-        record.set_field(&number.into, Value::Number(found));
+    if let Some(found) = found
+        && let Err(refused) = write_field("number", &mut record, &number.into, Value::Number(found))
+    {
+        return refused;
     }
     Outcome::Continue(record)
 }

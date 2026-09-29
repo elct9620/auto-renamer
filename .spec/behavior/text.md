@@ -141,3 +141,29 @@ Stages that set fixed values and rewrite text fields, one small change each.
 | Given | a strip stage and a record for `Show [a [b] c].mkv` |
 | When | the stage is applied |
 | Then | `name` is `Show` |
+
+## `SET-004` A set that makes the name unusable is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | a set stage giving `name` the text `a/b` and a record for `x.mkv` |
+| When | the stage is applied |
+| Then | the record is refused, naming the stage `set` |
+
+
+## `REP-005` A replace that makes the name unusable is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | a replace stage changing `a` into `/` and a record for `a.mkv` |
+| When | the stage is applied |
+| Then | the record is refused, naming the stage `replace` |
+
+
+## `REP-006` A rewritten name becomes the file name of the plan
+
+| Step | Statement |
+| --- | --- |
+| Given | a replace stage changing `_` into a space and a record for `Series/a_b.mkv` |
+| When | the stage is applied |
+| Then | the plan is `Series/a b.mkv` |

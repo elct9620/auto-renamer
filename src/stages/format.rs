@@ -1,4 +1,4 @@
-use super::Outcome;
+use super::{Outcome, write_field};
 use crate::record::{Record, Value};
 use crate::template::Template;
 
@@ -7,15 +7,8 @@ pub(super) fn apply(template: &Template, mut record: Record) -> Outcome {
         Ok(name) => name,
         Err(error) => return Outcome::rejected("format", error.to_string()),
     };
-    if name.is_empty() || name == "." || name == ".." || name.contains(['/', '\0']) {
-        return Outcome::rejected("format", format!("`{name}` is not a usable file name"));
+    match write_field("format", &mut record, "name", Value::Text(name)) {
+        Ok(()) => Outcome::Continue(record),
+        Err(refused) => refused,
     }
-
-    let file_name = match record.field("ext") {
-        Some(Value::Text(ext)) if !ext.is_empty() => format!("{name}.{ext}"),
-        _ => name,
-    };
-    let plan = record.plan().with_file_name(file_name);
-    record.set_plan(plan);
-    Outcome::Continue(record)
 }

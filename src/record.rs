@@ -12,6 +12,17 @@ pub enum Value {
     Date(DateTime<Utc>),
 }
 
+impl Value {
+    /// The value as it is written into a name: text as it is, a number in digits, a date not at all.
+    pub(crate) fn written(&self) -> Option<String> {
+        match self {
+            Value::Text(text) => Some(text.clone()),
+            Value::Number(number) => Some(number.to_string()),
+            Value::Date(_) => None,
+        }
+    }
+}
+
 /// One file as it moves through a pipeline: a plan path and its named fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Record {
@@ -64,10 +75,37 @@ impl Record {
         self.fields.get(name)
     }
 
-    /// Writes a field, replacing any earlier value.
+    /// Writes a field, replacing any earlier value. The file name of the plan is always `name` and `ext`
+    /// put together, so writing either one renames the plan; a result that cannot be a file name leaves the plan as it was.
     pub fn set_field(&mut self, name: &str, value: Value) {
         self.fields.insert(name.to_string(), value);
+        if name == "name" || name == "ext" {
+            self.sync_file_name();
+        }
     }
+
+    fn sync_file_name(&mut self) {
+        let part = |field: &str| {
+            self.fields
+                .get(field)
+                .and_then(Value::written)
+                .unwrap_or_default()
+        };
+        let (name, ext) = (part("name"), part("ext"));
+        let file_name = if ext.is_empty() {
+            name
+        } else {
+            format!("{name}.{ext}")
+        };
+        if is_usable_file_name(&file_name) {
+            self.plan.set_file_name(file_name);
+        }
+    }
+}
+
+/// A file name is one path component: not empty, not `.` or `..`, and without a separator or NUL.
+pub(crate) fn is_usable_file_name(name: &str) -> bool {
+    !name.is_empty() && name != "." && name != ".." && !name.contains(['/', '\0'])
 }
 
 /// The extension is what follows the last dot when it is 1 to 5 ASCII letters or digits

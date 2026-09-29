@@ -171,3 +171,33 @@ fn should_remove_nested_groups_together() {
         Some("Show".to_string())
     );
 }
+
+// @behavior SET-004
+#[test]
+fn should_refuse_a_set_that_makes_the_name_unusable() {
+    let outcome = apply(r#"{ set = { name = "a/b" } }"#, record("x.mkv"));
+
+    assert_rejected_by(outcome, "set");
+}
+
+// @behavior REP-005
+#[test]
+fn should_refuse_a_replace_that_makes_the_name_unusable() {
+    let outcome = apply(
+        r#"{ replace = { find = "a", with = "/" } }"#,
+        record("a.mkv"),
+    );
+
+    assert_rejected_by(outcome, "replace");
+}
+
+// @behavior REP-006
+#[test]
+fn should_make_a_rewritten_name_the_file_name_of_the_plan() {
+    let record = run(
+        r#"{ replace = { find = "_", with = " " } }"#,
+        record("Series/a_b.mkv"),
+    );
+
+    assert_eq!(record.plan(), std::path::Path::new("Series/a b.mkv"));
+}

@@ -112,3 +112,14 @@ fn should_refuse_a_date_field_as_the_source() {
 
     assert_rejected_by(outcome, "regex");
 }
+
+// @behavior RGX-011
+#[test]
+fn should_refuse_a_rewrite_that_makes_the_name_unusable() {
+    let outcome = apply(
+        r#"{ regex = { pattern = 'a', replace = "/" } }"#,
+        record("a.mkv"),
+    );
+
+    assert_rejected_by(outcome, "regex");
+}

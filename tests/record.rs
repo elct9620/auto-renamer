@@ -116,3 +116,33 @@ fn should_keep_a_built_in_field_when_a_variable_has_its_name() {
 
     assert_eq!(record.field("name"), Some(&text("Alpha - 12")));
 }
+
+// @behavior REC-013
+#[test]
+fn should_rewrite_the_file_name_of_the_plan_when_the_name_is_written() {
+    let mut record = record("Series/Alpha/x.mkv");
+
+    record.set_field("name", text("y"));
+
+    assert_eq!(record.plan(), Path::new("Series/Alpha/y.mkv"));
+}
+
+// @behavior REC-014
+#[test]
+fn should_rewrite_the_file_name_of_the_plan_when_the_extension_is_written() {
+    let mut record = record("Series/Alpha/x.mkv");
+
+    record.set_field("ext", text("mp4"));
+
+    assert_eq!(record.plan(), Path::new("Series/Alpha/x.mp4"));
+}
+
+// @behavior REC-015
+#[test]
+fn should_leave_the_plan_alone_when_the_name_cannot_be_a_file_name() {
+    let mut record = record("Series/Alpha/x.mkv");
+
+    record.set_field("name", text("a/b"));
+
+    assert_eq!(record.plan(), Path::new("Series/Alpha/x.mkv"));
+}

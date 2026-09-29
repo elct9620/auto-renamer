@@ -85,3 +85,11 @@ A regex stage extracts text into fields, or rewrites a field. It is the way out 
 | Given | a regex stage reading from `mtime` and a record for `Show.mkv` |
 | When | the stage is applied |
 | Then | the record is refused, naming the stage `regex` |
+
+## `RGX-011` A rewrite that makes the name unusable is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | a regex stage rewriting `name` with the pattern `a` replaced by `/` and a record for `a.mkv` |
+| When | the stage is applied |
+| Then | the record is refused, naming the stage `regex` |

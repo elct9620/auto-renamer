@@ -3,7 +3,9 @@
 mod declare;
 mod filter;
 mod format;
+mod next;
 mod number;
+mod path;
 mod pattern;
 mod text;
 
@@ -12,7 +14,7 @@ use std::collections::BTreeMap;
 
 use globset::GlobMatcher;
 
-use crate::record::{Record, Value};
+use crate::record::{Record, Value, is_usable_file_name};
 use crate::template::Template;
 
 pub use declare::DeclareError;
@@ -39,6 +41,25 @@ impl Outcome {
             reason: reason.into(),
         })
     }
+}
+
+/// Writes a field of the record; a `name` or `ext` that would not make a usable file name is refused.
+fn write_field(stage: &str, record: &mut Record, field: &str, value: Value) -> Result<(), Outcome> {
+    let written = value.written();
+    let usable = match (field, written.as_deref()) {
+        ("name", Some(name)) => is_usable_file_name(name),
+        ("ext", Some(ext)) => ext.is_empty() || !ext.contains(['/', '\0']),
+        _ => true,
+    };
+    if !usable {
+        let shown = written.unwrap_or_default();
+        return Err(Outcome::rejected(
+            stage,
+            format!("`{shown}` is not usable as the {field}"),
+        ));
+    }
+    record.set_field(field, value);
+    Ok(())
 }
 
 /// The text of a field, numbers written out; a date or a missing field says why it has none.
@@ -110,6 +131,9 @@ impl Stage {
             Stage::Case(case) => text::case(case, record),
             Stage::Strip(strip) => text::strip(strip, record),
             Stage::Format(template) => format::apply(template, record),
+            Stage::Lift(lift) => path::lift(lift, record),
+            Stage::Folder(template) => path::folder(template, record),
+            Stage::Next(next) => next::apply(next, record),
             other => Outcome::rejected(other.name(), "is not available yet"),
         }
     }
