@@ -11,7 +11,7 @@
 | 產物 | 取得方式 |
 |---|---|
 | Linux binary | GitHub Releases，靜態 musl，x86_64 與 aarch64 |
-| 容器映像 | `ghcr.io/<owner>/auto-renamer` |
+| 容器映像 | `ghcr.io/elct9620/auto-renamer` |
 
 只支援 Linux，事件語意依賴 inotify。映像是 `scratch`，沒有 shell，所以只做本機檔案操作。
 
@@ -45,7 +45,7 @@ docker run -d \
   -v ./config:/etc/auto-renamer \
   -v /srv/downloads:/Downloads \
   -v /srv/video:/Video \
-  ghcr.io/<owner>/auto-renamer
+  ghcr.io/elct9620/auto-renamer
 ```
 
 掛載設定檔所在的資料夾，編輯後會自動重新載入。單獨掛載一個檔案時沒有事件，改送 `SIGHUP`。
