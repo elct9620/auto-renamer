@@ -1,0 +1,485 @@
+# auto-renamer 設計
+
+auto-renamer 監看資料夾的檔案事件，依管線改寫檔案的名稱與位置，再把檔案移到目標目錄。
+
+```
+  source ─► watch ─► pipeline ─► target
+```
+
+## 0 總覽
+
+### 0.1 設計承諾
+
+| 承諾 | 意義 |
+|---|---|
+| 事件驅動 | 由 Linux 檔案系統事件觸發處理 |
+| 小階段堆疊 | 每個階段只做一件事，能力來自組合 |
+| 前純後動 | 效果階段之前都是純函式，可乾跑 |
+| 不確定就不動 | 無法判斷的檔案留在 source 並記錄原因 |
+| 關聯限於單元 | 不同單元的檔案不分組、不共號 |
+| 只信全域設定 | 目錄設定不能改 source、target 與單元 |
+| 只保證 Linux | 依賴 inotify，其他平台不在範圍 |
+
+這七項是設計的固定點。每一章都在套用其中幾項；兩項衝突時，由該章說明哪一項讓步。
+
+### 0.2 系統分層
+
+```
+  Linux inotify
+      │ events
+  ┌───▼────────┐
+  │ watcher    │  notify crate; settle, unit, batch
+  └───┬────────┘
+      │ batch
+  ┌───▼────────┐
+  │ pipeline   │  pure stages → effect stages
+  └───┬────────┘
+      │ plan
+  ┌───▼────────┐
+  │ filesystem │  source → target
+  └────────────┘
+```
+
+每層只與相鄰的層溝通。設定在啟動與設定檔變動時讀取，交給管線使用。
+
+### 0.3 處理流程
+
+```
+  /Downloads/Movies/XXX/XXX.mp4         download finishes
+    └ watcher    close-write, file settles
+    └ pipeline   XXX.mp4 → XXX-s1e1.mp4
+    └ move       copy to temp name, then rename
+  /Video/Movies/XXX/XXX-s1e1.mp4        ready for the media server
+```
+
+source 與 target 分離，媒體伺服器只掃描 target，它產生的 `.nfo` 等檔案不會再被改名。
+
+### 0.4 單元、批次與群組
+
+| 層 | 決定什麼 | 依據 |
+|---|---|---|
+| 單元 | 哪些檔案彼此有關 | watch 的 `unit` |
+| 批次 | 何時處理 | 單元的一次收集 |
+| 群組 | 批次內誰是一組 | 階段算出的欄位 |
+
+批次是單元在視窗內收集到的檔案。群組由欄位相同的檔案組成，與批次和資料夾無關，例如同一集的影片與字幕。
+
+### 0.5 進度
+
+| 章 | 依賴 | 進度 |
+|---|---|---|
+| 1 監看 | 0 | 📋 |
+| 2 管線 | 1 | 📋 |
+| 3 設定 | 2 | 📋 |
+| 4 執行行為 | 2、3 | 📋 |
+| 5 內建階段 | 2 | 📋 |
+
+📋 未開始。章節依實作的依賴排列。
+
+### 0.6 建置與發行
+
+| 產物 | 說明 |
+|---|---|
+| Linux binary | 靜態 musl |
+| 容器映像 | `scratch`，發佈到 ghcr.io |
+
+映像沒有 shell、CA 憑證與時區資料，所以只做本機檔案操作。inotify 是核心功能，不受影響。版本由 release-please 管理。
+
+## 1 監看
+
+### 1.1 監看範圍
+
+| 事件 | notify 對應 | 用途 |
+|---|---|---|
+| 寫入完成 | `Access(Close(Write))` | 檔案可以處理 |
+| 搬入 | `Modify(Name(To))` | 同檔案系統的 `mv` 沒有寫入完成事件 |
+| 建立資料夾 | `Create(Folder)` | 加入遞迴監看 |
+
+每個 watch 遞迴監看自己的 source，事件由 notify crate 的 inotify 後端提供。
+
+### 1.2 寫入穩定
+
+```
+  writing    create, modify ...      ignored
+  finished   close-write | moved-to  settled
+```
+
+只有穩定的檔案才進入處理。下載器、複製與 `mv` 三種來源，都以同一組事件判定。寫到一半的檔案不會產生寫入完成事件。
+
+### 1.3 單元
+
+| 寫法 | 單元 |
+|---|---|
+| `"directory"`（預設） | 檔案的父資料夾 |
+| `"source"` | 整個 source |
+| `{ root = [...] }` | 符合樣式的資料夾，底下的檔案都算 |
+
+樣式是相對於 source 的路徑，不符合任何樣式的檔案退回父資料夾。單元由使用者定義，不假設下載目錄的結構。單元只能由全域設定指定，因為目錄設定要在單元決定之後才找得到。
+
+### 1.4 批次收束
+
+```
+  a.mkv settled ┐
+  b.mkv settled ├─ same unit ─► batch ─► pipeline
+  c.mkv settled ┘  closes on a quiet period or a maximum wait
+```
+
+| 設定 | 作用 | 預設 |
+|---|---|---|
+| `batch_window` | 安靜這麼久就收束 | 5 分鐘 |
+| `batch_max_wait` | 從第一個檔案起最多等這麼久 | 30 分鐘 |
+| `batch_max` | 超過這個檔案數，整批略過 | 無上限 |
+
+收束時間依單元各自計算，`batch_max_wait` 不可小於 `batch_window`。批次不依數量切開，以免拆散同一群組的檔案。略過的批次留在 source 並記錄原因。
+
+### 1.5 保留檔案
+
+| 檔案 | 處理 |
+|---|---|
+| `auto-renamer.toml` | 目錄設定；不進管線、不搬移、不刪除 |
+
+`auto-renamer.toml` 是設定而非素材，由使用者管理，不計入 `batch_max`。它變動時，重新載入該目錄的設定。
+
+### 1.6 啟動掃描
+
+```
+  start ─► scan source ─► existing files ─► settled ─► batch
+                                   └ mtime within batch_window: wait for close-write
+```
+
+啟動時掃描 source 內既有的檔案，視同穩定事件進入批次，停機期間到達的檔案不會被遺漏。修改時間在 `batch_window` 內的檔案視為寫入中，等它的寫入完成事件。
+
+## 2 管線
+
+### 2.1 管線模型
+
+```
+  batch (sorted by name)
+   │ partition ─ claimed ─► pipeline 1: map … scan … ───────┐
+   │           └ rest ────► pipeline 2: map … join(1) … ─────┤
+   ▼                                                          ▼
+  unclaimed stay in source                    planned batch ─► foreach effects
+```
+
+一批檔案是依名稱排序的有序集合，每個階段是「集合 → 集合」的函式，逐檔階段是 map 的簡寫。單一檔案就是只有一個檔案的批次，適用同一套模型。
+
+### 2.2 記錄
+
+```
+  record = { plan:   "Movies/XXX/XXX.mp4",
+             fields: { name, ext, dir, show, season, episode } }
+```
+
+集合中的每個元素是一筆記錄，含計畫路徑與具名欄位。路徑起點是 source 內的相對路徑，即保留結構；欄位起點是 `name`（主檔名）、`ext`、`dir`（所在資料夾）與設定的 `vars`。
+
+### 2.3 階段形狀
+
+| 形狀 | 作用 | 例子 |
+|---|---|---|
+| filter | 放行或排除 | `filter` |
+| map | 逐檔改寫 | `number`、`format` |
+| scan | 帶累積狀態走訪 | `next` |
+| group | 依欄位分組或配對 | `rank`、`take` |
+| effect | 碰檔案系統，依序執行 | `move`、`cleanup` |
+
+前四種是純函式，整條管線因此可以乾跑預覽。階段不改動副檔名；正規表達式只用於內建階段處理不了的情況。
+
+### 2.4 階段輸出
+
+| 輸出 | 意義 |
+|---|---|
+| 改寫 | 記錄改變，交給下一階段 |
+| 不變 | 階段不適用，原樣交給下一階段 |
+| 排除 | filter 不符，檔案不再往下走 |
+| 拒絕 | 停止該檔案，留在 source 並記錄原因 |
+
+拒絕逐檔短路，依賴被拒絕檔案的階段（如 `take`）連帶拒絕，其他檔案照常處理。階段的輸入是批次、target 現況與前面管線的結果。
+
+### 2.5 認領與排除
+
+| 情況 | 結果 |
+|---|---|
+| 開頭的 `filter` 接受 | 這條管線認領該檔案 |
+| 開頭的 `filter` 不接受 | 交給下一條管線 |
+| 中途的 `filter` 排除 | 留在 source，不轉給其他管線 |
+| 沒有管線認領 | 留在 source |
+
+一個 watch 可以有多條管線，檔案由第一條認領它的管線處理。管線內不寫條件分支，分支由多條管線加 `filter` 表達。
+
+### 2.6 效果階段
+
+| 階段 | 作用 |
+|---|---|
+| `move` | 把計畫路徑套用到 target |
+| `cleanup` | 刪除 source 端已清空的資料夾 |
+
+效果階段必須明寫，並排在所有純階段之後，依列出的順序執行。整批先全部規劃完，才執行效果。沒有效果階段的管線只乾跑並警告。
+
+## 3 設定
+
+### 3.1 全域設定
+
+```toml
+[default]
+batch_window = "5m"
+pipelines = ["video"]
+
+[pipeline.video]
+stages = [
+  { filter = { ext = ["mkv", "mp4"] } },
+  "move",
+]
+
+[watch.animate]
+source = "/Downloads"
+target = "/Video"
+unit = { root = ["Movies/*"] }
+vars = { show = "Kokoore" }
+```
+
+`pipeline.*` 定義具名管線；`watch` 綁定 source、target、`unit` 與 `vars`；`default` 供所有 watch 共用。省略 target 表示原地改名。
+
+### 3.2 管線宣告
+
+| 寫法 | 意義 |
+|---|---|
+| `"move"` | 沒有參數的階段 |
+| `{ format = "..." }` | 一個參數 |
+| `{ filter = { ext = [...] } }` | 具名參數 |
+
+`stages` 是階段的陣列，由上而下依序處理，每個階段是單鍵內嵌表格或字串。
+
+### 3.3 目錄設定
+
+```toml
+# /Downloads/Animate/XXX/auto-renamer.toml
+vars = { show = "Yami Shibai" }
+
+[pipeline.video]
+stages = [
+  { filter = { ext = ["mkv", "mp4"] } },
+  { regex = { pattern = '\]\[(\d+)\]\[x264', into = "episode" } },
+  { format = "{show} s01e{episode}" },
+  "move",
+]
+```
+
+資料夾內的 `auto-renamer.toml` 覆蓋 watch 的設定，處理例外。作用方式如 `.gitignore`：管該資料夾與其下層，最近的優先。
+
+### 3.4 覆寫順序
+
+```
+  [default]  <  [watch.*]  <  auto-renamer.toml (parent)  <  auto-renamer.toml (nearest)
+  low                                                          high
+```
+
+後面的層覆蓋前面的層。`vars` 逐鍵覆蓋，`pipeline.*` 依名稱整條取代，不逐階段合併。
+
+### 3.5 覆寫界線
+
+| 項目 | 目錄設定 |
+|---|---|
+| 管線、`vars`、`batch_max` | 可覆寫 |
+| `source`、`target`、`unit` | 不可覆寫 |
+| 跳出 target 根的路徑 | 任何層都拒絕 |
+
+下載內容不可信，夾帶的 `auto-renamer.toml` 不能決定檔案的去向或分組。
+
+### 3.6 設定載入
+
+| 項目 | 規則 |
+|---|---|
+| 全域設定檔 | `/etc/auto-renamer/config.toml` |
+| 指定路徑 | `--config` 參數 |
+| 重新載入 | 設定檔變動時自動載入 |
+| 無效的設定 | 保留舊設定並記錄錯誤 |
+
+全域設定與目錄設定都會在變動時重新載入，不需要重啟。
+
+## 4 執行行為
+
+### 4.1 路徑對應
+
+```
+  source root   /Downloads
+  plan          Movies/XXX/XXX-s1e1.mp4
+  target root   /Video
+  result        /Video/Movies/XXX/XXX-s1e1.mp4
+```
+
+結果是 target 根加計畫路徑，缺少的目錄會建立。計畫路徑離開 target 根時拒絕。
+
+### 4.2 跨檔案系統
+
+```
+  same filesystem    rename ─► done
+  other filesystem   copy to temp name ─► rename ─► delete source
+```
+
+容器內 source 與 target 常是不同的掛載，`rename` 無法跨越。先寫成暫存名再改名，媒體伺服器就不會掃到寫到一半的檔案。
+
+### 4.3 撞名
+
+```
+  a.mp4 exists ─► reject                            default
+  a.mp4 exists ─► a_v2.mp4 ─ exists ─► reject       on_conflict = "suffix"
+```
+
+`move` 預設在目標已存在時拒絕，檔案留在 source。設 `on_conflict = "suffix"` 會加上 `suffix`（預設 `_v2`）重試一次，仍撞名就拒絕。任何情況都不覆寫既有檔案。
+
+### 4.4 冪等
+
+| 情況 | 結果 |
+|---|---|
+| target 位於 source 內 | 設定驗證拒絕，程式不啟動 |
+| 事件來自 target | 不監看，不處理 |
+| 計畫路徑等於目前路徑 | 不動作 |
+
+改名與搬移本身會產生新事件，冪等確保處理過的檔案不會再被處理。
+
+### 4.5 清理
+
+```
+  /Downloads/Movies/XXX/   empty after move  ─► removed
+  /Downloads/Movies/       parent            ─► kept
+```
+
+`cleanup` 階段在檔案搬走後，只刪除它原本所在、且已清空的資料夾，不往上層刪除。含 `auto-renamer.toml` 的資料夾不算清空，每週更新的作品因此保有設定。
+
+## 5 內建階段
+
+### 5.1 階段清單
+
+| 階段 | 形狀 | 作用 |
+|---|---|---|
+| `filter` | filter | 依副檔名或名稱樣式放行 |
+| `number` | map | 依序號規則取出數字 |
+| `regex` | map | 擷取具名群組成欄位 |
+| `set` | map | 設定固定值 |
+| `replace`、`case` | map | 字面取代、大小寫 |
+| `lift` | map | 計畫路徑往上提資料夾 |
+| `format` | map | 依樣板組出計畫路徑 |
+| `next` | scan | 欄位未設時，取 target 最大值加一 |
+| `rank` | group | 同組內排序並編號 |
+| `take` | group | 依名稱前綴向同批影片取欄位 |
+| `move`、`cleanup` | effect | 搬移與清理 |
+
+每個階段只做一件事，複雜的行為由堆疊產生。
+
+### 5.2 序號擷取
+
+| 參數 | 作用 | 預設 |
+|---|---|---|
+| `from` | 從哪個欄位找 | `name` |
+| `into` | 寫入哪個欄位 | 必填 |
+| `nth` | 取第幾個候選，負數從尾端算 | `1` |
+| `prefix` | 只取緊接在這個字之後的數字 | 無 |
+| `exclude` | 排除這些欄位目前的值 | 無 |
+| `default` | 找不到時的固定值 | 不設 |
+
+`number` 從候選數字中取一個，候選已排除解析度、編碼、日期、版本、年份與雜湊等雜訊。季數是它的變體：`prefix = "Season"`。
+
+### 5.3 遞增序號
+
+```
+  target      Kokoore s01e01, Kokoore s01e02   matched by like
+  episode     unset ─► max 2 + 1 = 3
+```
+
+`next` 只在欄位還沒有值時填入。`like` 樣板用來讀回 target 既有的檔名，只算符合的檔案，例如同一季。同批的多個檔案依序遞增；不寫 `number` 就是一律取最大值加一。
+
+### 5.4 分組編號
+
+```
+  Show 27.mkv       ─ number ─► 27  ── video group
+  Show 27.cht.ass   ─ number ─► 27  ┐
+  Show 27.chs.ass   ─ number ─► 27  ┴─ rank: cht → 01, chs → 02
+  Show 28.cht.ass   ─ number ─► 28  ── rank: alone → unset
+```
+
+`rank` 在管線認領的檔案中，依 `by` 欄位分組，名稱含 `prefer` 中較前字串的排前面，其餘依名稱排序。只有一個檔案時不設 `into`。`format` 的 `[...]` 是可選片段，內含的欄位都有值才輸出。
+
+### 5.5 篩選
+
+| 參數 | 作用 |
+|---|---|
+| `ext` | 副檔名清單，不分大小寫，不含點 |
+| `glob` | 檔名樣式 |
+| `invert` | 反轉結果，用於排除 |
+
+`ext` 與 `glob` 同時給時都要符合。開頭的 `filter` 認領檔案，中途的 `filter` 排除檔案（2.5）。
+
+### 5.6 改寫階段
+
+| 階段 | 參數 | 作用 |
+|---|---|---|
+| `regex` | `pattern`、`from`、`into` | 擷取，具名群組成欄位 |
+| `regex` | `pattern`、`from`、`replace` | 改寫欄位內容 |
+| `set` | 欄位 = 值 | 設定固定值，覆蓋既有 |
+| `replace` | `find`、`with`、`field` | 字面取代 |
+| `case` | `to`、`field` | `lower`、`upper`、`title` |
+| `lift` | 整數 | 計畫路徑往上提幾層 |
+
+`from` 與 `field` 預設是 `name`。`regex` 用 Rust `regex` crate 的語法，沒有比對到時不變。
+
+### 5.7 名稱配對
+
+| 參數 | 作用 | 預設 |
+|---|---|---|
+| `fields` | 要複製的欄位 | 必填 |
+| `from` | 來源管線名稱 | 前面所有管線 |
+
+`take` 只在字幕自己偵測不到欄位時使用。影片的原始主檔名是字幕主檔名的前綴（含相等）才配對，取最長者；沒有或並列就拒絕。
+
+### 5.8 名稱樣板
+
+| 語法 | 意義 |
+|---|---|
+| `{field}` | 取欄位值 |
+| `{field:02}` | 補零到至少 2 位 |
+| `[...]` | 可選片段，欄位都有值才輸出 |
+| `{{`、`}}`、`[[`、`]]` | 字面的括號 |
+
+必要位置的欄位沒有值就拒絕。樣板只寫檔名，副檔名自動接在最後。
+
+### 5.9 影集管線
+
+```toml
+[pipeline.video]
+stages = [
+  { filter = { ext = ["mkv", "mp4"] } },
+  { number = { from = "dir", into = "season", prefix = "Season", default = 1 } },
+  { number = { into = "episode", exclude = ["season"] } },
+  { next = { into = "episode", like = "{show} s{season:02}e{episode:02}" } },
+  { format = "{show} s{season:02}e{episode:02}" },
+  "move",
+  "cleanup",
+]
+
+[pipeline.subtitle]
+stages = [
+  { filter = { ext = ["ass", "srt"] } },
+  { number = { from = "dir", into = "season", prefix = "Season", default = 1 } },
+  { number = { into = "episode", exclude = ["season"] } },
+  { rank = { into = "index", by = ["season", "episode"], prefer = ["cht"] } },
+  { format = "{show} s{season:02}e{episode:02}.zh[.{index:02}]" },
+  "move",
+]
+```
+
+影集不是內建功能，而是階段的堆疊。字幕與影片各自跑 `number`，得到相同的季與集，不必互相查找。
+
+## 附錄
+
+### 刻意排除
+
+設計明確不做的事，避免日後被誤當成待辦。
+
+| 項目 | 理由 |
+|---|---|
+| 非 Linux 平台 | 事件語意依賴 inotify |
+| 目錄設定改 source、target、單元 | 下載內容不可信 |
+| 覆寫既有檔案 | 改名不應毀損資料 |
+| 跨單元關聯 | 關聯範圍以單元為界 |
+| 依數量切批次 | 會拆散同一群組的檔案 |
+| 目錄層宣告單元 | 單元先於目錄設定決定 |
