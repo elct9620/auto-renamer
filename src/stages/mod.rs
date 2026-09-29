@@ -21,7 +21,7 @@ use crate::record::{Record, Value, is_usable_file_name};
 use crate::template::Template;
 
 pub use declare::DeclareError;
-pub(crate) use take::Earlier;
+pub(crate) use take::{Earlier, EarlierFiles};
 
 /// What a stage does with one record: pass it on, exclude it, or refuse it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -154,7 +154,7 @@ impl Stage {
     }
 
     /// Takes fields from what earlier pipelines planned; any stage but `take` refuses.
-    pub(crate) fn take_from(&self, record: Record, earlier: &[Earlier]) -> Outcome {
+    pub(crate) fn take_from(&self, record: Record, earlier: &EarlierFiles) -> Outcome {
         match self {
             Stage::Take(take) => take::apply(take, record, earlier),
             other => Outcome::rejected(other.name(), "does not take from other files"),

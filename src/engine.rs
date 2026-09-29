@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::context::Context;
 use crate::pipeline::Pipeline;
 use crate::record::Record;
-use crate::stages::{Earlier, Outcome, Rejection, Stage};
+use crate::stages::{Earlier, EarlierFiles, Outcome, Rejection, Stage};
 
 /// What a batch made of one file.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -210,6 +210,7 @@ fn run_take(
         })
         .collect();
 
+    let earlier = EarlierFiles::new(earlier);
     map_live(slots, index, |record| stage.take_from(record, &earlier));
 }
 
