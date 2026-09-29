@@ -175,3 +175,19 @@ The machine decides when the settled files of a unit are handed over as a batch.
 | Given | a watch with each folder as a unit and a batch limit of 100000, and 100005 files settled in `Show` |
 | When | the batches that are ready are asked for |
 | Then | the batch handed over names no more than 100001 of the files |
+
+## `WCH-023` A folder that is gone takes the files under it out of the batch
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch with the whole source as its unit, and `Sub/a.mkv` and `Show/b.mkv` settled at 0 minutes |
+| When | the folder `Sub` is gone and the machine is asked at 5 minutes |
+| Then | the batch holds `Show/b.mkv` only |
+
+## `WCH-024` A folder that is gone releases the holds under it
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch with the whole source as its unit, `Show/a.mkv` settled at 0 minutes, and `Sub/b.mkv` written to at 0 minutes |
+| When | the folder `Sub` is gone and the machine is asked at 5 minutes |
+| Then | the batch of `Show/a.mkv` is ready |

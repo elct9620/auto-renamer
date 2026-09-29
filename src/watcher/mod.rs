@@ -135,10 +135,32 @@ impl Machine {
         self.touch(unit, now);
     }
 
+    /// A file that is gone, or a folder that is gone with every file under it.
     fn forget(&mut self, path: &Path) {
-        let unit = self.unit.of(path);
-        self.unsettle(&unit, path);
-        self.holds.remove(path);
+        let mut units: BTreeSet<PathBuf> = BTreeSet::new();
+        for (unit, pending) in &mut self.pending {
+            let before = pending.files.len();
+            pending.files.retain(|file| !file.starts_with(path));
+            if pending.files.len() != before {
+                units.insert(unit.clone());
+            }
+        }
+        self.pending.retain(|_, pending| !pending.files.is_empty());
+        self.holds.retain(|file, hold| {
+            let under = file.starts_with(path);
+            if under {
+                units.insert(hold.unit.clone());
+            }
+            !under
+        });
+        units.iter().for_each(|unit| self.release(unit));
+    }
+
+    /// Forgets when a unit was last active once nothing in it is waiting or held.
+    fn release(&mut self, unit: &Path) {
+        if !self.pending.contains_key(unit) && !self.holds_open(unit) {
+            self.touched.remove(unit);
+        }
     }
 
     /// A modification time comes from the file and cannot be trusted: one in the future counts as now.
@@ -175,7 +197,9 @@ impl Machine {
             }
         }
         for path in stale {
-            self.holds.remove(&path);
+            if let Some(hold) = self.holds.remove(&path) {
+                self.release(&hold.unit);
+            }
         }
         for (path, modified) in quiet {
             self.settle(path, modified);

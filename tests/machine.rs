@@ -303,3 +303,27 @@ fn should_stop_collecting_files_of_a_unit_past_the_ceiling() {
         other => panic!("expected one batch, got {} entries", other.len()),
     }
 }
+
+// @behavior WCH-023
+#[test]
+fn should_take_the_files_under_a_folder_that_is_gone_out_of_the_batch() {
+    let mut machine = machine("unit = \"source\"");
+    settled(&mut machine, "Sub/a.mkv", at(0, 0));
+    settled(&mut machine, "Show/b.mkv", at(0, 0));
+
+    machine.observe(Event::Gone(path("Sub")), at(1, 0));
+
+    assert_eq!(machine.ready(at(5, 0)), [batch("", &["Show/b.mkv"])]);
+}
+
+// @behavior WCH-024
+#[test]
+fn should_release_the_holds_under_a_folder_that_is_gone() {
+    let mut machine = machine("unit = \"source\"");
+    settled(&mut machine, "Show/a.mkv", at(0, 0));
+    machine.observe(Event::Writing(path("Sub/b.mkv")), at(0, 0));
+
+    machine.observe(Event::Gone(path("Sub")), at(1, 0));
+
+    assert_eq!(machine.ready(at(5, 0)), [batch("", &["Show/a.mkv"])]);
+}
