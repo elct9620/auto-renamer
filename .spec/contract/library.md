@@ -177,3 +177,121 @@ Why a template was refused for one record.
 ```rust
 pub enum RenderError {}
 ```
+
+## `Stage`
+
+One small function of a pipeline, declared with its parameters.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub enum Stage {}
+```
+
+## `Stage::declare`
+
+Read one stage from its declaration, refusing a mistaken one.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Stage {
+    pub fn declare(value: &toml::Value) -> Result<Stage, DeclareError> {}
+}
+```
+
+## `DeclareError`
+
+Why one stage declaration was refused.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub enum DeclareError {}
+```
+
+## `Pipeline`
+
+The ordered stages a watch applies to the files it claims.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct Pipeline {}
+```
+
+## `Pipeline::declare`
+
+Read a list of stage declarations and check their order.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Pipeline {
+    pub fn declare(values: &[toml::Value]) -> Result<Pipeline, PipelineError> {}
+}
+```
+
+## `Pipeline::from_toml`
+
+Read the `stages` list of a TOML document.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Pipeline {
+    pub fn from_toml(source: &str) -> Result<Pipeline, PipelineError> {}
+}
+```
+
+## `Pipeline::stages`
+
+The declared stages in the order they were written.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Pipeline {
+    pub fn stages(&self) -> &[Stage] {}
+}
+```
+
+## `Pipeline::has_effect`
+
+Whether the pipeline ends in a stage that touches the filesystem.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Pipeline {
+    pub fn has_effect(&self) -> bool {}
+}
+```
+
+## `PipelineError`
+
+Why a pipeline was refused.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub enum PipelineError {}
+```

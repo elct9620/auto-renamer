@@ -1,0 +1,425 @@
+use std::fmt;
+
+use globset::{Glob, GlobMatcher};
+use regex::RegexBuilder;
+use toml::Value as Toml;
+
+use super::{
+    Case, CaseKind, Cleanup, Fields, Filter, Lift, Move, Next, Number, OnConflict, Pattern, Rank,
+    Replace, Stage, Strip, Take,
+};
+use crate::record::Value;
+use crate::template::Template;
+
+/// The most a compiled regular expression may take, so a declaration cannot exhaust memory.
+const REGEX_SIZE_LIMIT: usize = 1 << 20;
+
+const DEFAULT_FIELD: &str = "name";
+const DEFAULT_SUFFIX: &str = "_v2";
+
+/// Why one stage declaration was refused.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DeclareError {
+    NotAStage,
+    NotOneKey,
+    UnknownStage(String),
+    NeedsParameters(String),
+    Invalid {
+        stage: String,
+        parameter: Option<String>,
+        reason: String,
+    },
+}
+
+impl fmt::Display for DeclareError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DeclareError::NotAStage => write!(f, "a stage is a name or a table with one key"),
+            DeclareError::NotOneKey => {
+                write!(f, "a stage table needs exactly one key, the stage name")
+            }
+            DeclareError::UnknownStage(name) => write!(f, "unknown stage `{name}`"),
+            DeclareError::NeedsParameters(name) => write!(f, "the stage `{name}` needs parameters"),
+            DeclareError::Invalid {
+                stage,
+                parameter: Some(parameter),
+                reason,
+            } => write!(f, "stage `{stage}`, parameter `{parameter}`: {reason}"),
+            DeclareError::Invalid {
+                stage,
+                parameter: None,
+                reason,
+            } => write!(f, "stage `{stage}`: {reason}"),
+        }
+    }
+}
+
+impl std::error::Error for DeclareError {}
+
+impl Stage {
+    /// Reads one stage from its declaration, refusing a mistaken one.
+    pub fn declare(value: &Toml) -> Result<Stage, DeclareError> {
+        match value {
+            Toml::String(name) => declare_named(name, None),
+            Toml::Table(table) => {
+                let mut entries = table.iter();
+                match (entries.next(), entries.next()) {
+                    (Some((name, parameters)), None) => declare_named(name, Some(parameters)),
+                    _ => Err(DeclareError::NotOneKey),
+                }
+            }
+            _ => Err(DeclareError::NotAStage),
+        }
+    }
+}
+
+fn declare_named(name: &str, value: Option<&Toml>) -> Result<Stage, DeclareError> {
+    match name {
+        "filter" => filter(value),
+        "number" => number(value),
+        "regex" => regex(value),
+        "set" => fields("set", value).map(Stage::Set),
+        "default" => fields("default", value).map(Stage::Default),
+        "replace" => replace(value),
+        "case" => case(value),
+        "strip" => strip(value),
+        "format" => template("format", value).map(Stage::Format),
+        "folder" => template("folder", value).map(Stage::Folder),
+        "lift" => lift(value),
+        "next" => next(value),
+        "rank" => rank(value),
+        "take" => take(value),
+        "move" => move_stage(value),
+        "cleanup" => cleanup(value),
+        other => Err(DeclareError::UnknownStage(other.to_string())),
+    }
+}
+
+/// The parameters of one stage, taken out one by one so that whatever is left over is a mistake.
+struct Args {
+    stage: &'static str,
+    table: toml::Table,
+}
+
+impl Args {
+    /// Parameters a stage cannot do without; a bare name is refused.
+    fn required(stage: &'static str, value: Option<&Toml>) -> Result<Args, DeclareError> {
+        match value {
+            None => Err(DeclareError::NeedsParameters(stage.to_string())),
+            Some(value) => Args::from_value(stage, value),
+        }
+    }
+
+    /// Parameters a stage has defaults for; a bare name declares all of them at once.
+    fn optional(stage: &'static str, value: Option<&Toml>) -> Result<Args, DeclareError> {
+        match value {
+            None => Ok(Args {
+                stage,
+                table: toml::Table::new(),
+            }),
+            Some(value) => Args::from_value(stage, value),
+        }
+    }
+
+    fn from_value(stage: &'static str, value: &Toml) -> Result<Args, DeclareError> {
+        match value {
+            Toml::Table(table) => Ok(Args {
+                stage,
+                table: table.clone(),
+            }),
+            _ => Err(invalid(stage, None, "expects a table of parameters")),
+        }
+    }
+
+    fn invalid(&self, parameter: &str, reason: impl Into<String>) -> DeclareError {
+        invalid(self.stage, Some(parameter), reason)
+    }
+
+    fn string(&mut self, key: &str) -> Result<Option<String>, DeclareError> {
+        match self.table.remove(key) {
+            None => Ok(None),
+            Some(Toml::String(text)) => Ok(Some(text)),
+            Some(_) => Err(self.invalid(key, "must be text")),
+        }
+    }
+
+    fn required_string(&mut self, key: &str) -> Result<String, DeclareError> {
+        self.string(key)?
+            .ok_or_else(|| self.invalid(key, "is required"))
+    }
+
+    fn strings(&mut self, key: &str) -> Result<Option<Vec<String>>, DeclareError> {
+        match self.table.remove(key) {
+            None => Ok(None),
+            Some(Toml::Array(items)) => items
+                .into_iter()
+                .map(|item| match item {
+                    Toml::String(text) => Ok(text),
+                    _ => Err(self.invalid(key, "must be a list of text")),
+                })
+                .collect::<Result<Vec<_>, _>>()
+                .map(Some),
+            Some(_) => Err(self.invalid(key, "must be a list of text")),
+        }
+    }
+
+    /// A list of field names the stage cannot do without.
+    fn required_fields(&mut self, key: &str) -> Result<Vec<String>, DeclareError> {
+        let fields = self
+            .strings(key)?
+            .ok_or_else(|| self.invalid(key, "is required"))?;
+        if fields.is_empty() {
+            return Err(self.invalid(key, "needs at least one field"));
+        }
+        Ok(fields)
+    }
+
+    fn bool(&mut self, key: &str) -> Result<Option<bool>, DeclareError> {
+        match self.table.remove(key) {
+            None => Ok(None),
+            Some(Toml::Boolean(flag)) => Ok(Some(flag)),
+            Some(_) => Err(self.invalid(key, "must be true or false")),
+        }
+    }
+
+    fn integer(&mut self, key: &str) -> Result<Option<i64>, DeclareError> {
+        match self.table.remove(key) {
+            None => Ok(None),
+            Some(Toml::Integer(number)) => Ok(Some(number)),
+            Some(_) => Err(self.invalid(key, "must be a whole number")),
+        }
+    }
+
+    fn glob(&self, key: &str, source: &str) -> Result<GlobMatcher, DeclareError> {
+        Glob::new(source)
+            .map(|glob| glob.compile_matcher())
+            .map_err(|error| self.invalid(key, error.to_string()))
+    }
+
+    fn finish(self) -> Result<(), DeclareError> {
+        match self.table.keys().next() {
+            None => Ok(()),
+            Some(key) => Err(self.invalid(key, "is not a parameter of this stage")),
+        }
+    }
+}
+
+fn invalid(stage: &str, parameter: Option<&str>, reason: impl Into<String>) -> DeclareError {
+    DeclareError::Invalid {
+        stage: stage.to_string(),
+        parameter: parameter.map(str::to_string),
+        reason: reason.into(),
+    }
+}
+
+fn field_or_default(args: &mut Args, key: &str) -> Result<String, DeclareError> {
+    Ok(args
+        .string(key)?
+        .unwrap_or_else(|| DEFAULT_FIELD.to_string()))
+}
+
+fn filter(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+    let mut args = Args::required("filter", value)?;
+    let ext: Vec<String> = args
+        .strings("ext")?
+        .unwrap_or_default()
+        .iter()
+        .map(|ext| ext.to_lowercase())
+        .collect();
+    let glob = match args.string("glob")? {
+        Some(source) => Some(args.glob("glob", &source)?),
+        None => None,
+    };
+    let invert = args.bool("invert")?.unwrap_or(false);
+    if ext.is_empty() && glob.is_none() {
+        return Err(args.invalid("ext", "needs `ext` or `glob` to say which files it means"));
+    }
+    args.finish()?;
+    Ok(Stage::Filter(Filter { ext, glob, invert }))
+}
+
+fn number(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+    let mut args = Args::required("number", value)?;
+    let from = field_or_default(&mut args, "from")?;
+    let into = args.required_string("into")?;
+    let nth = args.integer("nth")?;
+    if nth == Some(0) {
+        return Err(args.invalid("nth", "counts from 1, or from the end when negative"));
+    }
+    let prefix = args.string("prefix")?;
+    let exclude = args.strings("exclude")?.unwrap_or_default();
+    args.finish()?;
+    Ok(Stage::Number(Number {
+        from,
+        into,
+        nth,
+        prefix,
+        exclude,
+    }))
+}
+
+fn regex(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+    let mut args = Args::required("regex", value)?;
+    let source = args.required_string("pattern")?;
+    let from = field_or_default(&mut args, "from")?;
+    let into = args.string("into")?;
+    let replace = args.string("replace")?;
+    if into.is_some() && replace.is_some() {
+        return Err(args.invalid("replace", "cannot be combined with `into`"));
+    }
+    let pattern = RegexBuilder::new(&source)
+        .size_limit(REGEX_SIZE_LIMIT)
+        .build()
+        .map_err(|error| args.invalid("pattern", error.to_string()))?;
+    args.finish()?;
+    Ok(Stage::Regex(Pattern {
+        pattern,
+        from,
+        into,
+        replace,
+    }))
+}
+
+fn fields(stage: &'static str, value: Option<&Toml>) -> Result<Fields, DeclareError> {
+    let mut args = Args::required(stage, value)?;
+    let mut fields = Fields::new();
+    for (name, value) in std::mem::take(&mut args.table) {
+        let value = match value {
+            Toml::String(text) => Value::Text(text),
+            Toml::Integer(number) if number >= 0 => Value::Number(number as u64),
+            _ => return Err(args.invalid(&name, "must be text or a whole number")),
+        };
+        fields.insert(name, value);
+    }
+    Ok(fields)
+}
+
+fn replace(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+    let mut args = Args::required("replace", value)?;
+    let find = args.required_string("find")?;
+    let with = args.required_string("with")?;
+    let field = field_or_default(&mut args, "field")?;
+    args.finish()?;
+    Ok(Stage::Replace(Replace { find, with, field }))
+}
+
+fn case(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+    let mut args = Args::required("case", value)?;
+    let to = match args.required_string("to")?.as_str() {
+        "lower" => CaseKind::Lower,
+        "upper" => CaseKind::Upper,
+        "title" => CaseKind::Title,
+        _ => return Err(args.invalid("to", "must be lower, upper or title")),
+    };
+    let field = field_or_default(&mut args, "field")?;
+    args.finish()?;
+    Ok(Stage::Case(Case { to, field }))
+}
+
+fn strip(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+    let mut args = Args::optional("strip", value)?;
+    let sources = args
+        .strings("groups")?
+        .unwrap_or_else(|| vec!["[]".to_string()]);
+    let mut groups = Vec::new();
+    for source in &sources {
+        let mut chars = source.chars();
+        match (chars.next(), chars.next(), chars.next()) {
+            (Some(open), Some(close), None) => groups.push((open, close)),
+            _ => {
+                return Err(
+                    args.invalid("groups", "each group is an opening and a closing character")
+                );
+            }
+        }
+    }
+    let field = field_or_default(&mut args, "field")?;
+    args.finish()?;
+    Ok(Stage::Strip(Strip { groups, field }))
+}
+
+fn template(stage: &'static str, value: Option<&Toml>) -> Result<Template, DeclareError> {
+    match value {
+        None => Err(DeclareError::NeedsParameters(stage.to_string())),
+        Some(Toml::String(source)) => {
+            Template::parse(source).map_err(|error| invalid(stage, None, error.to_string()))
+        }
+        Some(_) => Err(invalid(stage, None, "expects a template written as text")),
+    }
+}
+
+fn lift(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+    match value {
+        None => Err(DeclareError::NeedsParameters("lift".to_string())),
+        Some(Toml::Integer(levels)) if *levels >= 1 => {
+            Ok(Stage::Lift(Lift::Levels(*levels as usize)))
+        }
+        Some(Toml::Integer(_)) => Err(invalid("lift", None, "lifts at least one level")),
+        Some(other) => {
+            let mut args = Args::from_value("lift", other)?;
+            let source = args.required_string("to")?;
+            let matcher = args.glob("to", &source)?;
+            args.finish()?;
+            Ok(Stage::Lift(Lift::To(matcher)))
+        }
+    }
+}
+
+fn next(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+    let mut args = Args::required("next", value)?;
+    let into = args.required_string("into")?;
+    let source = args.required_string("like")?;
+    let like = Template::parse(&source).map_err(|error| args.invalid("like", error.to_string()))?;
+    args.finish()?;
+    Ok(Stage::Next(Next { into, like }))
+}
+
+fn rank(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+    let mut args = Args::required("rank", value)?;
+    let into = args.required_string("into")?;
+    let by = args.required_fields("by")?;
+    let prefer = args.strings("prefer")?.unwrap_or_default();
+    args.finish()?;
+    Ok(Stage::Rank(Rank { into, by, prefer }))
+}
+
+fn take(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+    let mut args = Args::required("take", value)?;
+    let fields = args.required_fields("fields")?;
+    let from = args.string("from")?;
+    args.finish()?;
+    Ok(Stage::Take(Take { fields, from }))
+}
+
+fn move_stage(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+    let mut args = Args::optional("move", value)?;
+    let on_conflict = match args.string("on_conflict")?.as_deref() {
+        None | Some("reject") => OnConflict::Reject,
+        Some("suffix") => OnConflict::Suffix,
+        Some(_) => return Err(args.invalid("on_conflict", "must be reject or suffix")),
+    };
+    let suffix = args
+        .string("suffix")?
+        .unwrap_or_else(|| DEFAULT_SUFFIX.to_string());
+    if suffix.is_empty() || suffix.contains('/') || suffix.contains('\0') {
+        return Err(args.invalid(
+            "suffix",
+            "is added to a file name, so it cannot be empty or hold a slash",
+        ));
+    }
+    args.finish()?;
+    Ok(Stage::Move(Move {
+        on_conflict,
+        suffix,
+    }))
+}
+
+fn cleanup(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+    let mut args = Args::optional("cleanup", value)?;
+    let mut keep = Vec::new();
+    for source in args.strings("keep")?.unwrap_or_default() {
+        keep.push(args.glob("keep", &source)?);
+    }
+    args.finish()?;
+    Ok(Stage::Cleanup(Cleanup { keep }))
+}
