@@ -55,8 +55,11 @@ impl Session {
         sender: &Sender<Notification>,
         now: SystemTime,
     ) -> Result<Session, RunError> {
-        let mut watcher = notify::recommended_watcher(sender.clone())
-            .map_err(|error| RunError::Watch(error.to_string()))?;
+        let mut watcher = RecommendedWatcher::new(
+            sender.clone(),
+            notify::Config::default().with_follow_symlinks(false),
+        )
+        .map_err(|error| RunError::Watch(error.to_string()))?;
         let mut machines = Vec::new();
         for watch in config.watches() {
             watcher

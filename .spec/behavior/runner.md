@@ -37,3 +37,11 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | Given | a running watcher |
 | When | the configuration is changed to something that is not valid and a file is written |
 | Then | the file is still processed by the earlier configuration |
+
+## `RUN-005` A linked folder is not followed
+
+| Step | Statement |
+| --- | --- |
+| Given | a running watcher and a symbolic link in the source to a folder outside it |
+| When | a file is written into the folder outside the source |
+| Then | the file stays where it was and the target stays empty |

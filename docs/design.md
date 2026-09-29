@@ -95,7 +95,7 @@ source 與 target 分離，媒體伺服器只掃描 target，它產生的 `.nfo`
 | 搬入 | `Modify(Name(To))` | 同檔案系統的 `mv` 沒有寫入完成事件 |
 | 資料夾出現 | `Create(Folder)`、`Name(To)` | 掃描內容，補上未逐一通報的檔案 |
 
-每個 watch 遞迴監看自己的 source，事件由 notify crate 的 inotify 後端提供。
+每個 watch 遞迴監看自己的 source，事件由 notify crate 的 inotify 後端提供，不跟隨符號連結。
 
 ### 1.2 寫入穩定
 
