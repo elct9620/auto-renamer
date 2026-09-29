@@ -68,7 +68,7 @@ fn should_stop_the_effects_after_a_failed_move() {
 
 // @behavior EFF-003
 #[test]
-fn should_preview_every_effect_and_change_nothing_in_a_dry_run() {
+fn should_preview_the_move_and_run_no_cleanup_in_a_dry_run() {
     let sandbox = Sandbox::new();
     sandbox.write("source/Rel/x.mkv", "video");
 
@@ -82,8 +82,8 @@ fn should_preview_every_effect_and_change_nothing_in_a_dry_run() {
 
     assert_eq!(run.error, None);
     assert!(matches!(
-        run.done.first(),
-        Some(Done::Moved(Applied::Preview { .. }))
+        run.done.as_slice(),
+        [Done::Moved(Applied::Preview { .. })]
     ));
     assert!(sandbox.exists("source/Rel/x.mkv"));
     assert!(!sandbox.exists("target"));

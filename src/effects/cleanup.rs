@@ -8,14 +8,12 @@ use crate::stages::Cleanup;
 /// Removes the folders a moved file left empty, from the folder it was in upward.
 ///
 /// Only empty folders inside the unit go, and never the source itself. It stops at a folder that is not
-/// empty, that holds a folder configuration, that a keep pattern names, or that is a link. A dry run
-/// removes nothing and lists the folders that are empty now.
+/// empty, that holds a folder configuration, that a keep pattern names, or that is a link.
 pub fn cleanup_folders(
     stage: &Cleanup,
     origin: &Path,
     unit: &Path,
     roots: &Roots,
-    dry_run: bool,
 ) -> Result<Vec<PathBuf>, EffectError> {
     let mut removed = Vec::new();
     let mut folder = origin.parent();
@@ -28,19 +26,17 @@ pub fn cleanup_folders(
         if !is_empty_folder(&path)? {
             break;
         }
-        if !dry_run {
-            match fs::remove_dir(&path) {
-                Ok(()) => {}
-                Err(error)
-                    if matches!(
-                        error.kind(),
-                        io::ErrorKind::DirectoryNotEmpty | io::ErrorKind::NotFound
-                    ) =>
-                {
-                    break;
-                }
-                Err(error) => return Err(io_error("remove the folder", &path, error.kind())),
+        match fs::remove_dir(&path) {
+            Ok(()) => {}
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    io::ErrorKind::DirectoryNotEmpty | io::ErrorKind::NotFound
+                ) =>
+            {
+                break;
             }
+            Err(error) => return Err(io_error("remove the folder", &path, error.kind())),
         }
         removed.push(current.to_path_buf());
         folder = current.parent();

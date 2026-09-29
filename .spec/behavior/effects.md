@@ -22,13 +22,13 @@ A pipeline ends in effect stages, which run in the order they are written on the
 | When | the effects of the pipeline are applied |
 | Then | the failure is reported, `Rel` is kept, and the move is not in what was done |
 
-## `EFF-003` A dry run previews every effect and changes nothing
+## `EFF-003` A dry run previews the move, runs no cleanup and changes nothing
 
 | Step | Statement |
 | --- | --- |
 | Given | the same pipeline and a dry run |
 | When | the effects of the pipeline are applied |
-| Then | the move is previewed, nothing has moved, and `Rel` is still there |
+| Then | the move preview is all that was done, and nothing has changed |
 
 ## `EFF-004` A pipeline without effects does nothing
 

@@ -6,14 +6,14 @@ use auto_renamer::{Roots, cleanup_folders};
 use common::{Sandbox, cleanup_stage};
 
 /// The folders cleaned up after the file `origin` left, given the unit it belongs to.
-fn cleaned(sandbox: &Sandbox, keep: &str, origin: &str, unit: &str, dry_run: bool) -> Vec<PathBuf> {
+fn cleaned(sandbox: &Sandbox, keep: &str, origin: &str, unit: &str) -> Vec<PathBuf> {
     let roots = Roots {
         source: sandbox.path("source"),
         target: sandbox.path("target"),
     };
     let stage = cleanup_stage(&format!("{{ cleanup = {{ keep = [{keep}] }} }}"));
 
-    cleanup_folders(&stage, Path::new(origin), Path::new(unit), &roots, dry_run)
+    cleanup_folders(&stage, Path::new(origin), Path::new(unit), &roots)
         .expect("the cleanup should not fail")
 }
 
@@ -27,7 +27,7 @@ fn should_remove_the_folder_a_file_left_empty() {
     let sandbox = Sandbox::new();
     sandbox.make_dir("source/Rel");
 
-    let removed = cleaned(&sandbox, "", "Rel/x.mkv", "Rel", false);
+    let removed = cleaned(&sandbox, "", "Rel/x.mkv", "Rel");
 
     assert_eq!(removed, paths(&["Rel"]));
     assert!(!sandbox.exists("source/Rel"));
@@ -39,7 +39,7 @@ fn should_keep_a_folder_that_still_holds_a_file() {
     let sandbox = Sandbox::new();
     sandbox.write("source/Rel/y.mkv", "video");
 
-    let removed = cleaned(&sandbox, "", "Rel/x.mkv", "Rel", false);
+    let removed = cleaned(&sandbox, "", "Rel/x.mkv", "Rel");
 
     assert!(removed.is_empty());
     assert!(sandbox.exists("source/Rel/y.mkv"));
@@ -51,7 +51,7 @@ fn should_remove_folders_emptied_one_inside_another_upward() {
     let sandbox = Sandbox::new();
     sandbox.make_dir("source/Season/Rel/Subs");
 
-    let removed = cleaned(&sandbox, "", "Season/Rel/Subs/x.ass", "Season", false);
+    let removed = cleaned(&sandbox, "", "Season/Rel/Subs/x.ass", "Season");
 
     assert_eq!(removed, paths(&["Season/Rel/Subs", "Season/Rel", "Season"]));
     assert!(!sandbox.exists("source/Season"));
@@ -68,7 +68,6 @@ fn should_stop_at_a_folder_a_keep_pattern_names() {
         r#""Season *""#,
         "Series/Season 01/Rel/x.mkv",
         "Series",
-        false,
     );
 
     assert_eq!(removed, paths(&["Series/Season 01/Rel"]));
@@ -81,7 +80,7 @@ fn should_never_remove_the_source_itself() {
     let sandbox = Sandbox::new();
     sandbox.make_dir("source/Rel");
 
-    let removed = cleaned(&sandbox, "", "Rel/x.mkv", "", false);
+    let removed = cleaned(&sandbox, "", "Rel/x.mkv", "");
 
     assert_eq!(removed, paths(&["Rel"]));
     assert!(sandbox.exists("source"));
@@ -93,7 +92,7 @@ fn should_not_touch_folders_above_the_unit() {
     let sandbox = Sandbox::new();
     sandbox.make_dir("source/Movies/A");
 
-    let removed = cleaned(&sandbox, "", "Movies/A/x.mkv", "Movies/A", false);
+    let removed = cleaned(&sandbox, "", "Movies/A/x.mkv", "Movies/A");
 
     assert_eq!(removed, paths(&["Movies/A"]));
     assert!(sandbox.exists("source/Movies"));
@@ -105,7 +104,7 @@ fn should_keep_a_folder_holding_a_folder_configuration() {
     let sandbox = Sandbox::new();
     sandbox.write("source/Rel/auto-renamer.toml", "");
 
-    let removed = cleaned(&sandbox, "", "Rel/x.mkv", "Rel", false);
+    let removed = cleaned(&sandbox, "", "Rel/x.mkv", "Rel");
 
     assert!(removed.is_empty());
     assert!(sandbox.exists("source/Rel/auto-renamer.toml"));
@@ -119,23 +118,11 @@ fn should_not_remove_a_linked_folder() {
     sandbox.make_dir("elsewhere");
     std::os::unix::fs::symlink(sandbox.path("elsewhere"), sandbox.path("source/Rel")).unwrap();
 
-    let removed = cleaned(&sandbox, "", "Rel/x.mkv", "Rel", false);
+    let removed = cleaned(&sandbox, "", "Rel/x.mkv", "Rel");
 
     assert!(removed.is_empty());
     assert!(sandbox.exists("source/Rel"));
     assert!(sandbox.exists("elsewhere"));
-}
-
-// @behavior CLN-009
-#[test]
-fn should_remove_nothing_and_say_what_it_would_remove_in_a_dry_run() {
-    let sandbox = Sandbox::new();
-    sandbox.make_dir("source/Rel");
-
-    let removed = cleaned(&sandbox, "", "Rel/x.mkv", "Rel", true);
-
-    assert_eq!(removed, paths(&["Rel"]));
-    assert!(sandbox.exists("source/Rel"));
 }
 
 // @behavior CLN-010
@@ -144,7 +131,7 @@ fn should_list_the_folders_removed_innermost_first() {
     let sandbox = Sandbox::new();
     sandbox.make_dir("source/Season/Rel/Subs");
 
-    let removed = cleaned(&sandbox, "", "Season/Rel/Subs/x.ass", "Season", false);
+    let removed = cleaned(&sandbox, "", "Season/Rel/Subs/x.ass", "Season");
 
     assert_eq!(removed, paths(&["Season/Rel/Subs", "Season/Rel", "Season"]));
 }

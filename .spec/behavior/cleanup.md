@@ -70,14 +70,6 @@ After a file has moved out, the folders it leaves empty are removed, from the fo
 | When | the folders are cleaned up |
 | Then | the link and the folder it points to are kept |
 
-## `CLN-009` A dry run removes nothing and says what it would remove
-
-| Step | Statement |
-| --- | --- |
-| Given | a folder `Rel` that is empty and a dry run |
-| When | the folders are cleaned up |
-| Then | the answer lists `Rel` and it is still there |
-
 ## `CLN-010` The answer lists the folders removed, innermost first
 
 | Step | Statement |

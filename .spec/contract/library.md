@@ -663,7 +663,7 @@ Remove the folders a moved file left empty, from its folder upward and only insi
 | internal | yes |
 
 ```rust
-pub fn cleanup_folders(stage: &Cleanup, origin: &Path, unit: &Path, roots: &Roots, dry_run: bool) -> Result<Vec<PathBuf>, EffectError> {}
+pub fn cleanup_folders(stage: &Cleanup, origin: &Path, unit: &Path, roots: &Roots) -> Result<Vec<PathBuf>, EffectError> {}
 ```
 
 ## `Done`

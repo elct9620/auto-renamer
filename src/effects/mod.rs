@@ -113,8 +113,10 @@ pub fn apply_effects(
     for stage in pipeline.stages().iter().filter(|stage| stage.is_effect()) {
         let step = match stage {
             Stage::Move(policy) => move_file(policy, record, roots, dry_run).map(Done::Moved),
+            // A dry run leaves the file where it is, so no folder it would empty is empty yet.
+            Stage::Cleanup(_) if dry_run => continue,
             Stage::Cleanup(policy) => {
-                cleanup_folders(policy, record.origin(), unit, roots, dry_run).map(Done::Cleaned)
+                cleanup_folders(policy, record.origin(), unit, roots).map(Done::Cleaned)
             }
             _ => continue,
         };
