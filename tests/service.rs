@@ -279,7 +279,7 @@ const PREFIX: &str = r#"[{ format = "x{name}" }, "move"]"#;
 fn rename_again(run: &Setup, current: &mut String) -> What {
     let processed = run.process("", &[current.as_str()]);
     let what = run.what(&processed, current);
-    if matches!(what, What::Moved(_)) {
+    if matches!(what, What::Moved(_) | What::MovedThenFailed { .. }) {
         *current = format!("x{current}");
     }
     what
@@ -381,5 +381,24 @@ fn should_preview_a_file_whose_plan_is_where_it_already_is_in_a_dry_run() {
     assert_eq!(
         processed[0].what,
         What::Previewed(sandbox.path("source/x.mkv"))
+    );
+}
+
+// @behavior SVC-018
+#[test]
+fn should_count_a_rename_in_place_that_a_later_effect_failed_after() {
+    let run = in_place(r#"[{ format = "x{name}" }, "move", "move"]"#);
+    run.sandbox.write("source/a.mkv", "video");
+    let mut current = "a.mkv".to_string();
+
+    for _ in 0..5 {
+        let what = rename_again(&run, &mut current);
+        assert!(matches!(what, What::MovedThenFailed { .. }), "{what:?}");
+    }
+    let sixth = rename_again(&run, &mut current);
+
+    assert!(
+        matches!(&sixth, What::Refused(reason) if reason.contains("in a row")),
+        "{sixth:?}"
     );
 }
