@@ -338,7 +338,7 @@ dry_run = true      # log each plan, run no effect stage
   other filesystem   copy to temp name ─► rename ─► delete source
 ```
 
-容器內 source 與 target 常是不同的掛載，`rename` 無法跨越。先寫成暫存名再改名，媒體伺服器就不會掃到寫到一半的檔案。
+容器內 source 與 target 常是不同的掛載，`rename` 無法跨越。先寫成 `.` 開頭的暫存名，保留修改時間，只留讀寫權限，再改名，媒體伺服器就不會掃到寫到一半的檔案。
 
 ### 4.3 撞名
 
@@ -347,7 +347,7 @@ dry_run = true      # log each plan, run no effect stage
   a.mp4 exists ─► a_v2.mp4 ─ exists ─► reject       on_conflict = "suffix"
 ```
 
-`move` 預設在目標已存在時拒絕，檔案留在 source。設 `on_conflict = "suffix"` 會加上 `suffix`（預設 `_v2`）重試一次，仍撞名就拒絕。任何情況都不覆寫既有檔案。
+`move` 預設在目標已存在時拒絕，檔案留在 source。設 `on_conflict = "suffix"` 會加上 `suffix`（預設 `_v2`）重試一次，仍撞名就拒絕。任何情況都不覆寫既有檔案，符號連結與資料夾不處理也不跟隨。
 
 ### 4.4 冪等
 
