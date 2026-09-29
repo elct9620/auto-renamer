@@ -238,3 +238,11 @@ The configuration says which folders are watched, where their files go, and by w
 | Given | a watch with the batch limit 100000 |
 | When | the configuration is read |
 | Then | the watch has the limit 100000 |
+
+## `CFG-030` A pipeline without an effect stage is warned about
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch listing a pipeline whose stages only rewrite the plan |
+| When | the configuration is read |
+| Then | the warnings name the watch and the pipeline |

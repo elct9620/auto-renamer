@@ -148,6 +148,25 @@ impl Config {
     pub fn watches(&self) -> &[Watch] {
         &self.watches
     }
+
+    /// What is legal but probably not what was meant, such as a pipeline that never moves anything.
+    pub fn warnings(&self) -> Vec<String> {
+        self.watches
+            .iter()
+            .flat_map(|watch| {
+                watch
+                    .pipelines()
+                    .into_iter()
+                    .filter(|(_, pipeline)| !pipeline.has_effect())
+                    .map(|(name, _)| {
+                        format!(
+                            "watch `{}`: pipeline `{name}` has no effect stage, so it only previews",
+                            watch.name
+                        )
+                    })
+            })
+            .collect()
+    }
 }
 
 impl Watch {

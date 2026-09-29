@@ -965,3 +965,17 @@ Why the watcher could not start or stopped.
 ```rust
 pub enum RunError {}
 ```
+
+## `Config::warnings`
+
+What is legal but probably not what was meant, such as a pipeline that never moves anything.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Config {
+    pub fn warnings(&self) -> Vec<String> {}
+}
+```

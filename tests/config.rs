@@ -290,3 +290,20 @@ fn should_refuse_a_batch_limit_above_the_ceiling() {
 fn should_accept_the_ceiling_as_the_batch_limit() {
     assert_eq!(series("batch_max = 100000").batch_max, 100_000);
 }
+
+// @behavior CFG-030
+#[test]
+fn should_warn_about_a_pipeline_without_an_effect_stage() {
+    let config = Config::parse(
+        "[pipeline.preview]\nstages = [{ format = \"{name}\" }]\n\n[watch.w]\nsource = \"/s\"\npipelines = [\"preview\"]\n",
+    )
+    .expect("the configuration should be accepted");
+
+    let warnings = config.warnings();
+
+    assert_eq!(warnings.len(), 1);
+    assert!(
+        warnings[0].contains("`w`") && warnings[0].contains("`preview`"),
+        "{warnings:?}"
+    );
+}
