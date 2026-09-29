@@ -87,3 +87,39 @@ fn should_read_the_configuration_again_once_for_one_change() {
         .count();
     assert_eq!(reads, 1, "{}", program.log());
 }
+
+// @behavior RUN-014
+#[test]
+fn should_read_the_configuration_again_on_a_hangup() {
+    let sandbox = Sandbox::new();
+    // The configuration is reached through a link, so that changing the file it points at sends
+    // no notification to the folder the program watches for it.
+    let program = Program::start(&sandbox, r#"["move"]"#, "");
+    sandbox.make_dir("real");
+    std::fs::rename(
+        sandbox.path("config.toml"),
+        sandbox.path("real/config.toml"),
+    )
+    .unwrap();
+    std::os::unix::fs::symlink(
+        sandbox.path("real/config.toml"),
+        sandbox.path("config.toml"),
+    )
+    .unwrap();
+    thread::sleep(Duration::from_secs(3));
+    let renamed = sandbox
+        .read("real/config.toml")
+        .unwrap()
+        .replace(r#"["move"]"#, r#"[{ format = "renamed" }, "move"]"#);
+
+    sandbox.write("real/config.toml", &renamed);
+    program.signal("HUP");
+    thread::sleep(Duration::from_secs(1));
+    sandbox.write("source/a.mkv", "video");
+
+    assert!(
+        eventually(|| sandbox.exists("target/renamed.mkv")),
+        "{}",
+        program.log()
+    );
+}

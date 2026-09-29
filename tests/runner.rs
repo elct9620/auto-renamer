@@ -38,7 +38,7 @@ impl Running {
             config: sandbox.path("config.toml"),
         };
         let flag = stop.clone();
-        let thread = thread::spawn(move || run(&options, &flag));
+        let thread = thread::spawn(move || run(&options, &flag, &AtomicBool::new(false)));
         thread::sleep(Duration::from_millis(300));
         Running {
             stop,

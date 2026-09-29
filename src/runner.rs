@@ -13,7 +13,7 @@ use crate::cli::Options;
 use crate::config::Config;
 use crate::scan::scan_folder;
 use crate::service::process_batch;
-use crate::watcher::{Machine, Ready, Translated, translate};
+use crate::watcher::{Machine, Ready, Translated, rewrites, translate};
 
 /// How long a change to the configuration file is awaited for more changes before it is read.
 const RELOAD_DELAY: Duration = Duration::from_secs(1);
@@ -51,6 +51,7 @@ struct Session {
 impl Session {
     fn start(
         config: Config,
+        config_path: &Path,
         sender: &Sender<Notification>,
         now: SystemTime,
     ) -> Result<Session, RunError> {
@@ -72,6 +73,16 @@ impl Session {
                 machine.observe(event, now);
             }
             machines.push(machine);
+        }
+        if let Some(folder) = config_path.parent()
+            && !config
+                .watches()
+                .iter()
+                .any(|watch| folder.starts_with(&watch.source))
+        {
+            watcher
+                .watch(folder, RecursiveMode::NonRecursive)
+                .map_err(|error| RunError::Watch(format!("{}: {error}", folder.display())))?;
         }
         Ok(Session {
             config,
@@ -116,47 +127,48 @@ impl Session {
     }
 }
 
-/// Watches the sources of a configuration until told to stop, following the configuration file as it changes.
+/// Watches the sources of a configuration until told to stop, reading the configuration file again when
+/// it is rewritten or when `reload` is set, which is for a file no notification reaches, such as one
+/// mounted into a container on its own.
 ///
 /// A configuration that is not valid at start is an error; one that stops being valid later is reported
 /// and the running one is kept.
-pub fn run(options: &Options, stop: &AtomicBool) -> Result<(), RunError> {
+pub fn run(options: &Options, stop: &AtomicBool, reload: &AtomicBool) -> Result<(), RunError> {
     let config_path = std::path::absolute(&options.config)
         .map_err(|error| RunError::Config(format!("{}: {error}", options.config.display())))?;
     let (sender, receiver) = mpsc::channel();
-    let mut session = Session::start(load(&config_path)?, &sender, SystemTime::now())?;
+    let mut session = Session::start(
+        load(&config_path)?,
+        &config_path,
+        &sender,
+        SystemTime::now(),
+    )?;
     let mut reload_at: Option<SystemTime> = None;
-    let mut seen = fingerprint(&config_path);
 
     while !stop.load(Ordering::SeqCst) {
         let timeout = wait(&session, reload_at, SystemTime::now());
         match receive(&receiver, timeout)? {
-            Some(Ok(notification)) => session.observe(&notification, SystemTime::now()),
+            Some(Ok(notification)) => {
+                if rewrites(&notification, &config_path) {
+                    reload_at = Some(SystemTime::now() + RELOAD_DELAY);
+                }
+                session.observe(&notification, SystemTime::now());
+            }
             Some(Err(error)) => eprintln!("[warn] the filesystem reported: {error}"),
             None => {}
         }
 
         let now = SystemTime::now();
-        let current = fingerprint(&config_path);
-        if current != seen {
-            seen = current;
-            reload_at = Some(now + RELOAD_DELAY);
+        if reload.swap(false, Ordering::SeqCst) {
+            reload_at = Some(now);
         }
         session.process_ready(now);
         if reload_at.is_some_and(|due| due <= now) {
             reload_at = None;
-            session = reload(session, &config_path, &sender, now);
+            session = read_again(session, &config_path, &sender, now);
         }
     }
     Ok(())
-}
-
-/// What tells that the configuration file changed. It is looked at rather than watched, because a file
-/// mounted into a container on its own sends no notification to the folder it appears in.
-fn fingerprint(path: &Path) -> Option<(Option<SystemTime>, u64)> {
-    fs::metadata(path)
-        .ok()
-        .map(|metadata| (metadata.modified().ok(), metadata.len()))
 }
 
 fn load(path: &Path) -> Result<Config, RunError> {
@@ -166,13 +178,14 @@ fn load(path: &Path) -> Result<Config, RunError> {
 }
 
 /// The configuration read again, or the one running when the new one cannot be used.
-fn reload(
+fn read_again(
     session: Session,
     config_path: &Path,
     sender: &Sender<Notification>,
     now: SystemTime,
 ) -> Session {
-    let started = load(config_path).and_then(|config| Session::start(config, sender, now));
+    let started =
+        load(config_path).and_then(|config| Session::start(config, config_path, sender, now));
     match started {
         Ok(fresh) => {
             eprintln!("[info] the configuration was read again");

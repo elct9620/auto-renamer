@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use auto_renamer::{Event, Translated, translate};
+use auto_renamer::{Event, Translated, rewrites, translate};
 use notify::EventKind;
 use notify::event::{
     AccessKind, AccessMode, CreateKind, DataChange, ModifyKind, RemoveKind, RenameMode,
@@ -144,4 +144,44 @@ fn should_ignore_other_kinds_of_notification() {
     let kind = EventKind::Access(AccessKind::Open(AccessMode::Read));
 
     assert_eq!(translated(kind, &["/s/Show/a.mkv"]), []);
+}
+
+fn rewrites_config(kind: EventKind, path: &str) -> bool {
+    rewrites(&notification(kind, &[path]), Path::new("/c/config.toml"))
+}
+
+// @behavior TRN-013
+#[test]
+fn should_take_a_closed_write_as_rewriting_the_file() {
+    let kind = EventKind::Access(AccessKind::Close(AccessMode::Write));
+
+    assert!(rewrites_config(kind, "/c/config.toml"));
+}
+
+// @behavior TRN-014
+#[test]
+fn should_take_another_file_moved_over_it_as_rewriting_the_file() {
+    let kind = EventKind::Modify(ModifyKind::Name(RenameMode::To));
+
+    assert!(rewrites_config(kind, "/c/config.toml"));
+}
+
+// @behavior TRN-015
+#[test]
+fn should_not_take_a_read_as_rewriting_the_file() {
+    for kind in [
+        EventKind::Access(AccessKind::Open(AccessMode::Read)),
+        EventKind::Access(AccessKind::Read),
+        EventKind::Access(AccessKind::Close(AccessMode::Read)),
+    ] {
+        assert!(!rewrites_config(kind, "/c/config.toml"), "{kind:?}");
+    }
+}
+
+// @behavior TRN-016
+#[test]
+fn should_not_take_a_notification_about_another_file_as_rewriting_it() {
+    let kind = EventKind::Access(AccessKind::Close(AccessMode::Write));
+
+    assert!(!rewrites_config(kind, "/c/other.toml"));
 }

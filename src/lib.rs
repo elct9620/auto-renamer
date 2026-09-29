@@ -31,4 +31,4 @@ pub use scan::scan_folder;
 pub use service::{FsTarget, Processed, What, process_batch};
 pub use stages::{DeclareError, Outcome, Rejection, Stage};
 pub use template::{RenderError, Template, TemplateError};
-pub use watcher::{Event, Machine, Ready, Translated, translate};
+pub use watcher::{Event, Machine, Ready, Translated, rewrites, translate};

@@ -111,3 +111,11 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | Given | the program running and its configuration changed once |
 | When | some seconds pass with nothing else changing |
 | Then | its error output says the configuration was read again exactly once |
+
+## `RUN-014` A hangup signal reads the configuration again
+
+| Step | Statement |
+| --- | --- |
+| Given | the program running whose pipeline keeps the name |
+| When | the configuration is changed without a notification and the program is sent a hangup signal, and a file is written |
+| Then | the file appears in the target as `renamed` |

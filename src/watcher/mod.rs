@@ -11,7 +11,7 @@ use crate::config::{MAX_BATCH_FILES, Unit, Watch};
 
 mod notification;
 
-pub use notification::{Translated, translate};
+pub use notification::{Translated, rewrites, translate};
 
 /// The name of a folder configuration, which is read as settings and never renamed.
 const FOLDER_CONFIG: &str = "auto-renamer.toml";

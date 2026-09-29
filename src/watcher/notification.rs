@@ -79,3 +79,18 @@ fn relative_to<'a>(source: &Path, path: &'a Path) -> Option<&'a Path> {
         .ok()
         .filter(|relative| !relative.as_os_str().is_empty())
 }
+
+/// Whether a notification says a file was written, created or replaced, as opposed to only read.
+///
+/// Reading a file also makes notifications about it, so a program that reads its own configuration
+/// must not take every notification for a change.
+pub fn rewrites(notification: &notify::Event, file: &Path) -> bool {
+    let changed = matches!(
+        notification.kind,
+        EventKind::Access(AccessKind::Close(AccessMode::Write))
+            | EventKind::Create(_)
+            | EventKind::Modify(ModifyKind::Data(_))
+            | EventKind::Modify(ModifyKind::Name(RenameMode::To | RenameMode::Both))
+    );
+    changed && notification.paths.iter().any(|path| path == file)
+}

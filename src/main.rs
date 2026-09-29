@@ -32,7 +32,14 @@ fn start(options: &auto_renamer::Options) -> ExitCode {
             return ExitCode::from(2);
         }
     }
-    match auto_renamer::runner::run(options, &stop) {
+    let reload = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    if let Err(error) =
+        signal_hook::flag::register(signal_hook::consts::SIGHUP, std::sync::Arc::clone(&reload))
+    {
+        eprintln!("could not handle the hangup signal: {error}");
+        return ExitCode::from(2);
+    }
+    match auto_renamer::runner::run(options, &stop, &reload) {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             eprintln!("{error}");

@@ -101,3 +101,35 @@ The filesystem reports what happened in its own words, and only some of it matte
 | Given | the source `/s` and a notification that `/s/Show/a.mkv` was opened for reading |
 | When | the notification is translated |
 | Then | nothing is reported |
+
+## `TRN-013` A write that was closed rewrites the file
+
+| Step | Statement |
+| --- | --- |
+| Given | a notification that `/c/config.toml` was closed after writing |
+| When | it is asked whether it rewrites `/c/config.toml` |
+| Then | it does |
+
+## `TRN-014` Another file moved over the file rewrites it
+
+| Step | Statement |
+| --- | --- |
+| Given | a notification that a file was moved to `/c/config.toml` |
+| When | it is asked whether it rewrites `/c/config.toml` |
+| Then | it does |
+
+## `TRN-015` A read does not rewrite the file
+
+| Step | Statement |
+| --- | --- |
+| Given | notifications that `/c/config.toml` was opened, read, and closed after reading |
+| When | each is asked whether it rewrites `/c/config.toml` |
+| Then | none does |
+
+## `TRN-016` A notification about another file does not rewrite it
+
+| Step | Statement |
+| --- | --- |
+| Given | a notification that `/c/other.toml` was closed after writing |
+| When | it is asked whether it rewrites `/c/config.toml` |
+| Then | it does not |

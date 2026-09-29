@@ -944,14 +944,14 @@ pub fn parse_args(args: impl IntoIterator<Item = String>) -> Result<Command, Str
 
 ## `run`
 
-Watch the sources of a configuration until told to stop, following the configuration file as it changes.
+Watch the sources of a configuration until told to stop, reading the configuration file again when it is rewritten or when told to.
 
 | Attribute | Value |
 | --- | --- |
 | internal | yes |
 
 ```rust
-pub fn run(options: &Options, stop: &AtomicBool) -> Result<(), RunError> {}
+pub fn run(options: &Options, stop: &AtomicBool, reload: &AtomicBool) -> Result<(), RunError> {}
 ```
 
 ## `RunError`
@@ -978,4 +978,16 @@ What is legal but probably not what was meant, such as a pipeline that never mov
 impl Config {
     pub fn warnings(&self) -> Vec<String> {}
 }
+```
+
+## `rewrites`
+
+Whether a filesystem notification says a file was written, created or replaced, as opposed to only read.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub fn rewrites(notification: &notify::Event, file: &Path) -> bool {}
 ```
