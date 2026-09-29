@@ -225,3 +225,11 @@ pub fn move_stage(declaration: &str) -> auto_renamer::stages::Move {
         other => panic!("expected a move stage, got {other:?}"),
     }
 }
+
+/// A cleanup stage as it is written in a pipeline, such as `{ cleanup = { keep = ["Season *"] } }`.
+pub fn cleanup_stage(declaration: &str) -> auto_renamer::stages::Cleanup {
+    match stage(declaration) {
+        Stage::Cleanup(stage) => stage,
+        other => panic!("expected a cleanup stage, got {other:?}"),
+    }
+}

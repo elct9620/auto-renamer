@@ -1,68 +1,11 @@
-//! The only code that touches the files of the source and the target.
-
-use std::fmt;
 use std::fs::{self, File, OpenOptions, Permissions};
 use std::io;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Component, Path, PathBuf};
 
+use super::{Applied, EffectError, Roots, SkipReason, exists, io_error};
 use crate::record::{Record, split_extension};
 use crate::stages::{Move, OnConflict};
-
-/// The source a file comes from and the target it goes to, which are one folder when files are renamed in place.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Roots {
-    pub source: PathBuf,
-    pub target: PathBuf,
-}
-
-/// What a move did: moved the file, left it as it was, skipped it, or only said what it would do.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Applied {
-    Moved { from: PathBuf, to: PathBuf },
-    Unchanged(PathBuf),
-    Skipped(SkipReason),
-    Preview { from: PathBuf, to: PathBuf },
-}
-
-/// Why a file was skipped rather than moved.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SkipReason {
-    Link,
-    NotAFile,
-}
-
-/// Why a move was refused or failed, with the file as it was.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum EffectError {
-    Unsafe(PathBuf),
-    Conflict(PathBuf),
-    Missing(PathBuf),
-    Io {
-        action: &'static str,
-        path: PathBuf,
-        kind: io::ErrorKind,
-    },
-}
-
-impl fmt::Display for EffectError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            EffectError::Unsafe(path) => write!(
-                f,
-                "`{}` could lead outside the source or the target",
-                path.display()
-            ),
-            EffectError::Conflict(path) => write!(f, "`{}` already exists", path.display()),
-            EffectError::Missing(path) => write!(f, "`{}` is not there", path.display()),
-            EffectError::Io { action, path, kind } => {
-                write!(f, "could not {action} `{}`: {kind}", path.display())
-            }
-        }
-    }
-}
-
-impl std::error::Error for EffectError {}
 
 /// Moves the file of a planned record to its plan under the target, or says where it would go.
 ///
@@ -128,10 +71,6 @@ fn skip_reason(source: &Path, origin: &Path) -> Result<Option<SkipReason>, Effec
         }
     }
     Ok(None)
-}
-
-fn exists(path: &Path) -> bool {
-    fs::symlink_metadata(path).is_ok()
 }
 
 /// What to do when the target is taken: refuse, or try once more with the suffix before the extension.
@@ -230,14 +169,6 @@ fn failed(action: &'static str, from: &Path, to: &Path, error: &io::Error) -> Ef
     match error.kind() {
         io::ErrorKind::AlreadyExists if exists(to) => EffectError::Conflict(to.to_path_buf()),
         kind => io_error(action, from, kind),
-    }
-}
-
-fn io_error(action: &'static str, path: &Path, kind: io::ErrorKind) -> EffectError {
-    EffectError::Io {
-        action,
-        path: path.to_path_buf(),
-        kind,
     }
 }
 

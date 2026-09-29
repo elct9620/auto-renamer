@@ -370,7 +370,7 @@ dry_run = true      # log each plan, run no effect stage
   Series/                  above the unit    ─► never touched
 ```
 
-`cleanup` 只刪除單元之內清空的資料夾，由檔案原本所在處往上，遇到非空、含 `auto-renamer.toml` 或符合 `keep` 的資料夾就停。source 根永不刪除。
+`cleanup` 只刪除單元之內清空的資料夾（含單元本身），由檔案原本所在處往上，遇到非空、含 `auto-renamer.toml`、符合 `keep` 或是連結的資料夾就停。source 根永不刪除；乾跑只列出現在就是空的資料夾。
 
 ## 5 內建階段
 

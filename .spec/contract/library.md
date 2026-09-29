@@ -653,3 +653,51 @@ Move the file of a planned record to its plan under the target, or say where it 
 ```rust
 pub fn move_file(stage: &Move, record: &Record, roots: &Roots, dry_run: bool) -> Result<Applied, EffectError> {}
 ```
+
+## `cleanup_folders`
+
+Remove the folders a moved file left empty, from its folder upward and only inside its unit.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub fn cleanup_folders(stage: &Cleanup, origin: &Path, unit: &Path, roots: &Roots, dry_run: bool) -> Result<Vec<PathBuf>, EffectError> {}
+```
+
+## `Done`
+
+What one effect stage did.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub enum Done {}
+```
+
+## `EffectsRun`
+
+What the effect stages of a pipeline did to one file, and the failure that stopped them if there was one.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct EffectsRun {}
+```
+
+## `apply_effects`
+
+Run the effect stages of a pipeline in order on a planned file, stopping at the first failure.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub fn apply_effects(pipeline: &Pipeline, record: &Record, unit: &Path, roots: &Roots, dry_run: bool) -> EffectsRun {}
+```
