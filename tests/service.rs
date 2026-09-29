@@ -326,3 +326,21 @@ fn should_forget_the_renames_of_a_file_that_is_left_as_it_is() {
         assert!(matches!(rename_again(&run, &mut current), What::Moved(_)));
     }
 }
+
+// @behavior SVC-015
+#[test]
+fn should_report_a_file_moved_before_a_later_effect_failed_as_moved_with_the_failure() {
+    let run = setup(
+        r#"[{ format = "{show}" }, "move", "move"]"#,
+        "vars = { show = \"Alpha\" }",
+    );
+    run.sandbox.write("source/Show/x.mkv", "video");
+
+    let processed = run.process("Show", &["Show/x.mkv"]);
+
+    assert!(matches!(
+        run.what(&processed, "Show/x.mkv"),
+        What::MovedThenFailed { to, reason }
+            if to == run.sandbox.path("target/Show/Alpha.mkv") && reason.contains("is not there")
+    ));
+}

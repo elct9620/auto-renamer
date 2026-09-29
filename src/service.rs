@@ -45,6 +45,11 @@ impl Target for FsTarget {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum What {
     Moved(PathBuf),
+    /// Moved, and then a later effect of the pipeline failed.
+    MovedThenFailed {
+        to: PathBuf,
+        reason: String,
+    },
     Previewed(PathBuf),
     Unchanged,
     Skipped(String),
@@ -161,7 +166,7 @@ pub fn process_batch(
                         let what = effects_of(pipeline, &record, unit, &roots, effective.dry_run);
                         if in_place {
                             match &what {
-                                What::Moved(to) => {
+                                What::Moved(to) | What::MovedThenFailed { to, .. } => {
                                     if let Ok(relative) = to.strip_prefix(&effective.source) {
                                         renames.renamed(
                                             &entry.origin,
@@ -214,13 +219,19 @@ fn effects_of(
     dry_run: bool,
 ) -> What {
     let run = apply_effects(pipeline, record, unit, roots, dry_run);
-    if let Some(error) = run.error {
-        return What::Refused(error.to_string());
-    }
     let moved = run.done.into_iter().find_map(|done| match done {
         Done::Moved(applied) => Some(applied),
         Done::Cleaned(_) => None,
     });
+    if let Some(error) = run.error {
+        return match moved {
+            Some(Applied::Moved { to, .. }) => What::MovedThenFailed {
+                to,
+                reason: error.to_string(),
+            },
+            _ => What::Refused(error.to_string()),
+        };
+    }
     match moved {
         Some(Applied::Moved { to, .. }) => What::Moved(to),
         Some(Applied::Preview { to, .. }) => What::Previewed(to),
@@ -279,6 +290,9 @@ fn report(entry: &Processed) {
     let origin = entry.origin.display();
     match &entry.what {
         What::Moved(to) => eprintln!("[info] {origin} -> {}", to.display()),
+        What::MovedThenFailed { to, reason } => {
+            eprintln!("[warn] {origin} -> {}, then failed: {reason}", to.display())
+        }
         What::Previewed(to) => eprintln!("[info] {origin} would go to {}", to.display()),
         What::Unchanged => {}
         What::Unclaimed => eprintln!("[info] {origin} left: no pipeline claims it"),

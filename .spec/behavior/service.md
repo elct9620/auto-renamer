@@ -117,3 +117,11 @@ Processing a batch is what a ready batch of settled files turns into: the files 
 | Given | the same watch, a file renamed four times in a row, and a pipeline that then leaves it as it is |
 | When | it is processed with that pipeline and then renamed by the prefix pipeline five more times |
 | Then | every one of those renames is done |
+
+## `SVC-015` A file moved before a later effect failed is reported as moved, with the failure
+
+| Step | Statement |
+| --- | --- |
+| Given | the same watch whose pipeline moves the file and then has an effect that fails, and a file in `Show` |
+| When | the batch is processed |
+| Then | the file is reported as moved to the target together with why the later effect failed |
