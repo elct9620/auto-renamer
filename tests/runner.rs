@@ -139,3 +139,15 @@ fn should_not_follow_a_linked_folder() {
     assert!(sandbox.exists("outside/a.mkv"));
     assert_eq!(sandbox.names_in("target"), Vec::<String>::new());
 }
+
+// @behavior RUN-008
+#[test]
+fn should_process_a_folder_moved_into_the_source_with_what_it_holds() {
+    let sandbox = Sandbox::new();
+    let _running = Running::start(&sandbox, r#"["move"]"#);
+    sandbox.write("outside/Show/a.mkv", "video");
+
+    std::fs::rename(sandbox.path("outside/Show"), sandbox.path("source/Show")).unwrap();
+
+    assert!(eventually(|| sandbox.exists("target/Show/a.mkv")));
+}

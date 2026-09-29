@@ -62,3 +62,11 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | Given | the program running with a valid configuration |
 | When | it is sent an interrupt |
 | Then | it exits successfully |
+
+## `RUN-008` A folder moved into the source is processed with what it holds
+
+| Step | Statement |
+| --- | --- |
+| Given | a running watcher and a folder holding a file outside the source |
+| When | the folder is moved into the source |
+| Then | the file appears in the target |
