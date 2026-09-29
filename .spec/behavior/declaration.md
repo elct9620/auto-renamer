@@ -244,3 +244,11 @@ A pipeline is declared as a list of stages, each a bare name or a table with one
 | Given | the stage list `[{ replace = { find = "", with = "x" } }] |
 | When | the pipeline is read |
 | Then | the pipeline is refused, naming the parameter `find` |
+
+## `DEC-031` A next template must mention the field it fills
+
+| Step | Statement |
+| --- | --- |
+| Given | the stage list `[{ next = { into = "episode", like = "{name}" } }] |
+| When | the pipeline is read |
+| Then | the pipeline is refused, naming the parameter `like` |

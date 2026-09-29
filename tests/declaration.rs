@@ -224,7 +224,8 @@ fn should_refuse_a_plan_stage_after_an_effect() {
 // @behavior DEC-023
 #[test]
 fn should_refuse_a_path_stage_after_next() {
-    let refused = refused(r#"[{ next = { into = "episode", like = "{name}" } }, { lift = 1 }]"#);
+    let refused =
+        refused(r#"[{ next = { into = "episode", like = "{name} {episode}" } }, { lift = 1 }]"#);
 
     assert_eq!(
         refused,
@@ -326,4 +327,12 @@ fn should_refuse_a_literal_replace_that_looks_for_nothing() {
     let error = refused_declaration(r#"[{ replace = { find = "", with = "x" } }]"#);
 
     assert_invalid(error, "replace", Some("find"));
+}
+
+// @behavior DEC-031
+#[test]
+fn should_refuse_a_next_template_that_does_not_mention_the_field_it_fills() {
+    let error = refused_declaration(r#"[{ next = { into = "episode", like = "{name}" } }]"#);
+
+    assert_invalid(error, "next", Some("like"));
 }

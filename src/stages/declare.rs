@@ -378,6 +378,9 @@ fn next(value: Option<&Toml>) -> Result<Stage, DeclareError> {
     let into = args.required_string("into")?;
     let source = args.required_string("like")?;
     let like = Template::parse(&source).map_err(|error| args.invalid("like", error.to_string()))?;
+    if !like.has_field(&into) {
+        return Err(args.invalid("like", "must mention the field it fills"));
+    }
     args.finish()?;
     Ok(Stage::Next(Next { into, like }))
 }

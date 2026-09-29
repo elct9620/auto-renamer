@@ -110,7 +110,7 @@ pub(crate) fn is_usable_file_name(name: &str) -> bool {
 
 /// The extension is what follows the last dot when it is 1 to 5 ASCII letters or digits
 /// and the dot does not lead the name.
-fn split_extension(file_name: &str) -> (&str, &str) {
+pub(crate) fn split_extension(file_name: &str) -> (&str, &str) {
     match file_name.rfind('.') {
         Some(dot) if dot > 0 => {
             let ext = &file_name[dot + 1..];

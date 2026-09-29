@@ -2,6 +2,7 @@ use std::fmt;
 
 use toml::Value as Toml;
 
+use crate::context::Context;
 use crate::record::Record;
 use crate::stages::{DeclareError, Outcome, Stage};
 
@@ -71,10 +72,10 @@ impl Pipeline {
     }
 
     /// Runs the stages that only rewrite the plan, up to the first stage that touches the filesystem.
-    pub fn plan(&self, record: Record) -> Outcome {
+    pub fn plan(&self, record: Record, context: &mut Context) -> Outcome {
         let mut record = record;
         for stage in self.stages.iter().take_while(|stage| !stage.is_effect()) {
-            match stage.apply(record) {
+            match stage.apply(record, context) {
                 Outcome::Continue(next) => record = next,
                 stopped => return stopped,
             }

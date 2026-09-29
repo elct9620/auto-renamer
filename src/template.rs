@@ -3,11 +3,15 @@ use std::iter::Peekable;
 use std::str::Chars;
 
 use chrono::format::{Item, StrftimeItems};
+use regex::{Regex, RegexBuilder};
 
 use crate::record::{Record, Value};
 
 /// A `u64` has at most 20 digits, so a wider padding only spends memory.
 const MAX_PAD_WIDTH: usize = 20;
+
+/// The most a matcher built from a template may take to compile.
+const MATCHER_SIZE_LIMIT: usize = 1 << 20;
 
 /// A name written out of a record's fields.
 #[derive(Debug, Clone)]
@@ -60,6 +64,7 @@ pub enum RenderError {
     MissingField(String),
     SpecMismatch { field: String, spec: String },
     NeedsFormat(String),
+    TooLarge,
 }
 
 impl fmt::Display for TemplateError {
@@ -90,6 +95,7 @@ impl fmt::Display for RenderError {
                 write!(f, "the format `{spec}` does not suit the field `{field}`")
             }
             RenderError::NeedsFormat(field) => write!(f, "the date field `{field}` needs a format"),
+            RenderError::TooLarge => write!(f, "the names to match are too long to match"),
         }
     }
 }
@@ -103,6 +109,30 @@ impl Template {
         let mut chars = source.chars().peekable();
         let segments = parse_segments(&mut chars, false)?;
         Ok(Template { segments })
+    }
+
+    /// Whether a field of this name is written anywhere in the template.
+    pub fn has_field(&self, name: &str) -> bool {
+        fn any(segments: &[Segment], name: &str) -> bool {
+            segments.iter().any(|segment| match segment {
+                Segment::Literal(_) => false,
+                Segment::Field { name: field, .. } => field == name,
+                Segment::Optional(inner) => any(inner, name),
+            })
+        }
+        any(&self.segments, name)
+    }
+
+    /// A pattern for the names this template writes, capturing the number of the field `capture`
+    /// and taking every other field at its value in `record`.
+    pub(crate) fn matcher(&self, record: &Record, capture: &str) -> Result<Regex, RenderError> {
+        let mut source = String::from("^");
+        matcher_segments(&self.segments, record, capture, &mut source)?;
+        source.push('$');
+        RegexBuilder::new(&source)
+            .size_limit(MATCHER_SIZE_LIMIT)
+            .build()
+            .map_err(|_| RenderError::TooLarge)
     }
 
     /// Writes the template out for one record, refusing when a required field is missing or misused.
@@ -245,4 +275,39 @@ fn render_field(name: &str, spec: Option<&Spec>, record: &Record) -> Result<Stri
         (Value::Date(_), None) => Err(RenderError::NeedsFormat(name.to_string())),
         (_, Some(spec)) => Err(mismatch(spec)),
     }
+}
+
+fn matcher_segments(
+    segments: &[Segment],
+    record: &Record,
+    capture: &str,
+    out: &mut String,
+) -> Result<(), RenderError> {
+    for segment in segments {
+        match segment {
+            Segment::Literal(text) => out.push_str(&regex::escape(text)),
+            Segment::Field { name, spec } if name == capture => match spec {
+                Some(Spec::Pad { width, .. }) => {
+                    out.push_str(&format!("([0-9]{{{},}})", (*width).max(1)))
+                }
+                _ => out.push_str("([0-9]+)"),
+            },
+            Segment::Field { name, spec } => {
+                out.push_str(&regex::escape(&render_field(name, spec.as_ref(), record)?))
+            }
+            Segment::Optional(inner) => {
+                let mut part = String::new();
+                match matcher_segments(inner, record, capture, &mut part) {
+                    Ok(()) => {
+                        out.push_str("(?:");
+                        out.push_str(&part);
+                        out.push_str(")?");
+                    }
+                    Err(RenderError::MissingField(_)) => {}
+                    Err(other) => return Err(other),
+                }
+            }
+        }
+    }
+    Ok(())
 }

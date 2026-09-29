@@ -1,8 +1,9 @@
 #![allow(dead_code)]
 
+use std::collections::BTreeMap;
 use std::path::Path;
 
-use auto_renamer::{Outcome, Record, Stage, Value};
+use auto_renamer::{Context, Outcome, Record, Stage, Target, Value};
 use chrono::{TimeZone, Utc};
 
 /// The record of a file, modified at a fixed time.
@@ -38,8 +39,42 @@ pub fn stage(declaration: &str) -> Stage {
     Stage::declare(&document["stage"]).expect("the stage should be declared")
 }
 
+/// The files a target folder holds, by folder.
+pub struct Files(BTreeMap<String, Vec<String>>);
+
+impl Files {
+    pub fn none() -> Files {
+        Files(BTreeMap::new())
+    }
+
+    pub fn of(folders: &[(&str, &[&str])]) -> Files {
+        Files(
+            folders
+                .iter()
+                .map(|(folder, names)| {
+                    (
+                        folder.to_string(),
+                        names.iter().map(|name| name.to_string()).collect(),
+                    )
+                })
+                .collect(),
+        )
+    }
+}
+
+impl Target for Files {
+    fn files_in(&self, folder: &Path) -> Vec<String> {
+        folder
+            .to_str()
+            .and_then(|folder| self.0.get(folder))
+            .cloned()
+            .unwrap_or_default()
+    }
+}
+
 pub fn apply(declaration: &str, record: Record) -> Outcome {
-    stage(declaration).apply(record)
+    let files = Files::none();
+    stage(declaration).apply(record, &mut Context::new(&files))
 }
 
 /// The record a stage passed on.

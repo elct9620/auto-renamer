@@ -102,3 +102,28 @@ The examples of the design, each run through the pipeline it gives. They show th
 | When | the pipeline is planned |
 | Then | the plan is `Series/Alpha/Alpha s01e01.mkv` |
 
+## `EX-013` A number that cannot be told falls back to the next one
+
+| Step | Statement |
+| --- | --- |
+| Given | the series pipeline, `show` Eta Show, an empty target, and the file `Series/Eta Show/Season 17/[Team-7][Eta Show 17][03][x264 1080p][TC].mp4` |
+| When | the pipeline is planned |
+| Then | the plan is `Series/Eta Show/Season 17/Eta Show s17e01.mp4` |
+
+
+## `EX-014` A file without a number follows the target
+
+| Step | Statement |
+| --- | --- |
+| Given | the series pipeline, `show` Show, a target folder `Series/Show` holding `Show s01e01.mkv` and `Show s01e02.mkv`, and the file `Series/Show/Show new a.mkv` |
+| When | the pipeline is planned |
+| Then | the plan is `Series/Show/Show s01e03.mkv` |
+
+
+## `EX-015` The number follows the folder the file is lifted into
+
+| Step | Statement |
+| --- | --- |
+| Given | the series pipeline, `show` Show, a target folder `Series/Show/Season 01` holding `Show s01e05.mkv` and a target folder `Series/Show/Season 02` holding `Show s02e09.mkv`, and the file `Series/Show/Season 01/[Rel]/new.mkv` |
+| When | the pipeline is planned |
+| Then | the plan is `Series/Show/Season 01/Show s01e06.mkv` |

@@ -322,7 +322,7 @@ pub struct Rejection {}
 
 ## `Stage::apply`
 
-Run the stage on one record.
+Run the stage on one record, with what the batch and the target let it know.
 
 | Attribute | Value |
 | --- | --- |
@@ -330,7 +330,7 @@ Run the stage on one record.
 
 ```rust
 impl Stage {
-    pub fn apply(&self, record: Record) -> Outcome {}
+    pub fn apply(&self, record: Record, context: &mut Context) -> Outcome {}
 }
 ```
 
@@ -344,6 +344,58 @@ Run the stages that only rewrite the plan on one record, up to the first stage t
 
 ```rust
 impl Pipeline {
-    pub fn plan(&self, record: Record) -> Outcome {}
+    pub fn plan(&self, record: Record, context: &mut Context) -> Outcome {}
+}
+```
+
+## `Target`
+
+What the target folder holds, as far as a stage needs to know.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub trait Target {}
+```
+
+## `Target::files_in`
+
+The names of the files in a folder of the target, relative to its root.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub trait Target {
+    fn files_in(&self, folder: &Path) -> Vec<String>;
+}
+```
+
+## `Context`
+
+What a run of stages shares: the target and the numbers already handed out in the batch.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct Context {}
+```
+
+## `Context::new`
+
+Start a context over a target.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Context {
+    pub fn new(target: &dyn Target) -> Context {}
 }
 ```

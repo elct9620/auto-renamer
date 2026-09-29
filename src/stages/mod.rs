@@ -14,6 +14,7 @@ use std::collections::BTreeMap;
 
 use globset::GlobMatcher;
 
+use crate::context::Context;
 use crate::record::{Record, Value, is_usable_file_name};
 use crate::template::Template;
 
@@ -119,8 +120,8 @@ impl Stage {
         }
     }
 
-    /// Runs the stage on one record.
-    pub fn apply(&self, record: Record) -> Outcome {
+    /// Runs the stage on one record, with what the batch and the target let it know.
+    pub fn apply(&self, record: Record, context: &mut Context) -> Outcome {
         match self {
             Stage::Filter(filter) => filter::apply(filter, record),
             Stage::Number(number) => number::apply(number, record),
@@ -133,7 +134,7 @@ impl Stage {
             Stage::Format(template) => format::apply(template, record),
             Stage::Lift(lift) => path::lift(lift, record),
             Stage::Folder(template) => path::folder(template, record),
-            Stage::Next(next) => next::apply(next, record),
+            Stage::Next(next) => next::apply(next, record, context),
             other => Outcome::rejected(other.name(), "is not available yet"),
         }
     }

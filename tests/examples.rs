@@ -3,8 +3,8 @@ mod common;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use auto_renamer::{Outcome, Pipeline};
-use common::{record_on, text};
+use auto_renamer::{Context, Outcome, Pipeline};
+use common::{Files, record_on, text};
 
 /// The pipelines the design gives as examples, read from the design itself so they cannot drift from it.
 fn design_pipelines() -> BTreeMap<String, Pipeline> {
@@ -34,7 +34,13 @@ fn design_pipelines() -> BTreeMap<String, Pipeline> {
     pipelines
 }
 
-fn planned(pipeline: &str, show: Option<&str>, path: &str, month: (i32, u32, u32)) -> PathBuf {
+fn planned_against(
+    files: &Files,
+    pipeline: &str,
+    show: Option<&str>,
+    path: &str,
+    month: (i32, u32, u32),
+) -> PathBuf {
     let pipelines = design_pipelines();
     let pipeline = pipelines
         .get(pipeline)
@@ -44,14 +50,22 @@ fn planned(pipeline: &str, show: Option<&str>, path: &str, month: (i32, u32, u32
         .unwrap_or_default();
     let record = record_on(path, month.0, month.1, month.2).with_vars(vars);
 
-    match pipeline.plan(record) {
+    match pipeline.plan(record, &mut Context::new(files)) {
         Outcome::Continue(planned) => planned.plan().to_path_buf(),
         other => panic!("expected the file to be planned, got {other:?}"),
     }
 }
 
+fn planned(pipeline: &str, show: Option<&str>, path: &str, month: (i32, u32, u32)) -> PathBuf {
+    planned_against(&Files::none(), pipeline, show, path, month)
+}
+
 fn series(show: &str, path: &str) -> PathBuf {
     planned("video", Some(show), path, (2026, 9, 27))
+}
+
+fn series_against(files: &Files, show: &str, path: &str) -> PathBuf {
+    planned_against(files, "video", Some(show), path, (2026, 9, 27))
 }
 
 // @behavior EX-001
@@ -190,4 +204,41 @@ fn should_not_take_the_first_episode_for_the_default_season() {
     let plan = series("Alpha", "Series/Alpha/[Team] Alpha [01].mkv");
 
     assert_eq!(plan, PathBuf::from("Series/Alpha/Alpha s01e01.mkv"));
+}
+
+// @behavior EX-013
+#[test]
+fn should_fall_back_to_the_next_number_when_the_number_cannot_be_told() {
+    let plan = series(
+        "Eta Show",
+        "Series/Eta Show/Season 17/[Team-7][Eta Show 17][03][x264 1080p][TC].mp4",
+    );
+
+    assert_eq!(
+        plan,
+        PathBuf::from("Series/Eta Show/Season 17/Eta Show s17e01.mp4")
+    );
+}
+
+// @behavior EX-014
+#[test]
+fn should_follow_the_target_for_a_file_without_a_number() {
+    let files = Files::of(&[("Series/Show", &["Show s01e01.mkv", "Show s01e02.mkv"])]);
+
+    let plan = series_against(&files, "Show", "Series/Show/Show new a.mkv");
+
+    assert_eq!(plan, PathBuf::from("Series/Show/Show s01e03.mkv"));
+}
+
+// @behavior EX-015
+#[test]
+fn should_follow_the_folder_the_file_is_lifted_into() {
+    let files = Files::of(&[
+        ("Series/Show/Season 01", &["Show s01e05.mkv"]),
+        ("Series/Show/Season 02", &["Show s02e09.mkv"]),
+    ]);
+
+    let plan = series_against(&files, "Show", "Series/Show/Season 01/[Rel]/new.mkv");
+
+    assert_eq!(plan, PathBuf::from("Series/Show/Season 01/Show s01e06.mkv"));
 }
