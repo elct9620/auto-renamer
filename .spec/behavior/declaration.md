@@ -237,4 +237,10 @@ A pipeline is declared as a list of stages, each a bare name or a table with one
 | Given | the video, subtitle, movie, music and photo pipelines written out in the design |
 | When | each pipeline is read |
 | Then | every pipeline is accepted |
+## `DEC-030` A literal replace needs something to look for
 
+| Step | Statement |
+| --- | --- |
+| Given | the stage list `[{ replace = { find = "", with = "x" } }] |
+| When | the pipeline is read |
+| Then | the pipeline is refused, naming the parameter `find` |

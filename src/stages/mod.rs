@@ -1,15 +1,55 @@
 //! The stages a pipeline is stacked from, as declared in configuration.
 
 mod declare;
+mod filter;
+mod format;
+mod number;
+mod pattern;
+mod text;
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 use globset::GlobMatcher;
 
-use crate::record::Value;
+use crate::record::{Record, Value};
 use crate::template::Template;
 
 pub use declare::DeclareError;
+
+/// What a stage does with one record: pass it on, exclude it, or refuse it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Outcome {
+    Continue(Record),
+    Excluded,
+    Rejected(Rejection),
+}
+
+/// Why a stage refused a record, and which stage it was.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Rejection {
+    pub stage: String,
+    pub reason: String,
+}
+
+impl Outcome {
+    fn rejected(stage: &str, reason: impl Into<String>) -> Outcome {
+        Outcome::Rejected(Rejection {
+            stage: stage.to_string(),
+            reason: reason.into(),
+        })
+    }
+}
+
+/// The text of a field, numbers written out; a date or a missing field says why it has none.
+fn field_text<'a>(record: &'a Record, name: &str) -> Result<Cow<'a, str>, String> {
+    match record.field(name) {
+        Some(Value::Text(text)) => Ok(Cow::Borrowed(text)),
+        Some(Value::Number(number)) => Ok(Cow::Owned(number.to_string())),
+        Some(Value::Date(_)) => Err(format!("the field `{name}` is a date")),
+        None => Err(format!("the field `{name}` does not exist")),
+    }
+}
 
 /// Fixed values written into records by `set` and `default`.
 pub type Fields = BTreeMap<String, Value>;
@@ -58,6 +98,22 @@ impl Stage {
         }
     }
 
+    /// Runs the stage on one record.
+    pub fn apply(&self, record: Record) -> Outcome {
+        match self {
+            Stage::Filter(filter) => filter::apply(filter, record),
+            Stage::Number(number) => number::apply(number, record),
+            Stage::Regex(pattern) => pattern::apply(pattern, record),
+            Stage::Set(fields) => text::set(fields, record),
+            Stage::Default(fields) => text::default(fields, record),
+            Stage::Replace(replace) => text::replace(replace, record),
+            Stage::Case(case) => text::case(case, record),
+            Stage::Strip(strip) => text::strip(strip, record),
+            Stage::Format(template) => format::apply(template, record),
+            other => Outcome::rejected(other.name(), "is not available yet"),
+        }
+    }
+
     /// Whether the stage touches the filesystem, and so must come after every stage that only rewrites the plan.
     pub fn is_effect(&self) -> bool {
         matches!(self, Stage::Move(_) | Stage::Cleanup(_))
@@ -82,8 +138,28 @@ pub struct Number {
     pub from: String,
     pub into: String,
     pub nth: Option<i64>,
-    pub prefix: Option<String>,
+    pub prefix: Option<Prefix>,
     pub exclude: Vec<String>,
+}
+
+/// A word that the number to read must follow.
+#[derive(Debug, Clone)]
+pub struct Prefix {
+    pub word: String,
+    pattern: regex::Regex,
+}
+
+impl Prefix {
+    pub(crate) fn new(word: &str) -> Result<Prefix, regex::Error> {
+        let pattern = regex::Regex::new(&format!(
+            r"(?i)\b{}[\s._-]*([0-9]{{1,3}})",
+            regex::escape(word)
+        ))?;
+        Ok(Prefix {
+            word: word.to_string(),
+            pattern,
+        })
+    }
 }
 
 #[derive(Debug, Clone)]

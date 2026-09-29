@@ -319,3 +319,11 @@ fn should_accept_the_pipelines_the_design_gives_as_examples() {
         assert!(read(source).is_ok(), "should accept {source}");
     }
 }
+
+// @behavior DEC-030
+#[test]
+fn should_refuse_a_literal_replace_that_looks_for_nothing() {
+    let error = refused_declaration(r#"[{ replace = { find = "", with = "x" } }]"#);
+
+    assert_invalid(error, "replace", Some("find"));
+}

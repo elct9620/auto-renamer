@@ -295,3 +295,41 @@ Why a pipeline was refused.
 ```rust
 pub enum PipelineError {}
 ```
+
+## `Outcome`
+
+What a stage does with one record: pass it on, exclude it, or refuse it.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub enum Outcome {}
+```
+
+## `Rejection`
+
+Why a stage refused a record, and which stage it was.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct Rejection {}
+```
+
+## `Stage::apply`
+
+Run the stage on one record.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Stage {
+    pub fn apply(&self, record: Record) -> Outcome {}
+}
+```

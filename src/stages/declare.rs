@@ -5,8 +5,8 @@ use regex::RegexBuilder;
 use toml::Value as Toml;
 
 use super::{
-    Case, CaseKind, Cleanup, Fields, Filter, Lift, Move, Next, Number, OnConflict, Pattern, Rank,
-    Replace, Stage, Strip, Take,
+    Case, CaseKind, Cleanup, Fields, Filter, Lift, Move, Next, Number, OnConflict, Pattern, Prefix,
+    Rank, Replace, Stage, Strip, Take,
 };
 use crate::record::Value;
 use crate::template::Template;
@@ -246,7 +246,12 @@ fn number(value: Option<&Toml>) -> Result<Stage, DeclareError> {
     if nth == Some(0) {
         return Err(args.invalid("nth", "counts from 1, or from the end when negative"));
     }
-    let prefix = args.string("prefix")?;
+    let prefix = match args.string("prefix")? {
+        Some(word) => {
+            Some(Prefix::new(&word).map_err(|error| args.invalid("prefix", error.to_string()))?)
+        }
+        None => None,
+    };
     let exclude = args.strings("exclude")?.unwrap_or_default();
     args.finish()?;
     Ok(Stage::Number(Number {
@@ -297,6 +302,9 @@ fn fields(stage: &'static str, value: Option<&Toml>) -> Result<Fields, DeclareEr
 fn replace(value: Option<&Toml>) -> Result<Stage, DeclareError> {
     let mut args = Args::required("replace", value)?;
     let find = args.required_string("find")?;
+    if find.is_empty() {
+        return Err(args.invalid("find", "needs something to look for"));
+    }
     let with = args.required_string("with")?;
     let field = field_or_default(&mut args, "field")?;
     args.finish()?;
