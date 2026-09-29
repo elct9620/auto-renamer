@@ -7,7 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
-use crate::config::{Unit, Watch};
+use crate::config::{MAX_BATCH_FILES, Unit, Watch};
 
 mod notification;
 
@@ -54,7 +54,7 @@ pub struct Machine {
     unit: Unit,
     window: Duration,
     max_wait: Duration,
-    limit: Option<usize>,
+    limit: usize,
     pending: BTreeMap<PathBuf, Pending>,
     touched: BTreeMap<PathBuf, SystemTime>,
     holds: BTreeMap<PathBuf, Hold>,
@@ -114,14 +114,14 @@ impl Machine {
     fn settle(&mut self, path: PathBuf, activity: SystemTime) {
         let unit = self.unit.of(&path);
         self.holds.remove(&path);
-        self.pending
-            .entry(unit.clone())
-            .or_insert_with(|| Pending {
-                first: activity,
-                files: BTreeSet::new(),
-            })
-            .files
-            .insert(path);
+        let pending = self.pending.entry(unit.clone()).or_insert_with(|| Pending {
+            first: activity,
+            files: BTreeSet::new(),
+        });
+        // One file past the ceiling is enough to know the batch is too large.
+        if pending.files.len() <= MAX_BATCH_FILES {
+            pending.files.insert(path);
+        }
         self.touch(unit, activity);
     }
 
@@ -238,16 +238,14 @@ impl Machine {
         let pending = self.pending.remove(unit)?;
         self.touched.remove(unit);
         let files: Vec<PathBuf> = pending.files.into_iter().collect();
-        match self.limit {
-            _ if files.is_empty() => None,
-            Some(limit) if files.len() > limit => Some(Ready::Skipped {
-                unit: unit.to_path_buf(),
-                files,
-            }),
-            _ => Some(Ready::Batch {
-                unit: unit.to_path_buf(),
-                files,
-            }),
+        if files.is_empty() {
+            return None;
+        }
+        let unit = unit.to_path_buf();
+        if files.len() > self.limit {
+            Some(Ready::Skipped { unit, files })
+        } else {
+            Some(Ready::Batch { unit, files })
         }
     }
 }

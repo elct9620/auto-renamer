@@ -54,13 +54,13 @@ The configuration says which folders are watched, where their files go, and by w
 | When | the configuration is read |
 | Then | the maximum wait is thirty minutes |
 
-## `CFG-007` A batch has no size limit unless set
+## `CFG-007` A batch is limited to a thousand files unless set
 
 | Step | Statement |
 | --- | --- |
 | Given | a configuration with a pipeline `video` and a watch `series` for `/downloads` into `/library` listing `video` |
 | When | the configuration is read |
-| Then | there is no limit |
+| Then | the limit is 1000 files |
 
 ## `CFG-008` A dry run is off unless set
 
@@ -222,3 +222,19 @@ The configuration says which folders are watched, where their files go, and by w
 | When | the configuration is read |
 | Then | the configuration is refused, naming `source` |
 
+
+## `CFG-028` A batch limit above the ceiling is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch with the batch limit 100001 |
+| When | the configuration is read |
+| Then | the configuration is refused, naming `batch_max` |
+
+## `CFG-029` The ceiling itself is accepted
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch with the batch limit 100000 |
+| When | the configuration is read |
+| Then | the watch has the limit 100000 |

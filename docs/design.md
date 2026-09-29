@@ -128,9 +128,9 @@ source 與 target 分離，媒體伺服器只掃描 target，它產生的 `.nfo`
 |---|---|---|
 | `batch_window` | 安靜這麼久就收束 | 5 分鐘 |
 | `batch_max_wait` | 從第一個檔案起最多等這麼久 | 30 分鐘 |
-| `batch_max` | 超過這個檔案數，整批略過 | 無上限 |
+| `batch_max` | 超過這個檔案數，整批略過 | 1000 |
 
-收束時間依單元各自計算，`batch_max_wait` 不可小於 `batch_window`。批次不依數量切開，以免拆散同一群組的檔案。略過的批次留在 source 並記錄原因。
+收束時間依單元各自計算，`batch_max_wait` 不可小於 `batch_window`。批次不依數量切開，以免拆散同一群組的檔案。`batch_max` 不得超過 10 萬，單元收集到這個數量就不再記錄更多檔案，以免記憶體無限成長。略過的批次留在 source 並記錄原因。
 
 ### 1.5 保留檔案
 
@@ -292,7 +292,7 @@ stages = [
 
 | 項目 | 目錄設定 |
 |---|---|
-| 管線、`vars`、`batch_max` | 可覆寫 |
+| 管線、`vars`、`batch_max` | 可覆寫，`batch_max` 不得超過 10 萬 |
 | `source`、`target`、`unit`、`dry_run` | 不可覆寫 |
 | 跳出 target 根的路徑 | 任何層都拒絕 |
 

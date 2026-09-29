@@ -303,3 +303,19 @@ fn should_include_the_end_of_a_hold_in_the_deadline() {
 
     assert_eq!(machine.next_deadline(), Some(at(30, 0)));
 }
+
+// @behavior WCH-022
+#[test]
+fn should_stop_collecting_files_of_a_unit_past_the_ceiling() {
+    let mut machine = machine("unit = \"directory\"\nbatch_max = 100000");
+    for number in 0..100_005 {
+        settled(&mut machine, &format!("Show/{number}.mkv"), at(0, 0));
+    }
+
+    let ready = machine.ready(at(6, 0));
+
+    match ready.as_slice() {
+        [Ready::Skipped { files, .. }] => assert!(files.len() <= 100_001, "{}", files.len()),
+        other => panic!("expected one skipped batch, got {} entries", other.len()),
+    }
+}

@@ -125,3 +125,11 @@ A folder can carry its own `auto-renamer.toml` for the exceptions of what lies i
 | Given | a watch `series` with the variable `show` set to `Alpha` and the pipeline `video` for `mkv` and a folder configuration that defines a pipeline `extra` |
 | When | the folder configuration is applied |
 | Then | the watch still lists only the pipeline `video` |
+
+## `LAY-016` A folder cannot set the batch limit above the ceiling
+
+| Step | Statement |
+| --- | --- |
+| Given | a folder configuration with the batch limit 100001 |
+| When | the folder configuration is read |
+| Then | it is refused, naming `batch_max` |

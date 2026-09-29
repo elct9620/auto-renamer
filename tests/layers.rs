@@ -87,7 +87,7 @@ fn should_keep_the_pipelines_of_other_names() {
 fn should_let_a_folder_set_the_batch_limit() {
     let under = watch().under(&[folder("batch_max = 20")]);
 
-    assert_eq!(under.batch_max, Some(20));
+    assert_eq!(under.batch_max, 20);
 }
 
 // @behavior LAY-006
@@ -166,4 +166,10 @@ fn should_not_run_a_pipeline_a_folder_defines_unless_the_watch_lists_it() {
         .map(|(name, _)| name)
         .collect();
     assert_eq!(names, ["video", "photo"]);
+}
+
+// @behavior LAY-016
+#[test]
+fn should_refuse_a_folder_batch_limit_above_the_ceiling() {
+    assert!(names(&refused("batch_max = 100001"), "batch_max"));
 }

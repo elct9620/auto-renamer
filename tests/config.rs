@@ -101,8 +101,8 @@ fn should_default_the_maximum_wait_to_thirty_minutes() {
 
 // @behavior CFG-007
 #[test]
-fn should_default_to_no_batch_limit() {
-    assert_eq!(series("").batch_max, None);
+fn should_default_to_a_batch_limit_of_a_thousand() {
+    assert_eq!(series("").batch_max, 1000);
 }
 
 // @behavior CFG-008
@@ -260,7 +260,7 @@ fn should_let_a_watch_switch_on_a_dry_run() {
 // @behavior CFG-026
 #[test]
 fn should_read_the_batch_limit_of_a_watch() {
-    assert_eq!(series("batch_max = 5").batch_max, Some(5));
+    assert_eq!(series("batch_max = 5").batch_max, 5);
 }
 
 #[test]
@@ -274,4 +274,19 @@ fn should_refuse_a_default_that_holds_a_source() {
     let text = format!("{PIPELINES}\n[default]\nsource = \"/downloads\"\n");
 
     assert!(names(&refused(&text), "source"));
+}
+
+// @behavior CFG-028
+#[test]
+fn should_refuse_a_batch_limit_above_the_ceiling() {
+    assert!(names(
+        &refused(&with_watch("batch_max = 100001")),
+        "batch_max"
+    ));
+}
+
+// @behavior CFG-029
+#[test]
+fn should_accept_the_ceiling_as_the_batch_limit() {
+    assert_eq!(series("batch_max = 100000").batch_max, 100_000);
 }

@@ -68,7 +68,7 @@ pub fn process_batch(watch: &Watch, unit: &Path, files: &[PathBuf]) -> Vec<Proce
     let layers = folder_configs(&watch.source, unit, &mut processed);
     let effective = watch.under(&layers);
 
-    if effective.batch_max.is_some_and(|limit| files.len() > limit) {
+    if files.len() > effective.batch_max {
         processed.extend(files.iter().map(|origin| Processed {
             origin: origin.clone(),
             what: What::LeftTooLarge,

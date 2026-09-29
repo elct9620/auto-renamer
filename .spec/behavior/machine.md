@@ -175,3 +175,11 @@ The machine decides when the settled files of a unit are handed over as a batch.
 | Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, and `Show/a.mkv` written to at 0 minutes |
 | When | the next deadline is asked for |
 | Then | it is at the maximum wait, 30 minutes |
+
+## `WCH-022` A unit past the ceiling stops collecting files
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch with each folder as a unit and a batch limit of 100000, and 100005 files settled in `Show` |
+| When | the batches that are ready are asked for |
+| Then | the batch is skipped and names no more than 100001 of the files |
