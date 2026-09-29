@@ -296,7 +296,7 @@ stages = [
 | `source`、`target`、`unit`、`dry_run` | 不可覆寫 |
 | 跳出 target 根的路徑 | 任何層都拒絕 |
 
-下載內容不可信，夾帶的 `auto-renamer.toml` 不能決定檔案的去向或分組。
+下載內容不可信，夾帶的 `auto-renamer.toml` 不能決定檔案的去向或分組。它不得超過 64 KiB，管線不得超過 64 個階段。
 
 ### 3.6 設定載入
 
@@ -354,6 +354,8 @@ dry_run = true      # log each plan, run no effect stage
 | 情況 | 結果 |
 |---|---|
 | target 位於 source 內 | 設定驗證拒絕，程式不啟動 |
+| watch 的 source 彼此重疊 | 設定驗證拒絕 |
+| target 與其他 watch 的 source 重疊 | 設定驗證拒絕 |
 | 事件來自 target | 不監看，不處理 |
 | 計畫路徑等於目前路徑 | 不動作 |
 
