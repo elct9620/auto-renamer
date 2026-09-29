@@ -3,7 +3,7 @@ mod common;
 use std::os::unix::fs::symlink;
 use std::path::{Path, PathBuf};
 
-use auto_renamer::{Config, Processed, Renames, What, process_batch};
+use auto_renamer::{Config, Processed, Renames, SkipReason, What, process_batch};
 use common::Sandbox;
 
 const MOVE_AS_SHOW: &str = r#"[{ format = "{show}" }, "move"]"#;
@@ -212,7 +212,7 @@ fn should_skip_a_file_that_vanished() {
 
     assert_eq!(
         run.what(&processed, "Show/x.mkv"),
-        What::Skipped("missing".to_string())
+        What::Skipped(SkipReason::Missing)
     );
 }
 
@@ -232,7 +232,7 @@ fn should_skip_a_link_and_leave_it_untouched() {
 
     assert_eq!(
         run.what(&processed, "Show/x.mkv"),
-        What::Skipped("link".to_string())
+        What::Skipped(SkipReason::Link)
     );
     assert!(run.sandbox.exists("source/Show/x.mkv"));
     assert!(run.sandbox.exists("elsewhere.mkv"));

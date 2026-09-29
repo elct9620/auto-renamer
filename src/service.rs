@@ -7,10 +7,11 @@ use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Utc};
 
-use crate::config::{FolderConfig, MAX_BATCH_FILES, MAX_FOLDER_CONFIG_BYTES, Watch};
+use crate::config::{FolderConfig, MAX_FOLDER_CONFIG_BYTES, Watch};
 use crate::context::{Context, Target};
 use crate::effects::{Applied, Done, Roots, SkipReason, apply_effects};
 use crate::engine::{Verdict, plan_batch};
+use crate::pipeline::Pipeline;
 use crate::record::Record;
 
 /// The name of a folder configuration.
@@ -52,7 +53,7 @@ pub enum What {
     },
     Previewed(PathBuf),
     Unchanged,
-    Skipped(String),
+    Skipped(SkipReason),
     Refused(String),
     Unclaimed,
     Excluded,
@@ -70,6 +71,10 @@ pub struct Processed {
 /// The most times a file may be renamed in place in a row. A pipeline that names its own result again
 /// would otherwise rename it for ever, since every rename is seen as a file that arrived.
 pub const MAX_IN_PLACE_RENAMES: u32 = 5;
+
+/// The most files whose renames in place are remembered, so the record stays bounded however many
+/// files are renamed.
+const MAX_REMEMBERED_RENAMES: usize = 100_000;
 
 /// How many times each file was renamed in place in a row, kept while the program runs. A file the
 /// pipeline leaves as it is has been settled by it and is forgotten.
@@ -94,8 +99,7 @@ impl Renames {
 
     fn renamed(&mut self, from: &Path, to: PathBuf, count: u32) {
         self.counts.remove(from);
-        // Past the ceiling a batch may hold the record stops growing, so its memory stays bounded.
-        if self.counts.len() < MAX_BATCH_FILES {
+        if self.counts.len() < MAX_REMEMBERED_RENAMES {
             self.counts.insert(to, count);
         }
     }
@@ -135,7 +139,7 @@ pub fn process_batch(
             Ok(record) => records.push(record),
             Err(reason) => processed.push(Processed {
                 origin: origin.clone(),
-                what: What::Skipped(reason.to_string()),
+                what: What::Skipped(reason),
             }),
         }
     }
@@ -144,49 +148,14 @@ pub fn process_batch(
     let target = FsTarget::new(target_root);
     let judged = plan_batch(&pipelines, records, &mut Context::new(&target));
     for entry in judged {
-        let what = match entry.verdict {
-            Verdict::Planned(record) => {
-                let pipeline = pipelines
-                    .iter()
-                    .find(|(name, _)| Some(name) == entry.pipeline.as_ref())
-                    .map(|(_, pipeline)| pipeline);
-                let in_place = effective.target.is_none();
-                let count = renames.count(&entry.origin);
-                match pipeline {
-                    Some(_)
-                        if in_place
-                            && record.plan() != record.origin()
-                            && count >= MAX_IN_PLACE_RENAMES =>
-                    {
-                        What::Refused(format!(
-                            "renamed in place {count} times in a row; the pipeline may name its own result again"
-                        ))
-                    }
-                    Some(pipeline) => {
-                        let what = effects_of(pipeline, &record, unit, &roots, effective.dry_run);
-                        if in_place {
-                            match &what {
-                                What::Moved(to) | What::MovedThenFailed { to, .. } => {
-                                    if let Ok(relative) = to.strip_prefix(&effective.source) {
-                                        renames.renamed(
-                                            &entry.origin,
-                                            relative.to_path_buf(),
-                                            count + 1,
-                                        );
-                                    }
-                                }
-                                What::Unchanged => renames.forget(&entry.origin),
-                                _ => {}
-                            }
-                        }
-                        what
-                    }
-                    None => What::Unclaimed,
-                }
+        let what = match (entry.verdict, entry.pipeline) {
+            (Verdict::Planned(record), Some(index)) => {
+                let pipeline = &pipelines[index].1;
+                apply_planned(pipeline, &record, unit, &roots, &effective, renames)
             }
-            Verdict::Excluded => What::Excluded,
-            Verdict::Unclaimed => What::Unclaimed,
-            Verdict::Rejected(rejection) => {
+            (Verdict::Planned(_) | Verdict::Unclaimed, _) => What::Unclaimed,
+            (Verdict::Excluded, _) => What::Excluded,
+            (Verdict::Rejected(rejection), _) => {
                 What::Refused(format!("{}: {}", rejection.stage, rejection.reason))
             }
         };
@@ -199,20 +168,56 @@ pub fn process_batch(
     processed
 }
 
-fn read_record(watch: &Watch, origin: &Path) -> Result<Record, &'static str> {
-    let metadata = fs::symlink_metadata(watch.source.join(origin)).map_err(|_| "missing")?;
+/// Runs the effects of a planned file, unless it has been renamed in place too many times in a row,
+/// and keeps count of its renames in place.
+fn apply_planned(
+    pipeline: &Pipeline,
+    record: &Record,
+    unit: &Path,
+    roots: &Roots,
+    watch: &Watch,
+    renames: &mut Renames,
+) -> What {
+    let in_place = watch.target.is_none();
+    let origin = record.origin();
+    let count = renames.count(origin);
+    if in_place && record.plan() != origin && count >= MAX_IN_PLACE_RENAMES {
+        return What::Refused(format!(
+            "renamed in place {count} times in a row; the pipeline may name its own result again"
+        ));
+    }
+    let what = effects_of(pipeline, record, unit, roots, watch.dry_run);
+    if in_place {
+        match &what {
+            What::Moved(to) | What::MovedThenFailed { to, .. } => {
+                if let Ok(relative) = to.strip_prefix(&watch.source) {
+                    renames.renamed(origin, relative.to_path_buf(), count + 1);
+                }
+            }
+            What::Unchanged => renames.forget(origin),
+            _ => {}
+        }
+    }
+    what
+}
+
+fn read_record(watch: &Watch, origin: &Path) -> Result<Record, SkipReason> {
+    let metadata =
+        fs::symlink_metadata(watch.source.join(origin)).map_err(|_| SkipReason::Missing)?;
     if metadata.file_type().is_symlink() {
-        return Err("link");
+        return Err(SkipReason::Link);
     }
     if !metadata.is_file() {
-        return Err("not a file");
+        return Err(SkipReason::NotAFile);
     }
-    let modified = metadata.modified().map_err(|_| "no modification time")?;
+    let modified = metadata
+        .modified()
+        .map_err(|_| SkipReason::NoModificationTime)?;
     Ok(Record::new(origin, DateTime::<Utc>::from(modified)).with_vars(watch.vars.clone()))
 }
 
 fn effects_of(
-    pipeline: &crate::pipeline::Pipeline,
+    pipeline: &Pipeline,
     record: &Record,
     unit: &Path,
     roots: &Roots,
@@ -239,8 +244,7 @@ fn effects_of(
     match moved {
         Some(Applied::Moved { to, .. }) => What::Moved(to),
         Some(Applied::Preview { to, .. }) => What::Previewed(to),
-        Some(Applied::Skipped(SkipReason::Link)) => What::Skipped("link".to_string()),
-        Some(Applied::Skipped(SkipReason::NotAFile)) => What::Skipped("not a file".to_string()),
+        Some(Applied::Skipped(reason)) => What::Skipped(reason),
         Some(Applied::Unchanged(at)) if dry_run => What::Previewed(at),
         Some(Applied::Unchanged(_)) | None => What::Unchanged,
     }

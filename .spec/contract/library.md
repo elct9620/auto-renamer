@@ -428,7 +428,7 @@ pub enum Verdict {}
 
 ## `Judged`
 
-One file of a batch with the verdict on it.
+One file of a batch with the verdict on it, and the place in the list of the pipeline that claimed it.
 
 | Attribute | Value |
 | --- | --- |
@@ -620,7 +620,7 @@ pub enum Applied {}
 
 ## `SkipReason`
 
-Why a file was skipped rather than moved.
+Why a file was left alone before it could be planned or moved: it is a link, not a regular file, gone, or has no modification time.
 
 | Attribute | Value |
 | --- | --- |

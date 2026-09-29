@@ -31,11 +31,24 @@ pub enum Applied {
     Preview { from: PathBuf, to: PathBuf },
 }
 
-/// Why a file was skipped rather than moved.
+/// Why a file was left alone before it could be planned or moved.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SkipReason {
     Link,
     NotAFile,
+    Missing,
+    NoModificationTime,
+}
+
+impl fmt::Display for SkipReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            SkipReason::Link => "link",
+            SkipReason::NotAFile => "not a file",
+            SkipReason::Missing => "missing",
+            SkipReason::NoModificationTime => "no modification time",
+        })
+    }
 }
 
 /// Why a move was refused or failed, with the file as it was.

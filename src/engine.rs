@@ -18,8 +18,8 @@ pub enum Verdict {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Judged {
     pub origin: PathBuf,
-    /// The pipeline that claimed the file, or none when no pipeline did.
-    pub pipeline: Option<String>,
+    /// Where the pipeline that claimed the file stands in the list planned with, or none when no pipeline did.
+    pub pipeline: Option<usize>,
     pub verdict: Verdict,
 }
 
@@ -111,7 +111,7 @@ pub fn plan_batch(
             };
             Judged {
                 origin,
-                pipeline: pipeline.map(|index| pipelines[index].0.clone()),
+                pipeline,
                 verdict,
             }
         })
