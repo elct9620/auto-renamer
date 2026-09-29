@@ -593,3 +593,63 @@ Why a configuration was refused.
 ```rust
 pub enum ConfigError {}
 ```
+
+## `Roots`
+
+The source a file comes from and the target it goes to, which are one folder when files are renamed in place.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct Roots {}
+```
+
+## `Applied`
+
+What a move did: moved the file, left it as it was, skipped it, or only said what it would do.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub enum Applied {}
+```
+
+## `SkipReason`
+
+Why a file was skipped rather than moved.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub enum SkipReason {}
+```
+
+## `EffectError`
+
+Why a move was refused or failed, with the file as it was.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub enum EffectError {}
+```
+
+## `move_file`
+
+Move the file of a planned record to its plan under the target, or say where it would go.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub fn move_file(stage: &Move, record: &Record, roots: &Roots, dry_run: bool) -> Result<Applied, EffectError> {}
+```

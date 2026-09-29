@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 
 use std::collections::BTreeMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use auto_renamer::{
     ConfigError, Context, Judged, Outcome, Pipeline, Record, Stage, Target, Value, Verdict,
@@ -150,5 +151,77 @@ pub fn names(error: &ConfigError, wanted: &str) -> bool {
         ConfigError::Unknown { key, .. } | ConfigError::Invalid { key, .. } => key == wanted,
         ConfigError::Pipeline { name, .. } => name == wanted,
         _ => false,
+    }
+}
+
+/// A folder of its own under the temporary folder, removed when it goes out of scope.
+pub struct Sandbox {
+    root: PathBuf,
+}
+
+static SANDBOXES: AtomicUsize = AtomicUsize::new(0);
+
+impl Sandbox {
+    pub fn new() -> Sandbox {
+        Sandbox::under(&std::env::temp_dir())
+    }
+
+    /// A sandbox under another folder, such as one on another filesystem.
+    pub fn under(parent: &Path) -> Sandbox {
+        let count = SANDBOXES.fetch_add(1, Ordering::SeqCst);
+        let root = parent.join(format!("auto-renamer-{}-{count}", std::process::id()));
+        std::fs::create_dir_all(&root).expect("the sandbox should be created");
+        Sandbox { root }
+    }
+
+    pub fn path(&self, relative: &str) -> PathBuf {
+        self.root.join(relative)
+    }
+
+    pub fn write(&self, relative: &str, content: &str) {
+        let path = self.path(relative);
+        std::fs::create_dir_all(path.parent().unwrap()).expect("the folder should be created");
+        std::fs::write(path, content).expect("the file should be written");
+    }
+
+    pub fn read(&self, relative: &str) -> Option<String> {
+        std::fs::read_to_string(self.path(relative)).ok()
+    }
+
+    pub fn exists(&self, relative: &str) -> bool {
+        std::fs::symlink_metadata(self.path(relative)).is_ok()
+    }
+
+    pub fn make_dir(&self, relative: &str) {
+        std::fs::create_dir_all(self.path(relative)).expect("the folder should be created");
+    }
+
+    /// The names left in a folder, hidden ones included.
+    pub fn names_in(&self, relative: &str) -> Vec<String> {
+        let mut names: Vec<String> = std::fs::read_dir(self.path(relative))
+            .map(|entries| {
+                entries
+                    .filter_map(|entry| {
+                        Some(entry.ok()?.file_name().to_string_lossy().into_owned())
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        names.sort();
+        names
+    }
+}
+
+impl Drop for Sandbox {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.root);
+    }
+}
+
+/// A move stage as it is written in a pipeline, such as `"move"`.
+pub fn move_stage(declaration: &str) -> auto_renamer::stages::Move {
+    match stage(declaration) {
+        Stage::Move(stage) => stage,
+        other => panic!("expected a move stage, got {other:?}"),
     }
 }
