@@ -6,6 +6,7 @@ pub mod context;
 pub mod effects;
 pub mod engine;
 pub mod pipeline;
+mod reader;
 pub mod record;
 #[cfg(target_os = "linux")]
 pub mod runner;

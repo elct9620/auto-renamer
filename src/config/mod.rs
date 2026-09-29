@@ -1,6 +1,5 @@
 //! What the operator configured, and what a folder may say of the files in it.
 
-mod reader;
 mod unit;
 
 use std::collections::BTreeMap;
@@ -11,8 +10,8 @@ use std::time::Duration;
 use toml::{Table, Value as Toml};
 
 use crate::pipeline::{Pipeline, PipelineError};
+use crate::reader::{Reader, Scope};
 use crate::record::Value;
-use reader::{Reader, invalid};
 pub use unit::Unit;
 
 /// The most a folder configuration may hold, because it comes from downloaded content.
@@ -111,10 +110,10 @@ impl Config {
         let document: Table = source
             .parse()
             .map_err(|error: toml::de::Error| ConfigError::Syntax(error.to_string()))?;
-        let mut root = Reader::new("configuration", document);
+        let mut root = Reader::new("configuration".to_string(), document);
 
         let default = match root.table("default")? {
-            Some(table) => read_settings(Reader::new("default", table))?,
+            Some(table) => read_settings(Reader::new("default".to_string(), table))?,
             None => Settings::default(),
         };
         let definitions = read_pipelines(root.table("pipeline")?.unwrap_or_default())?;
@@ -124,7 +123,7 @@ impl Config {
         let mut watches = Vec::new();
         for (name, value) in declared {
             let scope = format!("watch.{name}");
-            let mut reader = Reader::from_value(scope.clone(), &value)?;
+            let mut reader = table_reader(scope.clone(), &value)?;
             let source = reader
                 .absolute_path("source")?
                 .ok_or_else(|| reader.invalid("source", "is required"))?;
@@ -207,7 +206,7 @@ impl FolderConfig {
         let document: Table = source
             .parse()
             .map_err(|error: toml::de::Error| ConfigError::Syntax(error.to_string()))?;
-        let mut reader = Reader::new("folder configuration", document);
+        let mut reader = Reader::new("folder configuration".to_string(), document);
 
         let vars = read_vars(&mut reader)?;
         let pipelines = read_pipelines(reader.table("pipeline")?.unwrap_or_default())?;
@@ -221,7 +220,7 @@ impl FolderConfig {
     }
 }
 
-fn read_settings(mut reader: Reader) -> Result<Settings, ConfigError> {
+fn read_settings(mut reader: Reader<String>) -> Result<Settings, ConfigError> {
     let batch_window = reader.duration("batch_window")?;
     let batch_max_wait = reader.duration("batch_max_wait")?;
     let batch_max = read_batch_max(&mut reader)?;
@@ -241,26 +240,18 @@ fn read_settings(mut reader: Reader) -> Result<Settings, ConfigError> {
     })
 }
 
-fn read_vars(reader: &mut Reader) -> Result<BTreeMap<String, Value>, ConfigError> {
-    let mut vars = BTreeMap::new();
-    for (name, value) in reader.table("vars")?.unwrap_or_default() {
-        let value = match value {
-            Toml::String(text) => Value::Text(text),
-            Toml::Integer(number) if number >= 0 => Value::Number(number as u64),
-            _ => return Err(invalid("vars", &name, "must be text or a whole number")),
-        };
-        vars.insert(name, value);
-    }
-    Ok(vars)
+fn read_vars(reader: &mut Reader<String>) -> Result<BTreeMap<String, Value>, ConfigError> {
+    let vars = reader.table("vars")?.unwrap_or_default();
+    Reader::new("vars".to_string(), vars).into_values()
 }
 
-fn read_unit(reader: &mut Reader) -> Result<Option<Unit>, ConfigError> {
+fn read_unit(reader: &mut Reader<String>) -> Result<Option<Unit>, ConfigError> {
     match reader.take("unit") {
         None => Ok(None),
         Some(Toml::String(kind)) if kind == "directory" => Ok(Some(Unit::Directory)),
         Some(Toml::String(kind)) if kind == "source" => Ok(Some(Unit::Source)),
         Some(Toml::Table(table)) => {
-            let mut roots = Reader::new("unit", table);
+            let mut roots = Reader::new("unit".to_string(), table);
             let patterns = roots
                 .strings("root")?
                 .ok_or_else(|| reader.invalid("unit", "needs `root`, a list of folder patterns"))?;
@@ -279,7 +270,7 @@ fn read_unit(reader: &mut Reader) -> Result<Option<Unit>, ConfigError> {
 fn read_pipelines(declared: Table) -> Result<BTreeMap<String, Pipeline>, ConfigError> {
     let mut pipelines = BTreeMap::new();
     for (name, value) in declared {
-        let mut reader = Reader::from_value(format!("pipeline.{name}"), &value)?;
+        let mut reader = table_reader(format!("pipeline.{name}"), &value)?;
         let stages = match reader.take("stages") {
             Some(Toml::Array(stages)) => stages,
             _ => return Err(reader.invalid("stages", "must be a list of stages")),
@@ -396,12 +387,43 @@ fn check_apart(watches: &[Watch]) -> Result<(), ConfigError> {
 }
 
 /// The batch limit a table says, which may not be more than the ceiling.
-fn read_batch_max(reader: &mut Reader) -> Result<Option<usize>, ConfigError> {
+fn read_batch_max(reader: &mut Reader<String>) -> Result<Option<usize>, ConfigError> {
     match reader.positive("batch_max")? {
         Some(limit) if limit > MAX_BATCH_FILES => Err(reader.invalid(
             "batch_max",
             format!("may not be more than {MAX_BATCH_FILES}"),
         )),
         limit => Ok(limit),
+    }
+}
+
+impl Scope for String {
+    type Error = ConfigError;
+
+    fn invalid(&self, key: &str, reason: String) -> ConfigError {
+        invalid(self, key, reason)
+    }
+
+    fn unknown(&self, key: &str) -> ConfigError {
+        ConfigError::Unknown {
+            scope: self.clone(),
+            key: key.to_string(),
+        }
+    }
+}
+
+/// The reader of a value that has to be a table, such as one watch or one pipeline.
+fn table_reader(scope: String, value: &Toml) -> Result<Reader<String>, ConfigError> {
+    match value {
+        Toml::Table(table) => Ok(Reader::new(scope, table.clone())),
+        _ => Err(invalid(&scope, &scope, "must be a table")),
+    }
+}
+
+fn invalid(scope: &str, key: &str, reason: impl Into<String>) -> ConfigError {
+    ConfigError::Invalid {
+        scope: scope.to_string(),
+        key: key.to_string(),
+        reason: reason.into(),
     }
 }
