@@ -125,6 +125,9 @@ impl Stage {
 
     /// Runs the stage on one record, with what the batch and the target let it know.
     pub fn apply(&self, record: Record, context: &mut Context) -> Outcome {
+        if let Some(refused) = self.refuse_unreadable(&record) {
+            return refused;
+        }
         match self {
             Stage::Filter(filter) => filter::apply(filter, record),
             Stage::Number(number) => number::apply(number, record),
@@ -147,18 +150,47 @@ impl Stage {
 
     /// Numbers the records of a batch among themselves; only a `rank` stage does anything here.
     pub(crate) fn rank_batch(&self, records: Vec<Record>) -> Option<Vec<Outcome>> {
-        match self {
-            Stage::Rank(rank) => Some(rank::apply(rank, records)),
-            _ => None,
-        }
+        let Stage::Rank(rank) = self else {
+            return None;
+        };
+        let (readable, unreadable): (Vec<_>, Vec<_>) = records
+            .into_iter()
+            .enumerate()
+            .partition(|(_, record)| record.is_readable());
+        let mut ranked = rank::apply(
+            rank,
+            readable.iter().map(|(_, record)| record.clone()).collect(),
+        )
+        .into_iter();
+        let mut outcomes: Vec<(usize, Outcome)> = readable
+            .iter()
+            .filter_map(|(position, _)| Some((*position, ranked.next()?)))
+            .collect();
+        outcomes.extend(unreadable.into_iter().filter_map(|(position, record)| {
+            self.refuse_unreadable(&record)
+                .map(|refused| (position, refused))
+        }));
+        outcomes.sort_by_key(|(position, _)| *position);
+        Some(outcomes.into_iter().map(|(_, outcome)| outcome).collect())
     }
 
     /// Takes fields from what earlier pipelines planned; any stage but `take` refuses.
     pub(crate) fn take_from(&self, record: Record, earlier: &EarlierFiles) -> Outcome {
+        if let Some(refused) = self.refuse_unreadable(&record) {
+            return refused;
+        }
         match self {
             Stage::Take(take) => take::apply(take, record, earlier),
             other => Outcome::rejected(other.name(), "does not take from other files"),
         }
+    }
+
+    /// The refusal of a file whose name is not valid UTF-8, by every stage that would read its name.
+    /// Only the stages that carry the bytes of the path as they are take such a file.
+    fn refuse_unreadable(&self, record: &Record) -> Option<Outcome> {
+        let carries_bytes = matches!(self, Stage::Folder(_) | Stage::Move(_) | Stage::Cleanup(_));
+        (!record.is_readable() && !carries_bytes)
+            .then(|| Outcome::rejected(self.name(), "the file name is not valid UTF-8"))
     }
 
     /// Whether the stage touches the filesystem, and so must come after every stage that only rewrites the plan.

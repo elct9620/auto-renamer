@@ -98,6 +98,13 @@ pub fn plan_batch(
         .zip(origins)
         .map(|(slot, origin)| {
             let (pipeline, verdict) = match slot {
+                Slot::Waiting(record) if !record.is_readable() => (
+                    None,
+                    Verdict::Rejected(Rejection {
+                        stage: "name".to_string(),
+                        reason: "the file name is not valid UTF-8".to_string(),
+                    }),
+                ),
                 Slot::Waiting(_) => (None, Verdict::Unclaimed),
                 Slot::Live { pipeline, record } => (Some(pipeline), Verdict::Planned(record)),
                 Slot::Done { pipeline, verdict } => (pipeline, verdict),

@@ -414,6 +414,20 @@ impl Record {
 }
 ```
 
+## `Record::is_readable`
+
+Whether the whole path is valid UTF-8, so that the name fields could be made from it.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Record {
+    pub fn is_readable(&self) -> bool {}
+}
+```
+
 ## `Verdict`
 
 What a batch made of one file: planned, excluded, unclaimed, or refused.

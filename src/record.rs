@@ -28,32 +28,44 @@ impl Value {
 pub struct Record {
     origin: PathBuf,
     plan: PathBuf,
+    readable: bool,
     fields: BTreeMap<String, Value>,
 }
 
 impl Record {
     /// Creates the record of a file from its path relative to the source and its modification time.
+    ///
+    /// A path that is not valid UTF-8 has no `name`, `ext`, `dir` or `path`, since text made from it would
+    /// stand for a different file.
     pub fn new(path: &Path, mtime: DateTime<Utc>) -> Record {
-        let file_name = lossy(path.file_name());
-        let (name, ext) = split_extension(&file_name);
-        let folder = path.parent().unwrap_or(Path::new(""));
-
-        let fields = BTreeMap::from([
-            ("name".to_string(), Value::Text(name.to_string())),
-            ("ext".to_string(), Value::Text(ext.to_string())),
-            ("dir".to_string(), Value::Text(lossy(folder.file_name()))),
-            (
-                "path".to_string(),
-                Value::Text(folder.to_string_lossy().into_owned()),
-            ),
-            ("mtime".to_string(), Value::Date(mtime)),
-        ]);
+        let readable = path.to_str().is_some();
+        let mut fields = BTreeMap::from([("mtime".to_string(), Value::Date(mtime))]);
+        if readable {
+            let file_name = lossy(path.file_name());
+            let (name, ext) = split_extension(&file_name);
+            let folder = path.parent().unwrap_or(Path::new(""));
+            fields.extend([
+                ("name".to_string(), Value::Text(name.to_string())),
+                ("ext".to_string(), Value::Text(ext.to_string())),
+                ("dir".to_string(), Value::Text(lossy(folder.file_name()))),
+                (
+                    "path".to_string(),
+                    Value::Text(folder.to_string_lossy().into_owned()),
+                ),
+            ]);
+        }
 
         Record {
             origin: path.to_path_buf(),
             plan: path.to_path_buf(),
+            readable,
             fields,
         }
+    }
+
+    /// Whether the whole path is valid UTF-8, so that the name fields could be made from it.
+    pub fn is_readable(&self) -> bool {
+        self.readable
     }
 
     /// Adds variables as fields; a built-in field is never replaced.
