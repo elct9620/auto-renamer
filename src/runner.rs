@@ -2,7 +2,7 @@
 
 use std::fmt;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::time::{Duration, SystemTime};
@@ -56,19 +56,9 @@ impl Session {
         sender: &Sender<Notification>,
         now: SystemTime,
     ) -> Result<Session, RunError> {
-        // A configuration file inside a source would be taken for a file to process.
-        if let Some(watch) = config
-            .watches()
-            .iter()
-            .find(|watch| config_path.starts_with(&watch.source))
-        {
-            return Err(RunError::Config(format!(
-                "{} may not be inside the source {} of `{}`",
-                config_path.display(),
-                watch.source.display(),
-                watch.name
-            )));
-        }
+        config
+            .check_paths(config_path, real_path)
+            .map_err(|error| RunError::Config(error.to_string()))?;
         for warning in config.warnings() {
             eprintln!("[warn] {warning}");
         }
@@ -178,6 +168,18 @@ pub fn run(options: &Options, stop: &AtomicBool, reload: &AtomicBool) -> Result<
         }
     }
     Ok(())
+}
+
+/// Where a path really is, past every link on its way. What does not exist yet, such as a target made on
+/// the first move, is placed under the real location of the part that does.
+fn real_path(path: &Path) -> PathBuf {
+    match fs::canonicalize(path) {
+        Ok(real) => real,
+        Err(_) => match (path.parent(), path.file_name()) {
+            (Some(parent), Some(name)) => real_path(parent).join(name),
+            _ => path.to_path_buf(),
+        },
+    }
 }
 
 fn load(path: &Path) -> Result<Config, RunError> {

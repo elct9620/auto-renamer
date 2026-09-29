@@ -100,9 +100,13 @@ impl<S: Scope> Reader<S> {
         }
     }
 
+    /// An absolute path written without `.` or `..`, so that comparing it with another is exact.
     pub(crate) fn absolute_path(&mut self, key: &str) -> Result<Option<PathBuf>, S::Error> {
         match self.string(key)? {
             None => Ok(None),
+            Some(text) if text.split('/').any(|part| part == "." || part == "..") => {
+                Err(self.invalid(key, "may not hold `.` or `..`"))
+            }
             Some(text) if text.starts_with('/') => Ok(Some(PathBuf::from(text))),
             Some(_) => Err(self.invalid(key, "must be an absolute path")),
         }

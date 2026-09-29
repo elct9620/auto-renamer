@@ -490,6 +490,20 @@ impl Config {
 }
 ```
 
+## `Config::check_paths`
+
+Check where the configuration file, the sources and the targets lie against one another, with each path taken to where `resolve` says it really is.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Config {
+    pub fn check_paths(&self, config_file: &Path, resolve: impl Fn(&Path) -> PathBuf) -> Result<(), ConfigError> {}
+}
+```
+
 ## `Watch`
 
 One watched folder with where its files go and how they are grouped and named.

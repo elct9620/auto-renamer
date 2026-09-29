@@ -246,3 +246,27 @@ The configuration says which folders are watched, where their files go, and by w
 | Given | a watch listing a pipeline whose stages only rewrite the plan |
 | When | the configuration is read |
 | Then | the warnings name the watch and the pipeline |
+
+## `CFG-031` A source or target written with `.` or `..` is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch whose source is `/downloads/../library` |
+| When | the configuration is read |
+| Then | the configuration is refused, naming `source` |
+
+## `CFG-032` Sources that overlap once their real paths are known are refused
+
+| Step | Statement |
+| --- | --- |
+| Given | two watches with the sources `/link` and `/downloads`, where `/link` really is `/downloads/sub` |
+| When | the paths are checked with their real locations |
+| Then | the check is refused, naming `source` |
+
+## `CFG-033` A configuration file inside a source once real paths are known is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch with the source `/link`, where `/link` really is `/etc/auto-renamer`, and the configuration file `/etc/auto-renamer/config.toml` |
+| When | the paths are checked with their real locations |
+| Then | the check is refused, naming `source` |

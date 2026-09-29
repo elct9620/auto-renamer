@@ -307,3 +307,59 @@ fn should_warn_about_a_pipeline_without_an_effect_stage() {
         "{warnings:?}"
     );
 }
+
+// @behavior CFG-031
+#[test]
+fn should_refuse_a_source_written_with_a_parent_folder() {
+    let text = format!(
+        "{PIPELINES}\n[watch.series]\nsource = \"/downloads/../library\"\npipelines = [\"video\"]\n"
+    );
+
+    assert!(names(&refused(&text), "source"));
+}
+
+/// The real location of a path, where `/link` is a link to `to`.
+fn linked(to: &'static str) -> impl Fn(&Path) -> std::path::PathBuf {
+    move |path: &Path| match path.strip_prefix("/link") {
+        Ok(rest) => Path::new(to).join(rest),
+        Err(_) => path.to_path_buf(),
+    }
+}
+
+// @behavior CFG-032
+#[test]
+fn should_refuse_sources_that_overlap_once_their_real_paths_are_known() {
+    let config = Config::parse(&format!(
+        "{PIPELINES}\n[watch.a]\nsource = \"/link\"\npipelines = [\"video\"]\n\n[watch.b]\nsource = \"/downloads\"\npipelines = [\"video\"]\n"
+    ))
+    .expect("the configuration should be accepted as written");
+
+    let checked = config.check_paths(
+        Path::new("/etc/auto-renamer/config.toml"),
+        linked("/downloads/sub"),
+    );
+
+    assert!(names(
+        &checked.expect_err("the paths should be refused"),
+        "source"
+    ));
+}
+
+// @behavior CFG-033
+#[test]
+fn should_refuse_a_configuration_file_inside_a_source_once_real_paths_are_known() {
+    let config = Config::parse(&format!(
+        "{PIPELINES}\n[watch.a]\nsource = \"/link\"\npipelines = [\"video\"]\n"
+    ))
+    .expect("the configuration should be accepted as written");
+
+    let checked = config.check_paths(
+        Path::new("/etc/auto-renamer/config.toml"),
+        linked("/etc/auto-renamer"),
+    );
+
+    assert!(names(
+        &checked.expect_err("the paths should be refused"),
+        "source"
+    ));
+}

@@ -143,3 +143,11 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | Given | a configuration file kept inside the source of its own watch |
 | When | the watcher is started |
 | Then | it stops with a configuration error naming the source |
+
+## `RUN-018` A configuration file reached through a link to a source is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch whose source is a link to the folder holding the configuration file |
+| When | the watcher is started |
+| Then | it stops with a configuration error naming the source |

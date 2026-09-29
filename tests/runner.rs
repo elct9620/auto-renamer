@@ -171,7 +171,31 @@ fn should_refuse_a_configuration_file_inside_a_source() {
     let result = run(&options, &AtomicBool::new(true), &AtomicBool::new(false));
 
     assert!(
-        matches!(&result, Err(RunError::Config(message)) if message.contains(&sandbox.path("source").display().to_string())),
+        matches!(&result, Err(RunError::Config(message)) if message.contains("watch.w: `source`")),
+        "{result:?}"
+    );
+}
+
+// @behavior RUN-018
+#[test]
+fn should_refuse_a_configuration_file_reached_through_a_link_to_a_source() {
+    let sandbox = Sandbox::new();
+    sandbox.make_dir("settings");
+    sandbox.make_dir("target");
+    std::os::unix::fs::symlink(sandbox.path("settings"), sandbox.path("source")).unwrap();
+    sandbox.write(
+        "settings/config.toml",
+        &config_of(&sandbox, r#"[{ format = "renamed" }, "move"]"#),
+    );
+    let options = Options {
+        config: sandbox.path("settings/config.toml"),
+    };
+
+    // Told to stop at once, so a watcher that wrongly starts returns rather than runs on.
+    let result = run(&options, &AtomicBool::new(true), &AtomicBool::new(false));
+
+    assert!(
+        matches!(&result, Err(RunError::Config(message)) if message.contains("watch.w: `source`")),
         "{result:?}"
     );
 }

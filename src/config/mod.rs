@@ -4,7 +4,7 @@ mod unit;
 
 use std::collections::BTreeMap;
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use toml::{Table, Value as Toml};
@@ -142,13 +142,24 @@ impl Config {
             )?);
         }
 
-        check_apart(&watches)?;
-        Ok(Config { watches })
+        let config = Config { watches };
+        check_apart(&config.watches, None, |path| path.to_path_buf())?;
+        Ok(config)
     }
 
     /// The watches in the order of their names.
     pub fn watches(&self) -> &[Watch] {
         &self.watches
+    }
+
+    /// Checks where the configuration file, the sources and the targets lie against one another, with
+    /// each path taken to where `resolve` says it really is, such as past the links on its way.
+    pub fn check_paths(
+        &self,
+        config_file: &Path,
+        resolve: impl Fn(&Path) -> PathBuf,
+    ) -> Result<(), ConfigError> {
+        check_apart(&self.watches, Some(config_file), resolve)
     }
 
     /// What is legal but probably not what was meant, such as a pipeline that never moves anything.
@@ -312,16 +323,6 @@ fn build_watch(
             "may not be shorter than `batch_window`",
         ));
     }
-    if let Some(target) = &target
-        && target.starts_with(&source)
-    {
-        return Err(invalid(
-            &scope,
-            "target",
-            "may not be inside its own source",
-        ));
-    }
-
     let pipeline_names = settings
         .pipelines
         .or_else(|| default.pipelines.clone())
@@ -360,26 +361,60 @@ fn build_watch(
     })
 }
 
-/// Watches must not overlap, and no target may lie among the sources, or files would be planned again after they are moved.
-fn check_apart(watches: &[Watch]) -> Result<(), ConfigError> {
-    for (index, watch) in watches.iter().enumerate() {
-        for other in &watches[index + 1..] {
-            let scope = format!("watch.{}", other.name);
-            if watch.source.starts_with(&other.source) || other.source.starts_with(&watch.source) {
+/// Watches must not overlap, and no target may lie among the sources, or files would be planned again
+/// after they are moved; the configuration file may not lie in a source either, or it would be taken for
+/// a file to process. Each path is compared where `resolve` puts it.
+fn check_apart(
+    watches: &[Watch],
+    config_file: Option<&Path>,
+    resolve: impl Fn(&Path) -> PathBuf,
+) -> Result<(), ConfigError> {
+    let config_file = config_file.map(&resolve);
+    let placed: Vec<(&Watch, PathBuf, Option<PathBuf>)> = watches
+        .iter()
+        .map(|watch| {
+            let target = watch.target.as_deref().map(&resolve);
+            (watch, resolve(&watch.source), target)
+        })
+        .collect();
+    let overlap = |a: &Path, b: &Path| a.starts_with(b) || b.starts_with(a);
+
+    for (index, (watch, source, target)) in placed.iter().enumerate() {
+        let scope = format!("watch.{}", watch.name);
+        if let Some(target) = target
+            && target.starts_with(source)
+        {
+            return Err(invalid(
+                &scope,
+                "target",
+                "may not be inside its own source",
+            ));
+        }
+        if let Some(file) = &config_file
+            && file.starts_with(source)
+        {
+            return Err(invalid(
+                &scope,
+                "source",
+                format!("holds the configuration file `{}`", file.display()),
+            ));
+        }
+        for (other, other_source, _) in &placed[index + 1..] {
+            if overlap(source, other_source) {
                 return Err(invalid(
-                    &scope,
+                    &format!("watch.{}", other.name),
                     "source",
                     format!("overlaps the source of `{}`", watch.name),
                 ));
             }
         }
-        for other in watches.iter().filter(|other| other.name != watch.name) {
-            if let Some(target) = &watch.target
-                && (target.starts_with(&other.source) || other.source.starts_with(target))
+        for (other, other_source, _) in placed.iter().filter(|(other, ..)| other.name != watch.name)
+        {
+            if let Some(target) = target
+                && overlap(target, other_source)
             {
-                let scope = format!("watch.{}", other.name);
                 return Err(invalid(
-                    &scope,
+                    &format!("watch.{}", other.name),
                     "source",
                     format!("overlaps the target of `{}`", watch.name),
                 ));
