@@ -81,9 +81,9 @@ source 與 target 分離，媒體伺服器只掃描 target，它產生的 `.nfo`
 | 產物 | 說明 |
 |---|---|
 | Linux binary | 靜態 musl |
-| 容器映像 | `scratch`，發佈到 ghcr.io |
+| 容器映像 | `scratch`，push main 更新 `latest` |
 
-映像沒有 shell、CA 憑證與時區資料，所以只做本機檔案操作。inotify 是核心功能，不受影響。版本由 release-please 管理。
+映像沒有 shell、CA 憑證與時區資料，所以只做本機檔案操作。inotify 是核心功能，不受影響。版本由 release-please 管理，release 時映像加上版本標籤。
 
 ## 1 監看
 

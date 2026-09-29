@@ -11,7 +11,7 @@
 | 產物 | 取得方式 |
 |---|---|
 | Linux binary | GitHub Releases，靜態 musl，x86_64 與 aarch64 |
-| 容器映像 | `ghcr.io/elct9620/auto-renamer` |
+| 容器映像 | `ghcr.io/elct9620/auto-renamer`，`latest` 或版本標籤 |
 
 只支援 Linux，事件語意依賴 inotify。映像是 `scratch`，沒有 shell，所以只做本機檔案操作。
 
