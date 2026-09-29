@@ -55,10 +55,11 @@ jobs:
           sha256sum "${name}.tar.gz" > "${name}.tar.gz.sha256"
           gh release upload "$TAG" "${name}.tar.gz" "${name}.tar.gz.sha256" --clobber
 
-  # Every push to main updates `latest`; a release adds its version tag to the same build.
+  # The version tag of the image a release made; `latest` is published by ci.yml.
   # amd64 and arm64 build in parallel, each on a native runner (no QEMU).
   docker:
     needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
     uses: docker/github-builder/.github/workflows/build.yml@58cb9f5b71b1836d6f690c1e95effdeb9b98cb8a # v1.17.0
     permissions:
       contents: read
@@ -70,10 +71,9 @@ jobs:
       platforms: linux/amd64,linux/arm64
       meta-images: ghcr.io/${{ github.repository }}
       meta-tags: |
-        type=raw,value=latest
-        type=raw,value=${{ needs.release-please.outputs.tag_name || 'unreleased' }},enable=${{ needs.release-please.outputs.release_created == 'true' }}
+        type=raw,value=${{ needs.release-please.outputs.tag_name }}
     secrets:
       registry-auths: |
         - registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ github.token }}
+          password: ${{ secrets.GITHUB_TOKEN }}

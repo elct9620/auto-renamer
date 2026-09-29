@@ -24,7 +24,7 @@ The Linux-only tests (watch loop, signals, cross-filesystem moves) skip on other
 
 - **Rust version lives in two places**: `rust-toolchain.toml` and `ARG RUST_VERSION` in `Dockerfile`. Change both together.
 - **Releases are driven by release-please**: only Conventional Commits (`feat:`, `fix:`) produce a Release PR; never bump the version or tag by hand.
-- **Binary and image publishing stays inside `release.yml`**: tags created with `GITHUB_TOKEN` do not trigger other workflows, so a separate tag-triggered workflow would never run. The image job runs on every push to main (`latest`) and adds the version tag only when release-please created a release, so `latest` may be ahead of the newest release.
+- **The binaries and the version-tagged image are published inside `release.yml`**: tags created with `GITHUB_TOKEN` do not trigger other workflows, so a separate tag-triggered workflow would never run.
 - **GitHub Actions**: pin every action to a full commit SHA with a version comment. `actions/*`, `docker/*` and `googleapis/release-please-action` are approved; any other third-party action needs the user's approval first.
 - **sumi is pinned by hand in `ci.yml`**: `SUMI_VERSION` and `SUMI_SHA256` change together, because nothing watches a release asset fetched over curl. The specification lives in `.spec/`; `sumi verify` and `sumi fmt --check` must pass.
 - **`tests/examples.rs` reads its pipelines from `docs/design.md`**: keep each example as a `toml` block with a `[pipeline.<name>]` table, or the test stops finding it. The Docker build context excludes `docs/`, so this test runs on the host or in a mounted container, not inside `docker build`.
