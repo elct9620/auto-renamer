@@ -72,3 +72,28 @@ Said of a file whose writing has finished, so it may enter a batch.
 #### Rejected
 
 - `Stable` - Settled is what the design calls it.
+
+### Watch
+
+One watched folder with where its files go, how they are grouped into units, and the pipelines that name them.
+
+#### Rejected
+
+- `Job` - Watch is what the design calls it.
+
+### Folder configuration
+
+The `auto-renamer.toml` a folder carries for the exceptions of what lies in it. It comes from downloaded content, so it may change how files are named and never where they come from, go, or how they are grouped.
+
+#### Rejected
+
+- `Local` - Folder configuration is what the design calls it.
+
+### Verdict
+
+What a batch made of one file: planned, excluded, unclaimed or refused.
+
+#### Rejected
+
+- `Disposition` - Verdict is what the design calls it.
+

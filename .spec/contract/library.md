@@ -449,3 +449,147 @@ Plan a whole batch through the pipelines of a watch, in the order they are liste
 ```rust
 pub fn plan_batch(pipelines: &[(String, Pipeline)], records: Vec<Record>, context: &mut Context) -> Vec<Judged> {}
 ```
+
+## `Config`
+
+What the operator configured: the watches, each with its pipelines and settings.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct Config {}
+```
+
+## `Config::parse`
+
+Read the configuration, refusing everything that would leave a watch unable to run.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Config {
+    pub fn parse(source: &str) -> Result<Config, ConfigError> {}
+}
+```
+
+## `Config::watches`
+
+The watches in the order of their names.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Config {
+    pub fn watches(&self) -> &[Watch] {}
+}
+```
+
+## `Watch`
+
+One watched folder with where its files go and how they are grouped and named.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct Watch {}
+```
+
+## `Watch::pipelines`
+
+The pipelines of the watch, in the order it lists them.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Watch {
+    pub fn pipelines(&self) -> Vec<(String, Pipeline)> {}
+}
+```
+
+## `Watch::under`
+
+The watch as it is for the files of a folder that carries configurations of its own, from the farthest to the nearest.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Watch {
+    pub fn under(&self, folders: &[FolderConfig]) -> Watch {}
+}
+```
+
+## `FolderConfig`
+
+What a folder says of the files in it: variables, pipelines and a batch limit.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct FolderConfig {}
+```
+
+## `FolderConfig::parse`
+
+Read a folder configuration, refusing what a folder may not decide or what is too large.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl FolderConfig {
+    pub fn parse(source: &str) -> Result<FolderConfig, ConfigError> {}
+}
+```
+
+## `Unit`
+
+How a file is assigned to a unit of the source.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub enum Unit {}
+```
+
+## `Unit::of`
+
+The folder of the source, relative to it, that is the unit of a file.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Unit {
+    pub fn of(&self, file: &Path) -> PathBuf {}
+}
+```
+
+## `ConfigError`
+
+Why a configuration was refused.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub enum ConfigError {}
+```

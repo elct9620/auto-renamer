@@ -252,3 +252,11 @@ A pipeline is declared as a list of stages, each a bare name or a table with one
 | Given | the stage list `[{ next = { into = "episode", like = "{name}" } }] |
 | When | the pipeline is read |
 | Then | the pipeline is refused, naming the parameter `like` |
+
+## `DEC-032` A pipeline of too many stages is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | a stage list of 65 stages |
+| When | the pipeline is read |
+| Then | the pipeline is refused |

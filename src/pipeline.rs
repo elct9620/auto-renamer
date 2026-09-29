@@ -6,6 +6,9 @@ use crate::context::Context;
 use crate::record::Record;
 use crate::stages::{DeclareError, Outcome, Stage};
 
+/// The most stages a pipeline may hold, because a declaration may come from downloaded content.
+const MAX_STAGES: usize = 64;
+
 /// The ordered stages a watch applies to the files it claims.
 #[derive(Debug, Clone)]
 pub struct Pipeline {
@@ -17,6 +20,7 @@ pub struct Pipeline {
 pub enum PipelineError {
     Syntax(String),
     NotAList,
+    TooManyStages,
     Declare { index: usize, error: DeclareError },
     PureAfterEffect { stage: String },
     PathAfterNext { stage: String },
@@ -27,6 +31,9 @@ impl fmt::Display for PipelineError {
         match self {
             PipelineError::Syntax(message) => write!(f, "not valid TOML: {message}"),
             PipelineError::NotAList => write!(f, "`stages` must be a list"),
+            PipelineError::TooManyStages => {
+                write!(f, "a pipeline may hold at most {MAX_STAGES} stages")
+            }
             PipelineError::Declare { index, error } => write!(f, "stage {}: {error}", index + 1),
             PipelineError::PureAfterEffect { stage } => {
                 write!(
@@ -49,6 +56,9 @@ impl std::error::Error for PipelineError {}
 impl Pipeline {
     /// Reads a list of stage declarations and checks their order.
     pub fn declare(values: &[Toml]) -> Result<Pipeline, PipelineError> {
+        if values.len() > MAX_STAGES {
+            return Err(PipelineError::TooManyStages);
+        }
         let stages = values
             .iter()
             .enumerate()

@@ -1,0 +1,277 @@
+mod common;
+
+use std::path::Path;
+use std::time::Duration;
+
+use auto_renamer::{Config, ConfigError, Unit, Value, Watch};
+use common::names;
+
+const PIPELINES: &str = r#"
+[pipeline.video]
+stages = [{ filter = { ext = ["mkv"] } }, "move"]
+
+[pipeline.photo]
+stages = ["move"]
+"#;
+
+/// A configuration of the two pipelines above and a watch `series` with the extra lines added to it.
+fn with_watch(extra: &str) -> String {
+    format!(
+        "{PIPELINES}\n[watch.series]\nsource = \"/downloads\"\ntarget = \"/library\"\npipelines = [\"video\"]\n{extra}\n"
+    )
+}
+
+fn read(text: &str) -> Vec<Watch> {
+    Config::parse(text)
+        .expect("the configuration should be accepted")
+        .watches()
+        .to_vec()
+}
+
+fn series(extra: &str) -> Watch {
+    read(&with_watch(extra)).remove(0)
+}
+
+fn refused(text: &str) -> ConfigError {
+    Config::parse(text).expect_err("the configuration should be refused")
+}
+
+fn pipeline_names(watch: &Watch) -> Vec<String> {
+    watch
+        .pipelines()
+        .into_iter()
+        .map(|(name, _)| name)
+        .collect()
+}
+
+// @behavior CFG-001
+#[test]
+fn should_read_the_source_target_and_pipelines_of_a_watch() {
+    let watch = series("");
+
+    assert_eq!(watch.source, Path::new("/downloads"));
+    assert_eq!(watch.target.as_deref(), Some(Path::new("/library")));
+    assert_eq!(pipeline_names(&watch), ["video"]);
+}
+
+// @behavior CFG-002
+#[test]
+fn should_give_every_watch_the_pipelines_the_default_lists() {
+    let text = format!(
+        "{PIPELINES}\n[default]\npipelines = [\"video\"]\n\n[watch.series]\nsource = \"/downloads\"\n"
+    );
+
+    assert_eq!(pipeline_names(&read(&text)[0]), ["video"]);
+}
+
+// @behavior CFG-003
+#[test]
+fn should_let_a_watch_override_the_default() {
+    let text = format!(
+        "{PIPELINES}\n[default]\npipelines = [\"video\"]\n\n[watch.series]\nsource = \"/downloads\"\npipelines = [\"photo\"]\n"
+    );
+
+    assert_eq!(pipeline_names(&read(&text)[0]), ["photo"]);
+}
+
+// @behavior CFG-004
+#[test]
+fn should_merge_the_variables_of_the_default_and_the_watch_by_name() {
+    let text = format!(
+        "{PIPELINES}\n[default]\nvars = {{ show = \"D\", year = 2026 }}\n\n[watch.series]\nsource = \"/downloads\"\nvars = {{ show = \"W\" }}\n"
+    );
+
+    let watch = read(&text).remove(0);
+
+    assert_eq!(watch.vars["show"], Value::Text("W".to_string()));
+    assert_eq!(watch.vars["year"], Value::Number(2026));
+}
+
+// @behavior CFG-005
+#[test]
+fn should_default_the_batch_window_to_five_minutes() {
+    assert_eq!(series("").batch_window, Duration::from_secs(300));
+}
+
+// @behavior CFG-006
+#[test]
+fn should_default_the_maximum_wait_to_thirty_minutes() {
+    assert_eq!(series("").batch_max_wait, Duration::from_secs(1800));
+}
+
+// @behavior CFG-007
+#[test]
+fn should_default_to_no_batch_limit() {
+    assert_eq!(series("").batch_max, None);
+}
+
+// @behavior CFG-008
+#[test]
+fn should_default_to_no_dry_run() {
+    assert!(!series("").dry_run);
+}
+
+// @behavior CFG-009
+#[test]
+fn should_read_durations_in_seconds_minutes_and_hours() {
+    let watch = series("batch_window = \"90s\"\nbatch_max_wait = \"2h\"");
+
+    assert_eq!(watch.batch_window, Duration::from_secs(90));
+    assert_eq!(watch.batch_max_wait, Duration::from_secs(7200));
+}
+
+// @behavior CFG-010
+#[test]
+fn should_refuse_a_duration_without_a_unit() {
+    assert!(names(
+        &refused(&with_watch("batch_window = \"5\"")),
+        "batch_window"
+    ));
+}
+
+// @behavior CFG-011
+#[test]
+fn should_refuse_a_maximum_wait_shorter_than_the_window() {
+    let error = refused(&with_watch(
+        "batch_window = \"10m\"\nbatch_max_wait = \"5m\"",
+    ));
+
+    assert!(names(&error, "batch_max_wait"));
+}
+
+// @behavior CFG-012
+#[test]
+fn should_refuse_a_source_that_is_not_absolute() {
+    let text = format!("{PIPELINES}\n[watch.series]\nsource = \"downloads\"\n");
+
+    assert!(names(&refused(&text), "source"));
+}
+
+// @behavior CFG-013
+#[test]
+fn should_refuse_a_watch_without_a_source() {
+    let text = format!("{PIPELINES}\n[watch.series]\ntarget = \"/library\"\n");
+
+    assert!(names(&refused(&text), "source"));
+}
+
+// @behavior CFG-014
+#[test]
+fn should_refuse_a_target_inside_its_own_source() {
+    let text = format!(
+        "{PIPELINES}\n[watch.series]\nsource = \"/downloads\"\ntarget = \"/downloads/library\"\n"
+    );
+
+    assert!(names(&refused(&text), "target"));
+}
+
+// @behavior CFG-015
+#[test]
+fn should_refuse_a_target_that_is_its_own_source() {
+    let text =
+        format!("{PIPELINES}\n[watch.series]\nsource = \"/downloads\"\ntarget = \"/downloads\"\n");
+
+    assert!(names(&refused(&text), "target"));
+}
+
+// @behavior CFG-016
+#[test]
+fn should_refuse_two_watches_whose_sources_overlap() {
+    let text = format!(
+        "{PIPELINES}\n[watch.a]\nsource = \"/downloads\"\n\n[watch.b]\nsource = \"/downloads/movies\"\n"
+    );
+
+    assert!(names(&refused(&text), "source"));
+}
+
+// @behavior CFG-017
+#[test]
+fn should_refuse_a_target_that_holds_the_source_of_another_watch() {
+    let text = format!(
+        "{PIPELINES}\n[watch.a]\nsource = \"/downloads\"\ntarget = \"/library\"\n\n[watch.b]\nsource = \"/library/incoming\"\ntarget = \"/other\"\n"
+    );
+
+    assert!(names(&refused(&text), "source"));
+}
+
+// @behavior CFG-018
+#[test]
+fn should_refuse_a_watch_naming_a_pipeline_that_is_not_defined() {
+    let text = format!(
+        "{PIPELINES}\n[watch.series]\nsource = \"/downloads\"\npipelines = [\"missing\"]\n"
+    );
+
+    assert!(names(&refused(&text), "pipelines"));
+}
+
+// @behavior CFG-019
+#[test]
+fn should_refuse_a_mistake_in_a_pipeline_with_its_name() {
+    let text =
+        "[pipeline.video]\nstages = [\"shred\"]\n\n[watch.series]\nsource = \"/downloads\"\n";
+
+    assert!(names(&refused(text), "video"));
+}
+
+// @behavior CFG-020
+#[test]
+fn should_refuse_an_unknown_key_by_name() {
+    assert!(names(&refused(&with_watch("colour = \"red\"")), "colour"));
+}
+
+// @behavior CFG-021
+#[test]
+fn should_let_a_watch_without_a_target_rename_in_place() {
+    let text = format!("{PIPELINES}\n[watch.series]\nsource = \"/downloads\"\n");
+
+    assert_eq!(read(&text)[0].target, None);
+}
+
+// @behavior CFG-022
+#[test]
+fn should_refuse_a_batch_limit_that_is_not_positive() {
+    assert!(names(&refused(&with_watch("batch_max = 0")), "batch_max"));
+}
+
+// @behavior CFG-023
+#[test]
+fn should_refuse_a_document_that_is_not_toml() {
+    assert!(matches!(
+        refused("this is = = not toml"),
+        ConfigError::Syntax(_)
+    ));
+}
+
+// @behavior CFG-024
+#[test]
+fn should_refuse_a_variable_that_is_neither_text_nor_a_whole_number() {
+    assert!(names(
+        &refused(&with_watch("vars = { show = [\"a\"] }")),
+        "show"
+    ));
+}
+
+// @behavior CFG-025
+#[test]
+fn should_let_a_watch_switch_on_a_dry_run() {
+    assert!(series("dry_run = true").dry_run);
+}
+
+// @behavior CFG-026
+#[test]
+fn should_read_the_batch_limit_of_a_watch() {
+    assert_eq!(series("batch_max = 5").batch_max, Some(5));
+}
+
+#[test]
+fn should_default_the_unit_to_the_folder_of_the_file() {
+    assert!(matches!(series("").unit, Unit::Directory));
+}
+
+// @behavior CFG-027
+#[test]
+fn should_refuse_a_default_that_holds_a_source() {
+    let text = format!("{PIPELINES}\n[default]\nsource = \"/downloads\"\n");
+
+    assert!(names(&refused(&text), "source"));
+}

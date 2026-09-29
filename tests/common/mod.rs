@@ -4,7 +4,8 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use auto_renamer::{
-    Context, Judged, Outcome, Pipeline, Record, Stage, Target, Value, Verdict, plan_batch,
+    ConfigError, Context, Judged, Outcome, Pipeline, Record, Stage, Target, Value, Verdict,
+    plan_batch,
 };
 use chrono::{TimeZone, Utc};
 
@@ -141,4 +142,13 @@ pub fn assert_refused_by(judged: &[Judged], origin: &str, stage: &str) {
 
 pub fn number(value: u64) -> Value {
     Value::Number(value)
+}
+
+/// Whether a refused configuration names the key, or the pipeline, that was wanted.
+pub fn names(error: &ConfigError, wanted: &str) -> bool {
+    match error {
+        ConfigError::Unknown { key, .. } | ConfigError::Invalid { key, .. } => key == wanted,
+        ConfigError::Pipeline { name, .. } => name == wanted,
+        _ => false,
+    }
 }

@@ -336,3 +336,14 @@ fn should_refuse_a_next_template_that_does_not_mention_the_field_it_fills() {
 
     assert_invalid(error, "next", Some("like"));
 }
+
+// @behavior DEC-032
+#[test]
+fn should_refuse_a_pipeline_of_too_many_stages() {
+    let stages = vec![r#""move""#; 65].join(", ");
+
+    assert_eq!(
+        refused(&format!("[{stages}]")),
+        PipelineError::TooManyStages
+    );
+}
