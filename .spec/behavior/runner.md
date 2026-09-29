@@ -5,6 +5,7 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 ## Includes
 
 - `tests/runner.rs`
+- `tests/signal.rs`
 
 ## `RUN-001` A file dropped in the source ends up in the target
 
@@ -45,3 +46,19 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | Given | a running watcher and a symbolic link in the source to a folder outside it |
 | When | a file is written into the folder outside the source |
 | Then | the file stays where it was and the target stays empty |
+
+## `RUN-006` A termination signal stops the watcher cleanly
+
+| Step | Statement |
+| --- | --- |
+| Given | the program running with a valid configuration |
+| When | it is sent a termination signal |
+| Then | it exits successfully |
+
+## `RUN-007` An interrupt stops the watcher cleanly
+
+| Step | Statement |
+| --- | --- |
+| Given | the program running with a valid configuration |
+| When | it is sent an interrupt |
+| Then | it exits successfully |

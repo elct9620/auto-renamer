@@ -24,7 +24,14 @@ fn main() -> ExitCode {
 
 #[cfg(target_os = "linux")]
 fn start(options: &auto_renamer::Options) -> ExitCode {
-    let stop = std::sync::atomic::AtomicBool::new(false);
+    let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    // As process 1 of a container, a signal without a handler is ignored, so `docker stop` would wait to kill it.
+    for signal in [signal_hook::consts::SIGTERM, signal_hook::consts::SIGINT] {
+        if let Err(error) = signal_hook::flag::register(signal, std::sync::Arc::clone(&stop)) {
+            eprintln!("could not handle signal {signal}: {error}");
+            return ExitCode::from(2);
+        }
+    }
     match auto_renamer::runner::run(options, &stop) {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
