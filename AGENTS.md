@@ -14,6 +14,8 @@ cargo clippy --all-targets --locked -- -D warnings
 cargo test --locked
 ```
 
+The Linux-only tests (watch loop, cross-filesystem moves) run with `docker compose run --rm test`.
+
 `.claude/hooks/edit.sh` formats edited `.rs` files automatically (edition 2024).
 
 ## Constraints
@@ -32,7 +34,8 @@ cargo test --locked
 | Path | What is there |
 |------|---------------|
 | `src/` | Application source (Rust binary crate `auto-renamer`) |
-| `Dockerfile`, `.dockerignore` | Multi-stage image build; `.dockerignore` is an allow-list |
+| `Dockerfile`, `.dockerignore` | Multi-stage image build with a `test` stage; `.dockerignore` is an allow-list |
+| `docker-compose.yml` | `test` service: mounts the repo, two filesystems for cross-device tests |
 | `.github/workflows/ci.yml` | PR / main checks and an image build without push |
 | `.github/workflows/release.yml` | release-please, Linux musl binaries, multi-arch ghcr.io image |
 | `release-please-config.json`, `.release-please-manifest.json` | Versioning config (`release-type: rust`) |

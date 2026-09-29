@@ -15,6 +15,12 @@ RUN mkdir src && echo 'fn main() {}' > src/main.rs \
 COPY src ./src
 RUN cargo build --release --locked
 
+# Linux to run the tests on: real inotify, and a second filesystem for cross-device moves.
+# The source is mounted rather than copied, see docker-compose.yml.
+FROM rust:${RUST_VERSION} AS test
+WORKDIR /app
+CMD ["cargo", "test", "--locked"]
+
 # Statically linked (musl) binary needs no runtime OS.
 FROM scratch
 COPY --from=builder /app/target/release/auto-renamer /auto-renamer

@@ -1,0 +1,20 @@
+# Runs the tests on Linux: `docker compose run --rm test`
+# The temporary folder and /dev/shm are different filesystems, which the cross-device move tests need.
+services:
+  test:
+    build:
+      context: .
+      target: test
+    volumes:
+      - .:/app
+      - target:/app/target
+      - cargo:/usr/local/cargo/registry
+      - scratch:/scratch
+    environment:
+      TMPDIR: /scratch
+    shm_size: 256m
+
+volumes:
+  target:
+  cargo:
+  scratch:
