@@ -411,7 +411,7 @@ dry_run = true      # log each plan, run no effect stage
                              ─► several candidates ─► unset, unless nth
 ```
 
-強標記優先，`exclude` 只作用在掃描。掃描恰好一個候選才採用，多個視為不確定，欄位維持未設，除非明指 `nth`。
+強標記優先，`exclude` 只作用在掃描。掃描恰好一個候選才採用，多個視為不確定，欄位維持未設；明指 `nth` 時只做掃描並依它挑選。
 
 ### 5.4 雜訊清單
 
@@ -486,7 +486,7 @@ dry_run = true      # log each plan, run no effect stage
 | `case` | `to`、`field` | `lower`、`upper`、`title` |
 | `strip` | `groups`、`field` | 去掉括號標籤 |
 
-`from` 與 `field` 預設是 `name`。`regex` 用 Rust `regex` crate 的語法，沒有比對到時不變。`strip` 的 `groups` 預設只有 `["[]"]`，並整理多餘空白。
+`from` 與 `field` 預設是 `name`。`regex` 用 Rust `regex` crate 的語法，沒有比對到時不變，只由數字組成的擷取值成為數字。`strip` 的 `groups` 預設只有 `["[]"]`，並整理多餘空白。
 
 ### 5.10 路徑改寫
 
