@@ -23,6 +23,7 @@ cargo test --locked
 - **Binary and image publishing stays inside `release.yml`**: tags created with `GITHUB_TOKEN` do not trigger other workflows, so a separate tag-triggered workflow would never run.
 - **GitHub Actions**: pin every action to a full commit SHA with a version comment. `actions/*`, `docker/*` and `googleapis/release-please-action` are approved; any other third-party action needs the user's approval first.
 - **sumi is pinned by hand in `ci.yml`**: `SUMI_VERSION` and `SUMI_SHA256` change together, because nothing watches a release asset fetched over curl. The specification lives in `.spec/`; `sumi verify` and `sumi fmt --check` must pass.
+- **`tests/examples.rs` reads its pipelines from `docs/design.md`**: keep each example as a `toml` block with a `[pipeline.<name>]` table, or the test stops finding it. The Docker build context excludes `docs/`, so this test runs on the host or in a mounted container, not inside `docker build`.
 - **Image runtime is `scratch`** with a static musl binary: no CA certificates, timezone data or shell. Adding HTTPS or similar needs a different final stage.
 
 ## Index
@@ -36,4 +37,5 @@ cargo test --locked
 | `release-please-config.json`, `.release-please-manifest.json` | Versioning config (`release-type: rust`) |
 | `.claude/settings.json`, `.claude/hooks/` | Hook registration and scripts |
 | `docs/design.md`, `docs/cases.md`, `docs/architecture.md` | Design, test cases derived from it, module structure |
+| `tests/` | Integration tests through the public API; each claims a behavior with `// @behavior ID` |
 | `.spec/`, `.sumi.json` | sumi specification: glossary, behavior, contract |
