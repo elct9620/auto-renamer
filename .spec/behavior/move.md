@@ -158,3 +158,11 @@ A move puts a file at its plan under the target, and it is the only thing that t
 | Given | a file with the set-user-id bit on one filesystem and a target on another, and the plan `y.mkv` |
 | When | the file is moved |
 | Then | `y.mkv` has no special permission bits |
+
+## `MV-020` A temporary file left by an interrupted move does not block the next one
+
+| Step | Statement |
+| --- | --- |
+| Given | a file on one filesystem, a target on another that holds a hidden `.y.mkv.part` left by an earlier move, and the plan `y.mkv` |
+| When | the file is moved |
+| Then | the target holds the same bytes as `y.mkv` |

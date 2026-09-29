@@ -404,3 +404,24 @@ fn should_not_carry_special_permission_bits_between_filesystems() {
         .mode();
     assert_eq!(mode & 0o7000, 0);
 }
+
+// @behavior MV-020
+#[cfg(target_os = "linux")]
+#[test]
+fn should_not_be_blocked_by_a_temporary_file_an_earlier_move_left() {
+    let Some(target) = other_filesystem() else {
+        eprintln!("skipped: no second filesystem here");
+        return;
+    };
+    let source = Sandbox::new();
+    source.write("x.mkv", "some bytes");
+    target.write(".y.mkv.part", "half");
+    let roots = Roots {
+        source: source.path(""),
+        target: target.path(""),
+    };
+
+    move_file(&reject(), &planned("x.mkv", "y.mkv"), &roots, false).unwrap();
+
+    assert_eq!(target.read("y.mkv").as_deref(), Some("some bytes"));
+}

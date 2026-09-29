@@ -306,7 +306,7 @@ stages = [
 | 指定路徑 | `--config` 參數 |
 | 重新載入 | 設定檔變動時自動載入 |
 | 無效的設定 | 保留舊設定並記錄錯誤 |
-| 停止 | 收到 SIGTERM 或 SIGINT，處理完手上的批次就結束 |
+| 停止 | SIGTERM 或 SIGINT，處理完批次就結束 |
 
 全域設定與目錄設定都會在變動時重新載入，不需要重啟。還在等待收束的批次在停止時放棄，檔案仍留在 source，下次啟動的掃描會重新收集。
 
@@ -339,7 +339,7 @@ dry_run = true      # log each plan, run no effect stage
   other filesystem   copy to temp name ─► rename ─► delete source
 ```
 
-容器內 source 與 target 常是不同的掛載，`rename` 無法跨越。先寫成 `.` 開頭的暫存名，保留修改時間，只留讀寫權限，再改名，媒體伺服器就不會掃到寫到一半的檔案。
+容器內 source 與 target 常是不同的掛載，`rename` 無法跨越。先寫成 `.` 開頭的暫存名，保留修改時間，只留讀寫權限，再改名，媒體伺服器就不會掃到寫到一半的檔案。暫存名每次不同，中斷時留下的暫存檔不會擋住下次搬移。
 
 ### 4.3 撞名
 

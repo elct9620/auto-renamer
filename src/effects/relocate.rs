@@ -2,6 +2,7 @@ use std::fs::{self, File, OpenOptions, Permissions};
 use std::io;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Component, Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::{Applied, EffectError, Roots, SkipReason, exists, io_error};
 use crate::record::{Record, split_extension};
@@ -110,13 +111,17 @@ fn place(from: &Path, to: &Path) -> Result<(), EffectError> {
 }
 
 /// Between filesystems a file is copied under a temporary name beside its destination, so nothing sees
-/// it half written, and only then renamed into place and removed from the source.
+/// it half written, and only then renamed into place and removed from the source. The name is new each
+/// time, so what an interrupted move left behind never blocks the next one.
 fn copy_then_remove(from: &Path, to: &Path) -> Result<(), EffectError> {
     let temporary = to.with_file_name(format!(
-        ".{}.part",
+        ".{}.{}.part",
         to.file_name()
             .map(|name| name.to_string_lossy().into_owned())
-            .unwrap_or_default()
+            .unwrap_or_default(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |elapsed| elapsed.as_nanos())
     ));
 
     if let Err(error) = copy_to(from, &temporary).and_then(|()| put(&temporary, to)) {
