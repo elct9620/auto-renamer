@@ -114,6 +114,8 @@ target 已有 `Show s01e12.mkv`，輸入 `Show 12.mkv`。
 | 整包資料夾內的 `notes.nfo` | 沒有管線認領，留在 source |
 | `vars` 沒有 `show` | `format` 缺欄位，拒絕 |
 | `batch_max = 5`，一批有 6 個檔案 | 整批留在 source |
+| 沒設 `batch_max`，一批有 1001 個檔案 | 整批留在 source |
+| 檔名不是有效 UTF-8 | 讀名稱的階段拒絕 |
 | 資料夾內的 `auto-renamer.toml` | 不處理、不計入 `batch_max` |
 | `dry_run = true` | 只記錄計畫路徑，不搬移、不清理 |
 
