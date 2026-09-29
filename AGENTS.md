@@ -22,6 +22,7 @@ cargo test --locked
 - **Releases are driven by release-please**: only Conventional Commits (`feat:`, `fix:`) produce a Release PR; never bump the version or tag by hand.
 - **Binary and image publishing stays inside `release.yml`**: tags created with `GITHUB_TOKEN` do not trigger other workflows, so a separate tag-triggered workflow would never run.
 - **GitHub Actions**: pin every action to a full commit SHA with a version comment. `actions/*`, `docker/*` and `googleapis/release-please-action` are approved; any other third-party action needs the user's approval first.
+- **sumi is pinned by hand in `ci.yml`**: `SUMI_VERSION` and `SUMI_SHA256` change together, because nothing watches a release asset fetched over curl. The specification lives in `.spec/`; `sumi verify` and `sumi fmt --check` must pass.
 - **Image runtime is `scratch`** with a static musl binary: no CA certificates, timezone data or shell. Adding HTTPS or similar needs a different final stage.
 
 ## Index
@@ -34,3 +35,5 @@ cargo test --locked
 | `.github/workflows/release.yml` | release-please, Linux musl binaries, multi-arch ghcr.io image |
 | `release-please-config.json`, `.release-please-manifest.json` | Versioning config (`release-type: rust`) |
 | `.claude/settings.json`, `.claude/hooks/` | Hook registration and scripts |
+| `docs/design.md`, `docs/cases.md`, `docs/architecture.md` | Design, test cases derived from it, module structure |
+| `.spec/`, `.sumi.json` | sumi specification: glossary, behavior, contract |
