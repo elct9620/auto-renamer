@@ -135,3 +135,11 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | Given | a running watcher without a target whose pipeline puts a prefix before the name |
 | When | a file is written into the source |
 | Then | the file is renamed a few times and then left, with the error output saying it was renamed too many times in a row |
+
+## `RUN-017` A configuration file inside a source is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | a configuration file kept inside the source of its own watch |
+| When | the watcher is started |
+| Then | it stops with a configuration error naming the source |

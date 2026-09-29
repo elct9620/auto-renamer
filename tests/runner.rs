@@ -152,3 +152,26 @@ fn should_follow_a_configuration_replaced_by_another_file() {
 
     assert!(eventually(|| sandbox.exists("target/replaced.mkv")));
 }
+
+// @behavior RUN-017
+#[test]
+fn should_refuse_a_configuration_file_inside_a_source() {
+    let sandbox = Sandbox::new();
+    sandbox.make_dir("source");
+    sandbox.make_dir("target");
+    sandbox.write(
+        "source/config.toml",
+        &config_of(&sandbox, r#"[{ format = "renamed" }, "move"]"#),
+    );
+    let options = Options {
+        config: sandbox.path("source/config.toml"),
+    };
+
+    // Told to stop at once, so a watcher that wrongly starts returns rather than runs on.
+    let result = run(&options, &AtomicBool::new(true), &AtomicBool::new(false));
+
+    assert!(
+        matches!(&result, Err(RunError::Config(message)) if message.contains(&sandbox.path("source").display().to_string())),
+        "{result:?}"
+    );
+}

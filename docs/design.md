@@ -357,6 +357,7 @@ dry_run = true      # log each plan, run no effect stage
 | target 位於 source 內 | 設定驗證拒絕，程式不啟動 |
 | watch 的 source 彼此重疊 | 設定驗證拒絕 |
 | target 與其他 watch 的 source 重疊 | 設定驗證拒絕 |
+| 設定檔位於 source 內 | 設定驗證拒絕，程式不啟動 |
 | 事件來自 target | 不監看，不處理 |
 | 計畫路徑等於目前路徑 | 不動作 |
 | 原地連續改名 5 次 | 第 6 次拒絕並記錄 |

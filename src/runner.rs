@@ -56,6 +56,19 @@ impl Session {
         sender: &Sender<Notification>,
         now: SystemTime,
     ) -> Result<Session, RunError> {
+        // A configuration file inside a source would be taken for a file to process.
+        if let Some(watch) = config
+            .watches()
+            .iter()
+            .find(|watch| config_path.starts_with(&watch.source))
+        {
+            return Err(RunError::Config(format!(
+                "{} may not be inside the source {} of `{}`",
+                config_path.display(),
+                watch.source.display(),
+                watch.name
+            )));
+        }
         for warning in config.warnings() {
             eprintln!("[warn] {warning}");
         }
@@ -77,12 +90,7 @@ impl Session {
             machines.push(machine);
             renames.push(Renames::new());
         }
-        if let Some(folder) = config_path.parent()
-            && !config
-                .watches()
-                .iter()
-                .any(|watch| folder.starts_with(&watch.source))
-        {
+        if let Some(folder) = config_path.parent() {
             watcher
                 .watch(folder, RecursiveMode::NonRecursive)
                 .map_err(|error| RunError::Watch(format!("{}: {error}", folder.display())))?;
