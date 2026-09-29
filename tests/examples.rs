@@ -3,7 +3,7 @@ mod common;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use auto_renamer::{Context, Outcome, Pipeline, Verdict, plan_batch};
+use auto_renamer::{Context, Judged, Pipeline, Verdict, plan_batch};
 use common::{Files, record_on, text};
 
 /// The pipelines the design gives as examples, read from the design itself so they cannot drift from it.
@@ -42,16 +42,27 @@ fn planned_against(
     month: (i32, u32, u32),
 ) -> PathBuf {
     let pipelines = design_pipelines();
-    let pipeline = pipelines
-        .get(pipeline)
-        .unwrap_or_else(|| panic!("the design has no `{pipeline}` pipeline"));
+    let listed = vec![(
+        pipeline.to_string(),
+        pipelines
+            .get(pipeline)
+            .unwrap_or_else(|| panic!("the design has no `{pipeline}` pipeline"))
+            .clone(),
+    )];
     let vars = show
         .map(|show| BTreeMap::from([("show".to_string(), text(show))]))
         .unwrap_or_default();
     let record = record_on(path, month.0, month.1, month.2).with_vars(vars);
 
-    match pipeline.plan(record, &mut Context::new(files)) {
-        Outcome::Continue(planned) => planned.plan().to_path_buf(),
+    // One file is a batch of one.
+    let judged = plan_batch(&listed, vec![record], &mut Context::new(files));
+    match &judged[..] {
+        [
+            Judged {
+                verdict: Verdict::Planned(planned),
+                ..
+            },
+        ] => planned.plan().to_path_buf(),
         other => panic!("expected the file to be planned, got {other:?}"),
     }
 }

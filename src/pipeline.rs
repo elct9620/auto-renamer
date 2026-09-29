@@ -2,9 +2,7 @@ use std::fmt;
 
 use toml::Value as Toml;
 
-use crate::context::Context;
-use crate::record::Record;
-use crate::stages::{DeclareError, Outcome, Stage};
+use crate::stages::{DeclareError, Stage};
 
 /// The most stages a pipeline may hold, because a declaration may come from downloaded content.
 const MAX_STAGES: usize = 64;
@@ -79,18 +77,6 @@ impl Pipeline {
             Some(Toml::Array(values)) => Pipeline::declare(values),
             _ => Err(PipelineError::NotAList),
         }
-    }
-
-    /// Runs the stages that only rewrite the plan, up to the first stage that touches the filesystem.
-    pub fn plan(&self, record: Record, context: &mut Context) -> Outcome {
-        let mut record = record;
-        for stage in self.stages.iter().take_while(|stage| !stage.is_effect()) {
-            match stage.apply(record, context) {
-                Outcome::Continue(next) => record = next,
-                stopped => return stopped,
-            }
-        }
-        Outcome::Continue(record)
     }
 
     /// The declared stages in the order they were written.

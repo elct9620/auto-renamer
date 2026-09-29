@@ -85,3 +85,11 @@ A batch is planned as a whole: files are put in name order, each is claimed by t
 | Given | a pipeline `video` for `mkv` and the file `a.mkv` |
 | When | the batch is planned |
 | Then | the judgment of `a.mkv` names the pipeline `video` |
+
+## `BAT-011` One file is a batch of one, each stage running on the result of the last
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline that reads the episode and then formats the name, and the file `Show - 12.mkv` alone |
+| When | the batch is planned |
+| Then | `Show - 12.mkv` is planned as `e12.mkv` |

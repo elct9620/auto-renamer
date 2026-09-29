@@ -334,20 +334,6 @@ impl Stage {
 }
 ```
 
-## `Pipeline::plan`
-
-Run the stages that only rewrite the plan on one record, up to the first stage that touches the filesystem.
-
-| Attribute | Value |
-| --- | --- |
-| internal | yes |
-
-```rust
-impl Pipeline {
-    pub fn plan(&self, record: Record, context: &mut Context) -> Outcome {}
-}
-```
-
 ## `Target`
 
 What the target folder holds, as far as a stage needs to know.

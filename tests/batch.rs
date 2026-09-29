@@ -180,3 +180,19 @@ fn should_name_the_pipeline_that_claimed_the_file() {
     assert_eq!(claimed("a.mkv"), Some("video".to_string()));
     assert_eq!(claimed("a.nfo"), None);
 }
+
+// @behavior BAT-011
+#[test]
+fn should_plan_one_file_as_a_batch_of_one_each_stage_on_the_result_of_the_last() {
+    let list = [(
+        "all",
+        r#"[{ number = { into = "episode" } }, { format = "e{episode:02}" }]"#,
+    )];
+
+    let judged = planned_batch(&list, vec![record("Show - 12.mkv")]);
+
+    assert_eq!(
+        planned_record(&judged, "Show - 12.mkv").plan(),
+        std::path::Path::new("e12.mkv")
+    );
+}
