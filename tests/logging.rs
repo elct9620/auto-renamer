@@ -70,3 +70,20 @@ fn should_report_a_file_that_no_pipeline_claims() {
         program.log()
     );
 }
+
+// @behavior RUN-013
+#[test]
+fn should_read_the_configuration_again_once_for_one_change() {
+    let sandbox = Sandbox::new();
+    let program = Program::start(&sandbox, r#"["move"]"#, "");
+    let changed = format!("{}\n# changed\n", sandbox.read("config.toml").unwrap());
+
+    sandbox.write("config.toml", &changed);
+    thread::sleep(Duration::from_secs(5));
+
+    let reads = program
+        .log()
+        .matches("the configuration was read again")
+        .count();
+    assert_eq!(reads, 1, "{}", program.log());
+}

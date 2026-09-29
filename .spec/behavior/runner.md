@@ -103,3 +103,11 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | Given | the program running with a pipeline for `mkv` only |
 | When | a `nfo` file is written into the source |
 | Then | its error output says the file was left |
+
+## `RUN-013` A configuration is read again once for one change
+
+| Step | Statement |
+| --- | --- |
+| Given | the program running and its configuration changed once |
+| When | some seconds pass with nothing else changing |
+| Then | its error output says the configuration was read again exactly once |
