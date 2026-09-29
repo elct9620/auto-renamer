@@ -107,3 +107,11 @@ fn should_do_nothing_for_a_pipeline_without_effects() {
     assert_eq!(run.error, None);
     assert!(sandbox.exists("source/Rel/x.mkv"));
 }
+
+// @behavior EFF-005
+#[test]
+fn should_pass_the_record_on_unchanged_when_an_effect_is_applied_while_planning() {
+    let outcome = common::apply(r#""move""#, record("x.mkv"));
+
+    assert_eq!(common::passed(outcome), record("x.mkv"));
+}

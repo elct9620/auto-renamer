@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use super::{Outcome, Take, write_field};
+use super::{Outcome, Take, refuse_unreadable, write_field};
 use crate::record::{Record, split_extension};
 
 /// What an earlier pipeline made of one file, as far as a take stage needs to know.
@@ -51,8 +51,18 @@ impl EarlierFiles {
     }
 }
 
+impl Take {
+    /// Copies fields from what earlier pipelines planned for the file whose name begins this one.
+    pub(crate) fn run(&self, record: Record, earlier: &EarlierFiles) -> Outcome {
+        match refuse_unreadable("take", &record) {
+            Some(refused) => refused,
+            None => apply(self, record, earlier),
+        }
+    }
+}
+
 /// Copies fields from the earlier file whose name is the longest beginning of this record's name.
-pub(super) fn apply(take: &Take, mut record: Record, earlier: &EarlierFiles) -> Outcome {
+fn apply(take: &Take, mut record: Record, earlier: &EarlierFiles) -> Outcome {
     let own = main_name(record.origin());
     let best = earlier.longest_beginning(own, take.from.as_ref());
 

@@ -14,6 +14,9 @@ use crate::reader::{Reader, Scope};
 use crate::record::Value;
 pub use unit::Unit;
 
+/// The name of a folder configuration, which is read as settings and never renamed.
+pub(crate) const FOLDER_CONFIG: &str = "auto-renamer.toml";
+
 /// The most a folder configuration may hold, because it comes from downloaded content.
 pub(crate) const MAX_FOLDER_CONFIG_BYTES: usize = 64 * 1024;
 

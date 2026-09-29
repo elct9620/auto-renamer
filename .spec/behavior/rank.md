@@ -61,3 +61,11 @@ A rank stage numbers the files of a group among themselves: files whose named fi
 | Given | a rank stage into `index` by `episode` preferring `cht`, and the files `a.ass` and `b.CHT.ass`, both with `episode` 1 |
 | When | the batch is planned |
 | Then | `b.CHT.ass` is 1 |
+
+## `RNK-008` A record ranked on its own is a group of one and is not numbered
+
+| Step | Statement |
+| --- | --- |
+| Given | the rank stage by `episode` and one record with `episode` 1 |
+| When | the stage is applied to that record alone |
+| Then | the record goes on without an `index` |

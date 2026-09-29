@@ -7,15 +7,12 @@ use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Utc};
 
-use crate::config::{FolderConfig, MAX_FOLDER_CONFIG_BYTES, Watch};
+use crate::config::{FOLDER_CONFIG, FolderConfig, MAX_FOLDER_CONFIG_BYTES, Watch};
 use crate::context::{Context, Target};
 use crate::effects::{Applied, Done, Roots, SkipReason, apply_effects};
 use crate::engine::{Verdict, plan_batch};
 use crate::pipeline::Pipeline;
 use crate::record::Record;
-
-/// The name of a folder configuration.
-const FOLDER_CONFIG: &str = "auto-renamer.toml";
 
 /// The target folder as the filesystem holds it.
 pub struct FsTarget {

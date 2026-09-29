@@ -37,3 +37,11 @@ A pipeline ends in effect stages, which run in the order they are written on the
 | Given | a pipeline with no effect stage and a file planned to `y.mkv` |
 | When | the effects of the pipeline are applied |
 | Then | nothing is done and the file has not moved |
+
+## `EFF-005` An effect stage applied while planning passes the record on unchanged
+
+| Step | Statement |
+| --- | --- |
+| Given | the `move` stage and a record for `x.mkv` |
+| When | the stage is applied to the record |
+| Then | the record goes on as it was |

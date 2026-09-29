@@ -7,14 +7,11 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
-use crate::config::{MAX_BATCH_FILES, Unit, Watch};
+use crate::config::{FOLDER_CONFIG, MAX_BATCH_FILES, Unit, Watch};
 
 mod notification;
 
 pub use notification::{Translated, rewrites, translate};
-
-/// The name of a folder configuration, which is read as settings and never renamed.
-const FOLDER_CONFIG: &str = "auto-renamer.toml";
 
 /// What happened to a file of the source, as far as the machine needs to know. Paths are relative to the source.
 #[derive(Debug, Clone, PartialEq, Eq)]

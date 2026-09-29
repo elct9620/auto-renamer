@@ -94,3 +94,14 @@ fn should_ignore_case_in_the_preference() {
 
     assert_eq!(index_of(&judged, "b.CHT.ass"), Some(1));
 }
+
+// @behavior RNK-008
+#[test]
+fn should_leave_a_record_ranked_on_its_own_without_a_number() {
+    let ranked = common::run(
+        r#"{ rank = { into = "index", by = ["episode"] } }"#,
+        subtitle("a.ass", 1),
+    );
+
+    assert_eq!(ranked.field("index"), None);
+}

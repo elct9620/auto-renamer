@@ -1,12 +1,31 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use super::{Outcome, Rank, write_field};
+use super::{Outcome, Rank, refuse_unreadable, write_field};
 use crate::record::{Record, Value};
+
+impl Rank {
+    /// Numbers the records of a batch among themselves, answering once for each record in its order.
+    /// A file whose name is not valid UTF-8 is refused and takes no part in the numbering.
+    pub(crate) fn run(&self, records: Vec<Record>) -> Vec<Outcome> {
+        let (readable, unreadable): (Vec<_>, Vec<_>) = records
+            .into_iter()
+            .enumerate()
+            .partition(|(_, record)| record.is_readable());
+        let (positions, readable): (Vec<usize>, Vec<Record>) = readable.into_iter().unzip();
+        let mut outcomes: Vec<(usize, Outcome)> =
+            positions.into_iter().zip(apply(self, readable)).collect();
+        outcomes.extend(unreadable.into_iter().filter_map(|(position, record)| {
+            refuse_unreadable("rank", &record).map(|refused| (position, refused))
+        }));
+        outcomes.sort_by_key(|(position, _)| *position);
+        outcomes.into_iter().map(|(_, outcome)| outcome).collect()
+    }
+}
 
 /// Numbers the records among those whose `by` fields agree, in an order the preference can bend;
 /// a record alone in its group is left without a number. The answers come in the order of the records.
-pub(super) fn apply(rank: &Rank, records: Vec<Record>) -> Vec<Outcome> {
+fn apply(rank: &Rank, records: Vec<Record>) -> Vec<Outcome> {
     let keys: Vec<Result<Vec<String>, String>> = records
         .iter()
         .map(|record| group_key(record, &rank.by))

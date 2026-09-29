@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::context::Context;
 use crate::pipeline::Pipeline;
 use crate::record::Record;
-use crate::stages::{Earlier, EarlierFiles, Outcome, Rejection, Stage};
+use crate::stages::{Earlier, EarlierFiles, Outcome, Rank, Rejection, Stage, Take};
 
 /// What a batch made of one file.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -161,8 +161,8 @@ fn run_stages(
 
     for stage in stages {
         match stage {
-            Stage::Rank(_) => run_rank(stage, index, slots),
-            Stage::Take(_) => run_take(stage, pipelines, index, origins, slots),
+            Stage::Rank(rank) => run_rank(rank, index, slots),
+            Stage::Take(take) => run_take(take, pipelines, index, origins, slots),
             _ => map_live(slots, index, |record| stage.apply(record, context)),
         }
     }
@@ -177,7 +177,7 @@ fn map_live(slots: &mut [Slot], index: usize, mut change: impl FnMut(Record) -> 
     }
 }
 
-fn run_rank(stage: &Stage, index: usize, slots: &mut [Slot]) {
+fn run_rank(rank: &Rank, index: usize, slots: &mut [Slot]) {
     let live: Vec<usize> = (0..slots.len())
         .filter(|&position| slots[position].is_live_in(index))
         .collect();
@@ -185,14 +185,14 @@ fn run_rank(stage: &Stage, index: usize, slots: &mut [Slot]) {
         .iter()
         .filter_map(|&position| slots[position].take_live(index))
         .collect();
-    let outcomes = stage.rank_batch(records).unwrap_or_default();
+    let outcomes = rank.run(records);
     for (position, outcome) in live.into_iter().zip(outcomes) {
         slots[position] = Slot::settle(index, outcome);
     }
 }
 
 fn run_take(
-    stage: &Stage,
+    take: &Take,
     pipelines: &[(String, Pipeline)],
     index: usize,
     origins: &[PathBuf],
@@ -218,7 +218,7 @@ fn run_take(
         .collect();
 
     let earlier = EarlierFiles::new(earlier);
-    map_live(slots, index, |record| stage.take_from(record, &earlier));
+    map_live(slots, index, |record| take.run(record, &earlier));
 }
 
 /// What the pipeline still holds live is planned.
