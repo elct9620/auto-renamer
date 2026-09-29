@@ -26,6 +26,7 @@ impl Value {
 /// One file as it moves through a pipeline: a plan path and its named fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Record {
+    origin: PathBuf,
     plan: PathBuf,
     fields: BTreeMap<String, Value>,
 }
@@ -49,6 +50,7 @@ impl Record {
         ]);
 
         Record {
+            origin: path.to_path_buf(),
             plan: path.to_path_buf(),
             fields,
         }
@@ -60,6 +62,11 @@ impl Record {
             self.fields.entry(name).or_insert(value);
         }
         self
+    }
+
+    /// The path the record was made from, which no stage rewrites.
+    pub fn origin(&self) -> &Path {
+        &self.origin
     }
 
     /// The path the file is planned to be moved to, relative to the source.

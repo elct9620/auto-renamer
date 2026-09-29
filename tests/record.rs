@@ -146,3 +146,13 @@ fn should_leave_the_plan_alone_when_the_name_cannot_be_a_file_name() {
 
     assert_eq!(record.plan(), Path::new("Series/Alpha/x.mkv"));
 }
+
+// @behavior REC-016
+#[test]
+fn should_remember_the_path_it_was_made_from() {
+    let mut record = record("Series/Alpha/x.mkv");
+
+    record.set_field("name", text("y"));
+
+    assert_eq!(record.origin(), Path::new("Series/Alpha/x.mkv"));
+}

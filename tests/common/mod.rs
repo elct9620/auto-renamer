@@ -3,7 +3,9 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use auto_renamer::{Context, Outcome, Record, Stage, Target, Value};
+use auto_renamer::{
+    Context, Judged, Outcome, Pipeline, Record, Stage, Target, Value, Verdict, plan_batch,
+};
 use chrono::{TimeZone, Utc};
 
 /// The record of a file, modified at a fixed time.
@@ -95,4 +97,48 @@ pub fn assert_rejected_by(outcome: Outcome, stage: &str) {
         Outcome::Rejected(rejection) => assert_eq!(rejection.stage, stage),
         other => panic!("expected a refusal by `{stage}`, got {other:?}"),
     }
+}
+
+/// Pipelines by name, each written as the list of its stages.
+pub fn pipelines(list: &[(&str, &str)]) -> Vec<(String, Pipeline)> {
+    list.iter()
+        .map(|(name, stages)| {
+            let pipeline = Pipeline::from_toml(&format!("stages = {stages}"))
+                .expect("the pipeline should be readable");
+            (name.to_string(), pipeline)
+        })
+        .collect()
+}
+
+/// A batch planned against an empty target.
+pub fn planned_batch(list: &[(&str, &str)], records: Vec<Record>) -> Vec<Judged> {
+    let files = Files::none();
+    plan_batch(&pipelines(list), records, &mut Context::new(&files))
+}
+
+pub fn verdict<'a>(judged: &'a [Judged], origin: &str) -> &'a Verdict {
+    &judged
+        .iter()
+        .find(|entry| entry.origin == Path::new(origin))
+        .unwrap_or_else(|| panic!("no verdict for {origin}"))
+        .verdict
+}
+
+/// The record a batch planned for a file.
+pub fn planned_record<'a>(judged: &'a [Judged], origin: &str) -> &'a Record {
+    match verdict(judged, origin) {
+        Verdict::Planned(record) => record,
+        other => panic!("expected {origin} to be planned, got {other:?}"),
+    }
+}
+
+pub fn assert_refused_by(judged: &[Judged], origin: &str, stage: &str) {
+    match verdict(judged, origin) {
+        Verdict::Rejected(rejection) => assert_eq!(rejection.stage, stage),
+        other => panic!("expected {origin} to be refused by `{stage}`, got {other:?}"),
+    }
+}
+
+pub fn number(value: u64) -> Value {
+    Value::Number(value)
 }

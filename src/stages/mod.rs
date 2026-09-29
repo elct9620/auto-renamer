@@ -7,6 +7,8 @@ mod next;
 mod number;
 mod path;
 mod pattern;
+mod rank;
+mod take;
 mod text;
 
 use std::borrow::Cow;
@@ -19,6 +21,7 @@ use crate::record::{Record, Value, is_usable_file_name};
 use crate::template::Template;
 
 pub use declare::DeclareError;
+pub(crate) use take::Earlier;
 
 /// What a stage does with one record: pass it on, exclude it, or refuse it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -135,7 +138,26 @@ impl Stage {
             Stage::Lift(lift) => path::lift(lift, record),
             Stage::Folder(template) => path::folder(template, record),
             Stage::Next(next) => next::apply(next, record, context),
+            Stage::Rank(_) | Stage::Take(_) => {
+                Outcome::rejected(self.name(), "works on a whole batch")
+            }
             other => Outcome::rejected(other.name(), "is not available yet"),
+        }
+    }
+
+    /// Numbers the records of a batch among themselves; only a `rank` stage does anything here.
+    pub(crate) fn rank_batch(&self, records: Vec<Record>) -> Option<Vec<Outcome>> {
+        match self {
+            Stage::Rank(rank) => Some(rank::apply(rank, records)),
+            _ => None,
+        }
+    }
+
+    /// Takes fields from what earlier pipelines planned; any stage but `take` refuses.
+    pub(crate) fn take_from(&self, record: Record, earlier: &[Earlier]) -> Outcome {
+        match self {
+            Stage::Take(take) => take::apply(take, record, earlier),
+            other => Outcome::rejected(other.name(), "does not take from other files"),
         }
     }
 

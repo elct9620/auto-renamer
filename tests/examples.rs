@@ -3,7 +3,7 @@ mod common;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use auto_renamer::{Context, Outcome, Pipeline};
+use auto_renamer::{Context, Outcome, Pipeline, Verdict, plan_batch};
 use common::{Files, record_on, text};
 
 /// The pipelines the design gives as examples, read from the design itself so they cannot drift from it.
@@ -241,4 +241,151 @@ fn should_follow_the_folder_the_file_is_lifted_into() {
     let plan = series_against(&files, "Show", "Series/Show/Season 01/[Rel]/new.mkv");
 
     assert_eq!(plan, PathBuf::from("Series/Show/Season 01/Show s01e06.mkv"));
+}
+
+/// The video and subtitle pipelines of the design planned together over the files of a batch.
+fn batch_against(files: &Files, show: &str, paths: &[&str]) -> Vec<(String, String)> {
+    let pipelines = design_pipelines();
+    let listed = vec![
+        ("video".to_string(), pipelines["video"].clone()),
+        ("subtitle".to_string(), pipelines["subtitle"].clone()),
+    ];
+    let vars = BTreeMap::from([("show".to_string(), text(show))]);
+    let records = paths
+        .iter()
+        .map(|path| record_on(path, 2026, 9, 27).with_vars(vars.clone()))
+        .collect();
+
+    plan_batch(&listed, records, &mut Context::new(files))
+        .into_iter()
+        .map(|judged| {
+            let answer = match judged.verdict {
+                Verdict::Planned(record) => record.plan().display().to_string(),
+                Verdict::Unclaimed => "unclaimed".to_string(),
+                other => format!("{other:?}"),
+            };
+            (judged.origin.display().to_string(), answer)
+        })
+        .collect()
+}
+
+fn plans_of(answers: &[(String, String)], origin: &str) -> String {
+    answers
+        .iter()
+        .find(|(found, _)| found == origin)
+        .unwrap_or_else(|| panic!("no answer for {origin}"))
+        .1
+        .clone()
+}
+
+// @behavior EX-016
+#[test]
+fn should_plan_two_episodes_and_their_subtitles_in_one_batch() {
+    let folder = "Series/Show/Season 01";
+    let paths = [
+        "Series/Show/Season 01/Show 27.mkv",
+        "Series/Show/Season 01/Show 27.cht.ass",
+        "Series/Show/Season 01/Show 27.chs.ass",
+        "Series/Show/Season 01/Show 28.mkv",
+        "Series/Show/Season 01/Show 28.cht.ass",
+    ];
+
+    let answers = batch_against(&Files::none(), "Show", &paths);
+
+    assert_eq!(
+        plans_of(&answers, paths[0]),
+        format!("{folder}/Show s01e27.mkv")
+    );
+    assert_eq!(
+        plans_of(&answers, paths[1]),
+        format!("{folder}/Show s01e27.zh.01.ass")
+    );
+    assert_eq!(
+        plans_of(&answers, paths[2]),
+        format!("{folder}/Show s01e27.zh.02.ass")
+    );
+    assert_eq!(
+        plans_of(&answers, paths[3]),
+        format!("{folder}/Show s01e28.mkv")
+    );
+    assert_eq!(
+        plans_of(&answers, paths[4]),
+        format!("{folder}/Show s01e28.zh.ass")
+    );
+}
+
+// @behavior EX-017
+#[test]
+fn should_empty_a_folder_made_for_one_release_into_the_season() {
+    let release = "Series/Theta_Show/Season 01/[Team][Theta_Show][27][1080p]";
+    let paths = [
+        format!("{release}/[Team][Theta_Show][27][1080p].mkv"),
+        format!("{release}/[Team][Theta_Show][27][1080p].cht.ass"),
+        format!("{release}/[Team][Theta_Show][27][1080p].ass"),
+    ];
+    let listed: Vec<&str> = paths.iter().map(String::as_str).collect();
+
+    let answers = batch_against(&Files::none(), "Theta_Show", &listed);
+
+    let season = "Series/Theta_Show/Season 01";
+    assert_eq!(
+        plans_of(&answers, listed[0]),
+        format!("{season}/Theta_Show s01e27.mkv")
+    );
+    assert_eq!(
+        plans_of(&answers, listed[1]),
+        format!("{season}/Theta_Show s01e27.zh.01.ass")
+    );
+    assert_eq!(
+        plans_of(&answers, listed[2]),
+        format!("{season}/Theta_Show s01e27.zh.02.ass")
+    );
+}
+
+// @behavior EX-018
+#[test]
+fn should_plan_subtitles_in_a_folder_of_the_release_with_their_video() {
+    let paths = [
+        "Series/Show/Season 01/[Rel 05]/Show 05.mkv",
+        "Series/Show/Season 01/[Rel 05]/Subs/Show 05.cht.ass",
+    ];
+
+    let answers = batch_against(&Files::none(), "Show", &paths);
+
+    assert_eq!(
+        plans_of(&answers, paths[0]),
+        "Series/Show/Season 01/Show s01e05.mkv"
+    );
+    assert_eq!(
+        plans_of(&answers, paths[1]),
+        "Series/Show/Season 01/Show s01e05.zh.ass"
+    );
+}
+
+// @behavior EX-019
+#[test]
+fn should_continue_the_target_in_name_order_for_files_without_a_number() {
+    let files = Files::of(&[("Series/Show", &["Show s01e01.mkv", "Show s01e02.mkv"])]);
+    let paths = [
+        "Series/Show/Show new a.mkv",
+        "Series/Show/Show new b.mkv",
+        "Series/Show/Show 07.mkv",
+    ];
+
+    let answers = batch_against(&files, "Show", &paths);
+
+    assert_eq!(plans_of(&answers, paths[2]), "Series/Show/Show s01e07.mkv");
+    assert_eq!(plans_of(&answers, paths[0]), "Series/Show/Show s01e03.mkv");
+    assert_eq!(plans_of(&answers, paths[1]), "Series/Show/Show s01e04.mkv");
+}
+
+// @behavior EX-020
+#[test]
+fn should_leave_a_file_no_pipeline_claims() {
+    let paths = ["Series/Show/Show 05.mkv", "Series/Show/notes.nfo"];
+
+    let answers = batch_against(&Files::none(), "Show", &paths);
+
+    assert_eq!(plans_of(&answers, paths[0]), "Series/Show/Show s01e05.mkv");
+    assert_eq!(plans_of(&answers, paths[1]), "unclaimed");
 }

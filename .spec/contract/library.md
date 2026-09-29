@@ -399,3 +399,53 @@ impl Context {
     pub fn new(target: &dyn Target) -> Context {}
 }
 ```
+
+## `Record::origin`
+
+The path the record was made from, which no stage rewrites.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Record {
+    pub fn origin(&self) -> &Path {}
+}
+```
+
+## `Verdict`
+
+What a batch made of one file: planned, excluded, unclaimed, or refused.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub enum Verdict {}
+```
+
+## `Judged`
+
+One file of a batch with the verdict on it.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct Judged {}
+```
+
+## `plan_batch`
+
+Plan a whole batch through the pipelines of a watch, in the order they are listed.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub fn plan_batch(pipelines: &[(String, Pipeline)], records: Vec<Record>, context: &mut Context) -> Vec<Judged> {}
+```

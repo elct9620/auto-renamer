@@ -127,3 +127,11 @@ A record is one file as it moves through a pipeline: a plan path together with n
 | Given | a record for `Series/Alpha/x.mkv` |
 | When | the field `name` is written as `a/b` |
 | Then | the plan is still `Series/Alpha/x.mkv` |
+
+## `REC-016` A record remembers the path it was made from
+
+| Step | Statement |
+| --- | --- |
+| Given | a record for `Series/Alpha/x.mkv` whose file name has since been rewritten |
+| When | the origin is asked for |
+| Then | it is `Series/Alpha/x.mkv` |
