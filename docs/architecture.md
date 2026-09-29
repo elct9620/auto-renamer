@@ -22,7 +22,7 @@ auto-renamer 是單一套件：`src/lib.rs` 放全部邏輯，`src/main.rs` 只�
 ## 模組地圖
 
 ```
-  main ─► watcher ─► engine ─► stages ─► template ─► record
+  main ─► watcher ─► engine ─► pipeline ─► stages ─► template ─► record
              │          │
              └─► config ┘
   engine ─► effects            only effects touch the filesystem
@@ -36,7 +36,8 @@ auto-renamer 是單一套件：`src/lib.rs` 放全部邏輯，`src/main.rs` 只�
 |---|---|---|
 | `record` | 記錄與欄位 | 否 |
 | `template` | 名稱樣板輸出與反推 | 否 |
-| `stages` | 各階段 | 否 |
+| `stages` | 階段型別、宣告解析與行為 | 否 |
+| `pipeline` | 階段清單與順序驗證 | 否 |
 | `engine` | 批次、認領與管線執行 | 否 |
 | `config` | 設定解析、層疊與驗證 | 讀檔 |
 | `effects` | `move` 與 `cleanup` | 檔案系統 |
