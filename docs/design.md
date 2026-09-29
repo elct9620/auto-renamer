@@ -444,7 +444,15 @@ dry_run = true      # log each plan, run no effect stage
   episode     unset ─► max 2 + 1 = 3
 ```
 
-`next` 只在欄位還沒有值時填入。`like` 樣板用來讀回 target 既有的檔名，只算符合的檔案，例如同一季。同批的多個檔案依序遞增；不寫 `number` 就是一律取最大值加一。
+| `like` 的部分 | 規則 |
+|---|---|
+| 已有值的欄位 | 代入目前的值，當成字面文字 |
+| `into` 欄位 | 唯一的擷取群組，`:02` 表示至少 2 位數 |
+| 其他未設的欄位 | 拒絕該檔案 |
+| 副檔名 | 不比對，只看主檔名 |
+| 掃描的資料夾 | 計畫路徑目前所在的 target 資料夾 |
+
+`next` 只在欄位未設時填入，取符合的既有檔案的最大值加一，沒有符合就是 1。同批的檔案依序遞增；路徑階段如 `lift` 必須排在它之前。
 
 ### 5.7 分組編號
 
@@ -504,7 +512,7 @@ dry_run = true      # log each plan, run no effect stage
 |---|---|
 | `{field}` | 取欄位值 |
 | `{field:02}` | 數字補零到至少 2 位 |
-| `{mtime:%Y-%m}` | 日期欄位依格式輸出 |
+| `{mtime:%Y-%m}` | 日期欄位依 strftime 格式輸出 |
 | `[...]` | 可選片段，欄位都有值才輸出 |
 | `{{`、`}}`、`[[`、`]]` | 字面的括號 |
 
@@ -519,8 +527,8 @@ stages = [
   { number = { from = "path", into = "season", prefix = "Season" } },
   { number = { into = "episode", exclude = ["season"] } },
   { default = { season = 1 } },
-  { next = { into = "episode", like = "{show} s{season:02}e{episode:02}" } },
   { lift = { to = "Season *" } },
+  { next = { into = "episode", like = "{show} s{season:02}e{episode:02}" } },
   { format = "{show} s{season:02}e{episode:02}" },
   "move",
   { cleanup = { keep = ["Season *"] } },
@@ -579,5 +587,6 @@ stages = [
 | 跨單元關聯 | 關聯範圍以單元為界 |
 | 依數量切批次 | 會拆散同一群組的檔案 |
 | 目錄層宣告單元 | 單元先於目錄設定決定 |
+| 符號連結 | 現階段略過，不處理也不跟隨 |
 | 檔案內容標籤（EXIF、ID3） | 讀內容破壞純函式承諾 |
 | 從檔名推斷作品名 | 作品名由使用者指定 |

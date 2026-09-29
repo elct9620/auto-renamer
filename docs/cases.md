@@ -83,7 +83,17 @@ target 已有 `Show s01e01.mkv`、`Show s01e02.mkv`，檔名沒有集數的檔�
 
 檔名有集數的檔案，`next` 不動作。
 
-### 3.2 撞名
+### 3.2 提出後遞增
+
+target 的 `Series/Show/Season 01/` 已有 `Show s01e05.mkv`，`Season 02/` 有 `Show s02e09.mkv`。
+
+| 輸入 | 輸出 |
+|---|---|
+| `Series/Show/Season 01/[Rel]/new.mkv` | `Series/Show/Season 01/Show s01e06.mkv` |
+
+`lift` 先提出整包資料夾，`next` 才掃描 `Season 01/`，第 2 季的檔案不計入。
+
+### 3.3 撞名
 
 target 已有 `Show s01e12.mkv`，輸入 `Show 12.mkv`。
 
@@ -95,7 +105,7 @@ target 已有 `Show s01e12.mkv`，輸入 `Show 12.mkv`。
 
 任何情況都不覆寫既有檔案。
 
-### 3.3 拒絕與不動
+### 3.4 拒絕與不動
 
 這些情況都遵循「不確定就不動」，檔案留在 source 並記錄原因。
 
