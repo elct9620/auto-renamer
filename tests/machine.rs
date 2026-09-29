@@ -25,7 +25,7 @@ fn settled(machine: &mut Machine, name: &str, when: SystemTime) {
 }
 
 fn batch(unit: &str, files: &[&str]) -> Ready {
-    Ready::Batch {
+    Ready {
         unit: path(unit),
         files: files.iter().map(|file| path(file)).collect(),
     }
@@ -86,7 +86,7 @@ fn should_close_a_batch_that_never_goes_quiet_at_the_maximum_wait() {
 
     let ready = machine.ready(at(30, 0));
 
-    assert!(matches!(ready.as_slice(), [Ready::Batch { files, .. }] if files.len() == 8));
+    assert!(matches!(ready.as_slice(), [Ready { files, .. }] if files.len() == 8));
 }
 
 // @behavior WCH-006
@@ -117,7 +117,7 @@ fn should_never_let_a_folder_configuration_into_a_batch() {
 
 // @behavior WCH-008
 #[test]
-fn should_skip_a_batch_over_the_limit_whole() {
+fn should_hand_over_a_batch_over_the_limit_for_the_service_to_judge() {
     let mut machine = machine("batch_max = 2");
     for name in ["Show/a.mkv", "Show/b.mkv", "Show/c.mkv"] {
         settled(&mut machine, name, at(0, 0));
@@ -127,23 +127,7 @@ fn should_skip_a_batch_over_the_limit_whole() {
 
     assert_eq!(
         ready,
-        [Ready::Skipped {
-            unit: path("Show"),
-            files: vec![path("Show/a.mkv"), path("Show/b.mkv"), path("Show/c.mkv")]
-        }]
-    );
-}
-
-// @behavior WCH-009
-#[test]
-fn should_hand_over_a_batch_at_the_limit() {
-    let mut machine = machine("batch_max = 2");
-    settled(&mut machine, "Show/a.mkv", at(0, 0));
-    settled(&mut machine, "Show/b.mkv", at(0, 0));
-
-    assert_eq!(
-        machine.ready(at(5, 0)),
-        [batch("Show", &["Show/a.mkv", "Show/b.mkv"])]
+        [batch("Show", &["Show/a.mkv", "Show/b.mkv", "Show/c.mkv"])]
     );
 }
 
@@ -315,7 +299,7 @@ fn should_stop_collecting_files_of_a_unit_past_the_ceiling() {
     let ready = machine.ready(at(6, 0));
 
     match ready.as_slice() {
-        [Ready::Skipped { files, .. }] => assert!(files.len() <= 100_001, "{}", files.len()),
-        other => panic!("expected one skipped batch, got {} entries", other.len()),
+        [Ready { files, .. }] => assert!(files.len() <= 100_001, "{}", files.len()),
+        other => panic!("expected one batch, got {} entries", other.len()),
     }
 }

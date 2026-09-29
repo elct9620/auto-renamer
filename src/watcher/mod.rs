@@ -29,11 +29,12 @@ pub enum Event {
     Found { path: PathBuf, modified: SystemTime },
 }
 
-/// A batch the machine hands over, or one it skipped for being too large.
+/// A batch the machine hands over: the settled files of one unit. Whether it is too large is decided
+/// where the folder configurations that may raise the limit are read.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Ready {
-    Batch { unit: PathBuf, files: Vec<PathBuf> },
-    Skipped { unit: PathBuf, files: Vec<PathBuf> },
+pub struct Ready {
+    pub unit: PathBuf,
+    pub files: Vec<PathBuf>,
 }
 
 struct Pending {
@@ -54,20 +55,18 @@ pub struct Machine {
     unit: Unit,
     window: Duration,
     max_wait: Duration,
-    limit: usize,
     pending: BTreeMap<PathBuf, Pending>,
     touched: BTreeMap<PathBuf, SystemTime>,
     holds: BTreeMap<PathBuf, Hold>,
 }
 
 impl Machine {
-    /// Starts a machine for a watch, with its unit, window, maximum wait and batch limit.
+    /// Starts a machine for a watch, with its unit, window and maximum wait.
     pub fn new(watch: &Watch) -> Machine {
         Machine {
             unit: watch.unit.clone(),
             window: watch.batch_window,
             max_wait: watch.batch_max_wait,
-            limit: watch.batch_max,
             pending: BTreeMap::new(),
             touched: BTreeMap::new(),
             holds: BTreeMap::new(),
@@ -241,12 +240,10 @@ impl Machine {
         if files.is_empty() {
             return None;
         }
-        let unit = unit.to_path_buf();
-        if files.len() > self.limit {
-            Some(Ready::Skipped { unit, files })
-        } else {
-            Some(Ready::Batch { unit, files })
-        }
+        Some(Ready {
+            unit: unit.to_path_buf(),
+            files,
+        })
     }
 }
 

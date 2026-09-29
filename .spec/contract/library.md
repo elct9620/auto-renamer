@@ -716,14 +716,14 @@ pub enum Event {}
 
 ## `Ready`
 
-A batch the machine hands over, or one it skipped for being too large.
+A batch the machine hands over: the settled files of one unit.
 
 | Attribute | Value |
 | --- | --- |
 | internal | yes |
 
 ```rust
-pub enum Ready {}
+pub struct Ready {}
 ```
 
 ## `Machine`
@@ -740,7 +740,7 @@ pub struct Machine {}
 
 ## `Machine::new`
 
-Start a machine for a watch, with its unit, window, maximum wait and batch limit.
+Start a machine for a watch, with its unit, window and maximum wait.
 
 | Attribute | Value |
 | --- | --- |

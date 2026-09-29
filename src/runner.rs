@@ -114,12 +114,8 @@ impl Session {
     fn process_ready(&mut self, now: SystemTime) {
         let watches = self.config.watches().iter();
         for ((watch, machine), renames) in watches.zip(&mut self.machines).zip(&mut self.renames) {
-            for ready in machine.ready(now) {
-                match ready {
-                    Ready::Batch { unit, files } | Ready::Skipped { unit, files } => {
-                        process_batch(watch, &unit, &files, renames);
-                    }
-                }
+            for Ready { unit, files } in machine.ready(now) {
+                process_batch(watch, &unit, &files, renames);
             }
         }
     }

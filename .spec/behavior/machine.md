@@ -62,21 +62,13 @@ The machine decides when the settled files of a unit are handed over as a batch.
 | When | the machine is asked when they are due |
 | Then | the batch holds `Show/a.mkv` only |
 
-## `WCH-008` A batch over the limit is skipped whole
+## `WCH-008` A batch over the batch limit is still handed over, for the service to judge
 
 | Step | Statement |
 | --- | --- |
 | Given | the same watch with a batch limit of 2, and three files settled in `Show` |
 | When | the machine is asked when they are due |
-| Then | the batch is reported as skipped, with its three files, and no batch is handed over |
-
-## `WCH-009` A batch at the limit is handed over
-
-| Step | Statement |
-| --- | --- |
-| Given | the same watch with a batch limit of 2, and two files settled in `Show` |
-| When | the machine is asked when they are due |
-| Then | the batch is handed over |
+| Then | one batch of the three files is handed over |
 
 ## `WCH-010` A file being written holds its unit open
 
@@ -182,4 +174,4 @@ The machine decides when the settled files of a unit are handed over as a batch.
 | --- | --- |
 | Given | a watch with each folder as a unit and a batch limit of 100000, and 100005 files settled in `Show` |
 | When | the batches that are ready are asked for |
-| Then | the batch is skipped and names no more than 100001 of the files |
+| Then | the batch handed over names no more than 100001 of the files |
