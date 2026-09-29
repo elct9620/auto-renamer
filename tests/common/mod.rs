@@ -233,3 +233,83 @@ pub fn cleanup_stage(declaration: &str) -> auto_renamer::stages::Cleanup {
         other => panic!("expected a cleanup stage, got {other:?}"),
     }
 }
+
+/// The program running over a sandbox with `source` and `target` folders, killed if a test ends before it did.
+pub struct Program {
+    child: std::process::Child,
+    log: PathBuf,
+}
+
+impl Program {
+    /// Starts the program with a pipeline of `stages`, and `extra` lines in the watch.
+    pub fn start(sandbox: &Sandbox, stages: &str, extra: &str) -> Program {
+        sandbox.make_dir("source");
+        sandbox.make_dir("target");
+        sandbox.write(
+            "config.toml",
+            &format!(
+                "[pipeline.p]\nstages = {stages}\n\n[watch.w]\nsource = \"{}\"\ntarget = \"{}\"\npipelines = [\"p\"]\nunit = \"source\"\nbatch_window = \"1s\"\nbatch_max_wait = \"3s\"\n{extra}\n",
+                sandbox.path("source").display(),
+                sandbox.path("target").display(),
+            ),
+        );
+        let log = sandbox.path("log.txt");
+        let child = std::process::Command::new(env!("CARGO_BIN_EXE_auto-renamer"))
+            .arg("--config")
+            .arg(sandbox.path("config.toml"))
+            .stderr(std::fs::File::create(&log).expect("the log should be created"))
+            .spawn()
+            .expect("the program should start");
+        std::thread::sleep(std::time::Duration::from_millis(1500));
+        Program { child, log }
+    }
+
+    pub fn signal(&self, name: &str) {
+        let status = std::process::Command::new("kill")
+            .arg(format!("-{name}"))
+            .arg(self.child.id().to_string())
+            .status()
+            .expect("kill should run");
+        assert!(status.success());
+    }
+
+    /// Whether the program exited successfully within five seconds.
+    pub fn exits_successfully(&mut self) -> bool {
+        let until = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while std::time::Instant::now() < until {
+            if let Some(status) = self
+                .child
+                .try_wait()
+                .expect("the program should be waited on")
+            {
+                return status.success();
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+        false
+    }
+
+    /// What the program has written to its error output so far.
+    pub fn log(&self) -> String {
+        std::fs::read_to_string(&self.log).unwrap_or_default()
+    }
+}
+
+impl Drop for Program {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
+/// Whether the condition came true within ten seconds.
+pub fn eventually(condition: impl Fn() -> bool) -> bool {
+    let until = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    while std::time::Instant::now() < until {
+        if condition() {
+            return true;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+    condition()
+}

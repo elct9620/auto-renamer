@@ -124,22 +124,6 @@ fn should_keep_the_running_configuration_when_the_new_one_is_not_valid() {
     assert!(eventually(|| sandbox.exists("target/kept.mkv")));
 }
 
-// @behavior RUN-005
-#[test]
-fn should_not_follow_a_linked_folder() {
-    let sandbox = Sandbox::new();
-    sandbox.make_dir("outside");
-    sandbox.make_dir("source");
-    std::os::unix::fs::symlink(sandbox.path("outside"), sandbox.path("source/Linked")).unwrap();
-    let _running = Running::start(&sandbox, r#"["move"]"#);
-
-    sandbox.write("outside/a.mkv", "video");
-    thread::sleep(Duration::from_secs(5));
-
-    assert!(sandbox.exists("outside/a.mkv"));
-    assert_eq!(sandbox.names_in("target"), Vec::<String>::new());
-}
-
 // @behavior RUN-008
 #[test]
 fn should_process_a_folder_moved_into_the_source_with_what_it_holds() {
@@ -150,4 +134,21 @@ fn should_process_a_folder_moved_into_the_source_with_what_it_holds() {
     std::fs::rename(sandbox.path("outside/Show"), sandbox.path("source/Show")).unwrap();
 
     assert!(eventually(|| sandbox.exists("target/Show/a.mkv")));
+}
+
+// @behavior RUN-009
+#[test]
+fn should_follow_a_configuration_replaced_by_another_file() {
+    let sandbox = Sandbox::new();
+    let _running = Running::start(&sandbox, r#"["move"]"#);
+
+    sandbox.write(
+        "next.toml",
+        &config_of(&sandbox, r#"[{ format = "replaced" }, "move"]"#),
+    );
+    std::fs::rename(sandbox.path("next.toml"), sandbox.path("config.toml")).unwrap();
+    let_the_configuration_settle();
+    sandbox.write("source/a.mkv", "video");
+
+    assert!(eventually(|| sandbox.exists("target/replaced.mkv")));
 }

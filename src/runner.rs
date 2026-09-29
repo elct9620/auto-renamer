@@ -51,7 +51,6 @@ struct Session {
 impl Session {
     fn start(
         config: Config,
-        config_path: &Path,
         sender: &Sender<Notification>,
         now: SystemTime,
     ) -> Result<Session, RunError> {
@@ -73,16 +72,6 @@ impl Session {
                 machine.observe(event, now);
             }
             machines.push(machine);
-        }
-        if let Some(folder) = config_path.parent()
-            && !config
-                .watches()
-                .iter()
-                .any(|watch| folder.starts_with(&watch.source))
-        {
-            watcher
-                .watch(folder, RecursiveMode::NonRecursive)
-                .map_err(|error| RunError::Watch(format!("{}: {error}", folder.display())))?;
         }
         Ok(Session {
             config,
@@ -135,28 +124,24 @@ pub fn run(options: &Options, stop: &AtomicBool) -> Result<(), RunError> {
     let config_path = std::path::absolute(&options.config)
         .map_err(|error| RunError::Config(format!("{}: {error}", options.config.display())))?;
     let (sender, receiver) = mpsc::channel();
-    let mut session = Session::start(
-        load(&config_path)?,
-        &config_path,
-        &sender,
-        SystemTime::now(),
-    )?;
+    let mut session = Session::start(load(&config_path)?, &sender, SystemTime::now())?;
     let mut reload_at: Option<SystemTime> = None;
+    let mut seen = fingerprint(&config_path);
 
     while !stop.load(Ordering::SeqCst) {
         let timeout = wait(&session, reload_at, SystemTime::now());
         match receive(&receiver, timeout)? {
-            Some(Ok(notification)) => {
-                if notification.paths.iter().any(|path| path == &config_path) {
-                    reload_at = Some(SystemTime::now() + RELOAD_DELAY);
-                }
-                session.observe(&notification, SystemTime::now());
-            }
+            Some(Ok(notification)) => session.observe(&notification, SystemTime::now()),
             Some(Err(error)) => eprintln!("[warn] the filesystem reported: {error}"),
             None => {}
         }
 
         let now = SystemTime::now();
+        let current = fingerprint(&config_path);
+        if current != seen {
+            seen = current;
+            reload_at = Some(now + RELOAD_DELAY);
+        }
         session.process_ready(now);
         if reload_at.is_some_and(|due| due <= now) {
             reload_at = None;
@@ -164,6 +149,14 @@ pub fn run(options: &Options, stop: &AtomicBool) -> Result<(), RunError> {
         }
     }
     Ok(())
+}
+
+/// What tells that the configuration file changed. It is looked at rather than watched, because a file
+/// mounted into a container on its own sends no notification to the folder it appears in.
+fn fingerprint(path: &Path) -> Option<(Option<SystemTime>, u64)> {
+    fs::metadata(path)
+        .ok()
+        .map(|metadata| (metadata.modified().ok(), metadata.len()))
 }
 
 fn load(path: &Path) -> Result<Config, RunError> {
@@ -179,8 +172,7 @@ fn reload(
     sender: &Sender<Notification>,
     now: SystemTime,
 ) -> Session {
-    let started =
-        load(config_path).and_then(|config| Session::start(config, config_path, sender, now));
+    let started = load(config_path).and_then(|config| Session::start(config, sender, now));
     match started {
         Ok(fresh) => {
             eprintln!("[info] the configuration was read again");

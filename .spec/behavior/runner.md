@@ -6,6 +6,7 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 
 - `tests/runner.rs`
 - `tests/signal.rs`
+- `tests/logging.rs`
 
 ## `RUN-001` A file dropped in the source ends up in the target
 
@@ -45,7 +46,7 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | --- | --- |
 | Given | a running watcher and a symbolic link in the source to a folder outside it |
 | When | a file is written into the folder outside the source |
-| Then | the file stays where it was and the target stays empty |
+| Then | the file stays where it was, the target stays empty and the program says nothing of the folder |
 
 ## `RUN-006` A termination signal stops the watcher cleanly
 
@@ -70,3 +71,35 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | Given | a running watcher and a folder holding a file outside the source |
 | When | the folder is moved into the source |
 | Then | the file appears in the target |
+
+## `RUN-009` A configuration replaced by another file takes effect
+
+| Step | Statement |
+| --- | --- |
+| Given | a running watcher whose pipeline keeps the name |
+| When | another file is moved over the configuration file, renaming to `replaced`, and a file is written |
+| Then | the file appears in the target as `replaced` |
+
+## `RUN-010` A dry run reports where a file would go
+
+| Step | Statement |
+| --- | --- |
+| Given | the program running as a dry run |
+| When | a file is written into the source |
+| Then | its error output says where the file would go, and the file stays |
+
+## `RUN-011` A refused file is reported with why
+
+| Step | Statement |
+| --- | --- |
+| Given | the program running with a pipeline that needs a variable that is not set |
+| When | a file is written into the source |
+| Then | its error output says the file was refused, and the file stays |
+
+## `RUN-012` A file no pipeline claims is reported
+
+| Step | Statement |
+| --- | --- |
+| Given | the program running with a pipeline for `mkv` only |
+| When | a `nfo` file is written into the source |
+| Then | its error output says the file was left |
