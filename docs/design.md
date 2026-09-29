@@ -167,10 +167,10 @@ source 與 target 分離，媒體伺服器只掃描 target，它產生的 `.nfo`
 
 ```
   record = { plan:   "Movies/XXX/XXX.mp4",
-             fields: { name, ext, dir, show, season, episode } }
+             fields: { name, ext, dir, path, mtime, show, season, episode } }
 ```
 
-集合中的每個元素是一筆記錄，含計畫路徑與具名欄位。路徑起點是 source 內的相對路徑，即保留結構；欄位起點是 `name`（主檔名）、`ext`、`dir`（所在資料夾）與設定的 `vars`。
+集合中的每個元素是一筆記錄，含計畫路徑與具名欄位。路徑起點是 source 內的相對路徑，即保留結構。欄位的起點見 2.7。
 
 ### 2.3 階段形狀
 
@@ -211,9 +211,22 @@ source 與 target 分離，媒體伺服器只掃描 target，它產生的 `.nfo`
 | 階段 | 作用 |
 |---|---|
 | `move` | 把計畫路徑套用到 target |
-| `cleanup` | 刪除 source 端已清空的資料夾 |
+| `cleanup` | 刪除單元內已清空的資料夾 |
 
 效果階段必須明寫，並排在所有純階段之後，依列出的順序執行。整批先全部規劃完，才執行效果。沒有效果階段的管線只乾跑並警告。
+
+### 2.7 起始欄位
+
+| 欄位 | 內容 |
+|---|---|
+| `name` | 主檔名 |
+| `ext` | 副檔名 |
+| `dir` | 所在資料夾名 |
+| `path` | 相對於 source 的資料夾路徑 |
+| `mtime` | 修改時間，UTC |
+| `vars` | 設定的 `vars` |
+
+欄位值有文字、數字與日期三種。映像沒有時區資料，所以日期一律以 UTC 表示。
 
 ## 3 設定
 
@@ -230,11 +243,11 @@ stages = [
   "move",
 ]
 
-[watch.animate]
+[watch.series]
 source = "/Downloads"
 target = "/Video"
 unit = { root = ["Movies/*"] }
-vars = { show = "Kokoore" }
+vars = { show = "Alpha" }
 ```
 
 `pipeline.*` 定義具名管線；`watch` 綁定 source、target、`unit` 與 `vars`；`default` 供所有 watch 共用。省略 target 表示原地改名。
@@ -252,8 +265,8 @@ vars = { show = "Kokoore" }
 ### 3.3 目錄設定
 
 ```toml
-# /Downloads/Animate/XXX/auto-renamer.toml
-vars = { show = "Yami Shibai" }
+# /Downloads/Series/XXX/auto-renamer.toml
+vars = { show = "Eta Show" }
 
 [pipeline.video]
 stages = [
@@ -280,7 +293,7 @@ stages = [
 | 項目 | 目錄設定 |
 |---|---|
 | 管線、`vars`、`batch_max` | 可覆寫 |
-| `source`、`target`、`unit` | 不可覆寫 |
+| `source`、`target`、`unit`、`dry_run` | 不可覆寫 |
 | 跳出 target 根的路徑 | 任何層都拒絕 |
 
 下載內容不可信，夾帶的 `auto-renamer.toml` 不能決定檔案的去向或分組。
@@ -295,6 +308,15 @@ stages = [
 | 無效的設定 | 保留舊設定並記錄錯誤 |
 
 全域設定與目錄設定都會在變動時重新載入，不需要重啟。
+
+### 3.7 乾跑
+
+```toml
+[watch.series]
+dry_run = true      # log each plan, run no effect stage
+```
+
+`dry_run = true` 時管線照常規劃，把每個檔案的原路徑、計畫路徑與拒絕原因寫進 log，但不執行效果階段。預設關閉，適合第一次寫管線時先看結果。
 
 ## 4 執行行為
 
@@ -340,11 +362,13 @@ stages = [
 ### 4.5 清理
 
 ```
-  /Downloads/Movies/XXX/   empty after move  ─► removed
-  /Downloads/Movies/       parent            ─► kept
+  Season 01/[Rel]/Subs/   empty after move ─► removed
+  Season 01/[Rel]/        empty             ─► removed
+  Season 01/              matches keep      ─► kept, stop
+  Series/                  above the unit    ─► never touched
 ```
 
-`cleanup` 階段在檔案搬走後，只刪除它原本所在、且已清空的資料夾，不往上層刪除。含 `auto-renamer.toml` 的資料夾不算清空，每週更新的作品因此保有設定。
+`cleanup` 只刪除單元之內清空的資料夾，由檔案原本所在處往上，遇到非空、含 `auto-renamer.toml` 或符合 `keep` 的資料夾就停。source 根永不刪除。
 
 ## 5 內建階段
 
@@ -354,17 +378,18 @@ stages = [
 |---|---|---|
 | `filter` | filter | 依副檔名或名稱樣式放行 |
 | `number` | map | 依序號規則取出數字 |
-| `regex` | map | 擷取具名群組成欄位 |
-| `set` | map | 設定固定值 |
-| `replace`、`case` | map | 字面取代、大小寫 |
-| `lift` | map | 計畫路徑往上提資料夾 |
-| `format` | map | 依樣板組出計畫路徑 |
+| `regex` | map | 擷取或改寫，通用的逃生口 |
+| `set` | map | 設定固定值，覆蓋既有 |
+| `default` | map | 欄位未設時填入固定值 |
+| `replace`、`case`、`strip` | map | 字面取代、大小寫、去括號標籤 |
+| `format` | map | 依樣板組出檔名 |
+| `lift`、`folder` | map | 計畫路徑往上提、往下放 |
 | `next` | scan | 欄位未設時，取 target 最大值加一 |
 | `rank` | group | 同組內排序並編號 |
 | `take` | group | 依名稱前綴向同批影片取欄位 |
 | `move`、`cleanup` | effect | 搬移與清理 |
 
-每個階段只做一件事，複雜的行為由堆疊產生。
+每個階段只做一件事，複雜的行為由堆疊產生。常見的改寫優先由內建階段提供，`regex` 留給內建處理不了的情況。
 
 ### 5.2 序號擷取
 
@@ -372,23 +397,56 @@ stages = [
 |---|---|---|
 | `from` | 從哪個欄位找 | `name` |
 | `into` | 寫入哪個欄位 | 必填 |
-| `nth` | 取第幾個候選，負數從尾端算 | `1` |
+| `nth` | 明指取第幾個候選，負數從尾端算 | 無 |
 | `prefix` | 只取緊接在這個字之後的數字 | 無 |
 | `exclude` | 排除這些欄位目前的值 | 無 |
-| `default` | 找不到時的固定值 | 不設 |
 
-`number` 從候選數字中取一個，候選已排除解析度、編碼、日期、版本、年份與雜湊等雜訊。季數是它的變體：`prefix = "Season"`。
+`number` 從欄位中取出一個數字。季數是它的變體：`from = "path"` 加 `prefix = "Season"`。
 
-### 5.3 遞增序號
+### 5.3 判斷順序
 
 ```
-  target      Kokoore s01e01, Kokoore s01e02   matched by like
+  strong marker   S01E02 | EP02 | - 02     ─► use it
+  scan            drop noise ─► one candidate     ─► use it
+                             ─► several candidates ─► unset, unless nth
+```
+
+強標記優先，`exclude` 只作用在掃描。掃描恰好一個候選才採用，多個視為不確定，欄位維持未設，除非明指 `nth`。
+
+### 5.4 雜訊清單
+
+| 雜訊 | 例子 |
+|---|---|
+| 解析度 | `1080p` |
+| 編碼、位元深度 | `x264`、`h.265`、`10bit` |
+| 版本 | `18v2` |
+| 日期、年份 | `2026.09.26` |
+| 音訊規格 | `2.0` |
+| 季數標記、序數 | `S03`、`第3季`、`2nd` |
+| 雜湊、上標數字 | `5E9D2F64`、`7³` |
+
+掃描前先排除這些數字，它們不會成為候選。
+
+### 5.5 預設值
+
+```toml
+{ number = { from = "path", into = "season", prefix = "Season" } },
+{ number = { into = "episode", exclude = ["season"] } },
+{ default = { season = 1 } },
+```
+
+`default` 只在欄位未設時填入，須放在擷取之後：季數沒找到就套預設，`exclude` 才不會把預設值當成已知的季數，誤排除第 1 集。
+
+### 5.6 遞增序號
+
+```
+  target      Alpha s01e01, Alpha s01e02   matched by like
   episode     unset ─► max 2 + 1 = 3
 ```
 
 `next` 只在欄位還沒有值時填入。`like` 樣板用來讀回 target 既有的檔名，只算符合的檔案，例如同一季。同批的多個檔案依序遞增；不寫 `number` 就是一律取最大值加一。
 
-### 5.4 分組編號
+### 5.7 分組編號
 
 ```
   Show 27.mkv       ─ number ─► 27  ── video group
@@ -397,9 +455,9 @@ stages = [
   Show 28.cht.ass   ─ number ─► 28  ── rank: alone → unset
 ```
 
-`rank` 在管線認領的檔案中，依 `by` 欄位分組，名稱含 `prefer` 中較前字串的排前面，其餘依名稱排序。只有一個檔案時不設 `into`。`format` 的 `[...]` 是可選片段，內含的欄位都有值才輸出。
+`rank` 在管線認領的檔案中，依 `by` 欄位分組，名稱含 `prefer` 中較前字串的排前面，其餘依名稱排序。只有一個檔案時不設 `into`。
 
-### 5.5 篩選
+### 5.8 篩選
 
 | 參數 | 作用 |
 |---|---|
@@ -409,7 +467,7 @@ stages = [
 
 `ext` 與 `glob` 同時給時都要符合。開頭的 `filter` 認領檔案，中途的 `filter` 排除檔案（2.5）。
 
-### 5.6 改寫階段
+### 5.9 名稱改寫
 
 | 階段 | 參數 | 作用 |
 |---|---|---|
@@ -418,11 +476,20 @@ stages = [
 | `set` | 欄位 = 值 | 設定固定值，覆蓋既有 |
 | `replace` | `find`、`with`、`field` | 字面取代 |
 | `case` | `to`、`field` | `lower`、`upper`、`title` |
-| `lift` | 整數 | 計畫路徑往上提幾層 |
+| `strip` | `groups`、`field` | 去掉括號標籤 |
 
-`from` 與 `field` 預設是 `name`。`regex` 用 Rust `regex` crate 的語法，沒有比對到時不變。
+`from` 與 `field` 預設是 `name`。`regex` 用 Rust `regex` crate 的語法，沒有比對到時不變。`strip` 的 `groups` 預設只有 `["[]"]`，並整理多餘空白。
 
-### 5.7 名稱配對
+### 5.10 路徑改寫
+
+| 階段 | 參數 | 作用 |
+|---|---|---|
+| `lift` | `to` 或整數 | 計畫路徑往上提 |
+| `folder` | 樣板 | 依樣板加入子資料夾 |
+
+`lift` 的 `to` 是資料夾名稱樣式，提到最近符合的祖先；沒有符合就不變。`folder` 的樣板以 `/` 分段，欄位缺值就拒絕。
+
+### 5.11 名稱配對
 
 | 參數 | 作用 | 預設 |
 |---|---|---|
@@ -431,43 +498,72 @@ stages = [
 
 `take` 只在字幕自己偵測不到欄位時使用。影片的原始主檔名是字幕主檔名的前綴（含相等）才配對，取最長者；沒有或並列就拒絕。
 
-### 5.8 名稱樣板
+### 5.12 名稱樣板
 
 | 語法 | 意義 |
 |---|---|
 | `{field}` | 取欄位值 |
-| `{field:02}` | 補零到至少 2 位 |
+| `{field:02}` | 數字補零到至少 2 位 |
+| `{mtime:%Y-%m}` | 日期欄位依格式輸出 |
 | `[...]` | 可選片段，欄位都有值才輸出 |
 | `{{`、`}}`、`[[`、`]]` | 字面的括號 |
 
-必要位置的欄位沒有值就拒絕。樣板只寫檔名，副檔名自動接在最後。
+必要位置的欄位沒有值就拒絕。`format` 只寫檔名，副檔名自動接在最後。
 
-### 5.9 影集管線
+### 5.13 影集管線
 
 ```toml
 [pipeline.video]
 stages = [
   { filter = { ext = ["mkv", "mp4"] } },
-  { number = { from = "dir", into = "season", prefix = "Season", default = 1 } },
+  { number = { from = "path", into = "season", prefix = "Season" } },
   { number = { into = "episode", exclude = ["season"] } },
+  { default = { season = 1 } },
   { next = { into = "episode", like = "{show} s{season:02}e{episode:02}" } },
+  { lift = { to = "Season *" } },
   { format = "{show} s{season:02}e{episode:02}" },
   "move",
-  "cleanup",
+  { cleanup = { keep = ["Season *"] } },
 ]
 
 [pipeline.subtitle]
 stages = [
   { filter = { ext = ["ass", "srt"] } },
-  { number = { from = "dir", into = "season", prefix = "Season", default = 1 } },
+  { number = { from = "path", into = "season", prefix = "Season" } },
   { number = { into = "episode", exclude = ["season"] } },
+  { default = { season = 1 } },
   { rank = { into = "index", by = ["season", "episode"], prefer = ["cht"] } },
+  { lift = { to = "Season *" } },
   { format = "{show} s{season:02}e{episode:02}.zh[.{index:02}]" },
   "move",
 ]
 ```
 
 影集不是內建功能，而是階段的堆疊。字幕與影片各自跑 `number`，得到相同的季與集，不必互相查找。
+
+### 5.14 其他管線
+
+```toml
+[pipeline.movie]        # tags out of the name
+stages = [{ filter = { ext = ["mkv", "mp4"] } }, { strip = {} }, "move"]
+
+[pipeline.music]        # "03 - Title.mp3" → "03 Title.mp3"
+stages = [
+  { filter = { ext = ["mp3", "flac"] } },
+  { regex = { pattern = '^(?<track>\d+)\s*-\s*(?<title>.+)$' } },
+  { format = "{track:02} {title}" },
+  "move",
+]
+
+[pipeline.photo]        # sort into year/month by modified time
+stages = [
+  { filter = { ext = ["jpg", "png"] } },
+  { folder = "{mtime:%Y}/{mtime:%m}" },
+  "move",
+]
+```
+
+同一套階段處理影集以外的檔案，不需要新增階段。
 
 ## 附錄
 
@@ -483,3 +579,5 @@ stages = [
 | 跨單元關聯 | 關聯範圍以單元為界 |
 | 依數量切批次 | 會拆散同一群組的檔案 |
 | 目錄層宣告單元 | 單元先於目錄設定決定 |
+| 檔案內容標籤（EXIF、ID3） | 讀內容破壞純函式承諾 |
+| 從檔名推斷作品名 | 作品名由使用者指定 |
