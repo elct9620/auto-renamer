@@ -101,3 +101,19 @@ Processing a batch is what a ready batch of settled files turns into: the files 
 | Given | the same watch and a folder configuration in `Show` that is not valid |
 | When | the batch is processed |
 | Then | the watch is applied as it is, and the folder configuration is reported |
+
+## `SVC-013` A file renamed in place again and again is left after a limit
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch without a target whose pipeline puts a prefix before the name, and a file processed again each time it was renamed |
+| When | it has been renamed five times in a row and is processed once more |
+| Then | it is refused, saying it was renamed too many times in a row, and it stays as it is |
+
+## `SVC-014` A file that is left as it is forgets its renames
+
+| Step | Statement |
+| --- | --- |
+| Given | the same watch, a file renamed four times in a row, and a pipeline that then leaves it as it is |
+| When | it is processed with that pipeline and then renamed by the prefix pipeline five more times |
+| Then | every one of those renames is done |

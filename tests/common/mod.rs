@@ -319,7 +319,12 @@ impl Drop for Program {
 
 /// Whether the condition came true within ten seconds.
 pub fn eventually(condition: impl Fn() -> bool) -> bool {
-    let until = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    eventually_within(10, condition)
+}
+
+/// Whether the condition came true within the seconds given.
+pub fn eventually_within(seconds: u64, condition: impl Fn() -> bool) -> bool {
+    let until = std::time::Instant::now() + std::time::Duration::from_secs(seconds);
     while std::time::Instant::now() < until {
         if condition() {
             return true;

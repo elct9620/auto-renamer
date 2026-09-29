@@ -896,14 +896,14 @@ pub struct Processed {}
 
 ## `process_batch`
 
-Plan a ready batch through the pipelines of its watch, with the folder configurations that apply, and run the effects on what was planned.
+Plan a ready batch through the pipelines of its watch, with the folder configurations that apply, and run the effects on what was planned, refusing a file renamed in place too many times in a row.
 
 | Attribute | Value |
 | --- | --- |
 | internal | yes |
 
 ```rust
-pub fn process_batch(watch: &Watch, unit: &Path, files: &[PathBuf]) -> Vec<Processed> {}
+pub fn process_batch(watch: &Watch, unit: &Path, files: &[PathBuf], renames: &mut Renames) -> Vec<Processed> {}
 ```
 
 ## `Command`
@@ -990,4 +990,30 @@ Whether a filesystem notification says a file was written, created or replaced, 
 
 ```rust
 pub fn rewrites(notification: &notify::Event, file: &Path) -> bool {}
+```
+
+## `Renames`
+
+How many times each file was renamed in place in a row, kept while the program runs.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct Renames {}
+```
+
+## `Renames::new`
+
+A record with no renames in it.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Renames {
+    pub fn new() -> Renames {}
+}
 ```

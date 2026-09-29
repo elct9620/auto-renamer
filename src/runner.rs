@@ -12,7 +12,7 @@ use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use crate::cli::Options;
 use crate::config::Config;
 use crate::scan::scan_folder;
-use crate::service::process_batch;
+use crate::service::{Renames, process_batch};
 use crate::watcher::{Machine, Ready, Translated, rewrites, translate};
 
 /// How long a change to the configuration file is awaited for more changes before it is read.
@@ -45,6 +45,7 @@ type Notification = notify::Result<notify::Event>;
 struct Session {
     config: Config,
     machines: Vec<Machine>,
+    renames: Vec<Renames>,
     _watcher: RecommendedWatcher,
 }
 
@@ -64,6 +65,7 @@ impl Session {
         )
         .map_err(|error| RunError::Watch(error.to_string()))?;
         let mut machines = Vec::new();
+        let mut renames = Vec::new();
         for watch in config.watches() {
             watcher
                 .watch(&watch.source, RecursiveMode::Recursive)
@@ -73,6 +75,7 @@ impl Session {
                 machine.observe(event, now);
             }
             machines.push(machine);
+            renames.push(Renames::new());
         }
         if let Some(folder) = config_path.parent()
             && !config
@@ -87,6 +90,7 @@ impl Session {
         Ok(Session {
             config,
             machines,
+            renames,
             _watcher: watcher,
         })
     }
@@ -108,11 +112,12 @@ impl Session {
     }
 
     fn process_ready(&mut self, now: SystemTime) {
-        for (watch, machine) in self.config.watches().iter().zip(&mut self.machines) {
+        let watches = self.config.watches().iter();
+        for ((watch, machine), renames) in watches.zip(&mut self.machines).zip(&mut self.renames) {
             for ready in machine.ready(now) {
                 match ready {
                     Ready::Batch { unit, files } | Ready::Skipped { unit, files } => {
-                        process_batch(watch, &unit, &files);
+                        process_batch(watch, &unit, &files, renames);
                     }
                 }
             }

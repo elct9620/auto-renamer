@@ -3,7 +3,7 @@ mod common;
 use std::os::unix::fs::symlink;
 use std::path::{Path, PathBuf};
 
-use auto_renamer::{Config, Processed, What, process_batch};
+use auto_renamer::{Config, Processed, Renames, What, process_batch};
 use common::Sandbox;
 
 const MOVE_AS_SHOW: &str = r#"[{ format = "{show}" }, "move"]"#;
@@ -12,6 +12,7 @@ const MOVE_AS_SHOW: &str = r#"[{ format = "{show}" }, "move"]"#;
 struct Setup {
     sandbox: Sandbox,
     config: Config,
+    renames: std::cell::RefCell<Renames>,
 }
 
 fn setup(stages: &str, extra: &str) -> Setup {
@@ -24,13 +25,38 @@ fn setup(stages: &str, extra: &str) -> Setup {
         sandbox.path("target").display(),
     );
     let config = Config::parse(&text).expect("the configuration should be accepted");
-    Setup { sandbox, config }
+    Setup {
+        sandbox,
+        config,
+        renames: Default::default(),
+    }
+}
+
+/// A watch without a target, so that files are renamed where they are.
+fn in_place(stages: &str) -> Setup {
+    let sandbox = Sandbox::new();
+    sandbox.make_dir("source");
+    let text = format!(
+        "[pipeline.p]\nstages = {stages}\n\n[watch.w]\nsource = \"{}\"\npipelines = [\"p\"]\nunit = \"source\"\n",
+        sandbox.path("source").display(),
+    );
+    let config = Config::parse(&text).expect("the configuration should be accepted");
+    Setup {
+        sandbox,
+        config,
+        renames: Default::default(),
+    }
 }
 
 impl Setup {
     fn process(&self, unit: &str, files: &[&str]) -> Vec<Processed> {
         let files: Vec<PathBuf> = files.iter().map(PathBuf::from).collect();
-        process_batch(&self.config.watches()[0], Path::new(unit), &files)
+        process_batch(
+            &self.config.watches()[0],
+            Path::new(unit),
+            &files,
+            &mut self.renames.borrow_mut(),
+        )
     }
 
     fn what(&self, processed: &[Processed], origin: &str) -> What {
@@ -245,4 +271,58 @@ fn should_ignore_and_report_a_folder_configuration_that_cannot_be_used() {
         run.what(&processed, "Show/auto-renamer.toml"),
         What::Refused(_)
     ));
+}
+
+const PREFIX: &str = r#"[{ format = "x{name}" }, "move"]"#;
+
+/// Renames the file the way the prefix pipeline does, and says what became of it.
+fn rename_again(run: &Setup, current: &mut String) -> What {
+    let processed = run.process("", &[current.as_str()]);
+    let what = run.what(&processed, current);
+    if matches!(what, What::Moved(_)) {
+        *current = format!("x{current}");
+    }
+    what
+}
+
+// @behavior SVC-013
+#[test]
+fn should_leave_a_file_renamed_in_place_again_and_again_after_a_limit() {
+    let run = in_place(PREFIX);
+    run.sandbox.write("source/a.mkv", "video");
+    let mut current = "a.mkv".to_string();
+
+    for _ in 0..5 {
+        assert!(matches!(rename_again(&run, &mut current), What::Moved(_)));
+    }
+    let sixth = rename_again(&run, &mut current);
+
+    assert!(
+        matches!(&sixth, What::Refused(reason) if reason.contains("in a row")),
+        "{sixth:?}"
+    );
+    assert!(run.sandbox.exists(&format!("source/{current}")));
+}
+
+// @behavior SVC-014
+#[test]
+fn should_forget_the_renames_of_a_file_that_is_left_as_it_is() {
+    let run = in_place(PREFIX);
+    run.sandbox.write("source/a.mkv", "video");
+    let mut current = "a.mkv".to_string();
+    for _ in 0..4 {
+        assert!(matches!(rename_again(&run, &mut current), What::Moved(_)));
+    }
+
+    run.sandbox.write(
+        "source/auto-renamer.toml",
+        "[pipeline.p]\nstages = [{ format = \"{name}\" }, \"move\"]\n",
+    );
+    let settled = run.process("", &[current.as_str()]);
+    assert_eq!(run.what(&settled, &current), What::Unchanged);
+    std::fs::remove_file(run.sandbox.path("source/auto-renamer.toml")).unwrap();
+
+    for _ in 0..5 {
+        assert!(matches!(rename_again(&run, &mut current), What::Moved(_)));
+    }
 }

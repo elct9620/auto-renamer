@@ -127,3 +127,11 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | Given | a running watcher without a target, a long maximum wait, and a file renamed in place |
 | When | another file is written into the same folder |
 | Then | it is renamed too, well before the maximum wait |
+
+## `RUN-016` A pipeline that names its own result again is stopped
+
+| Step | Statement |
+| --- | --- |
+| Given | a running watcher without a target whose pipeline puts a prefix before the name |
+| When | a file is written into the source |
+| Then | the file is renamed a few times and then left, with the error output saying it was renamed too many times in a row |

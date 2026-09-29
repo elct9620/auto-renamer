@@ -1,12 +1,13 @@
 //! Turns a ready batch of settled files into moved, unchanged or refused files.
 
+use std::collections::HashMap;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Utc};
 
-use crate::config::{FolderConfig, MAX_FOLDER_CONFIG_BYTES, Watch};
+use crate::config::{FolderConfig, MAX_BATCH_FILES, MAX_FOLDER_CONFIG_BYTES, Watch};
 use crate::context::{Context, Target};
 use crate::effects::{Applied, Done, Roots, SkipReason, apply_effects};
 use crate::engine::{Verdict, plan_batch};
@@ -61,9 +62,48 @@ pub struct Processed {
     pub what: What,
 }
 
+/// The most times a file may be renamed in place in a row. A pipeline that names its own result again
+/// would otherwise rename it for ever, since every rename is seen as a file that arrived.
+pub const MAX_IN_PLACE_RENAMES: u32 = 5;
+
+/// How many times each file was renamed in place in a row, kept while the program runs. A file the
+/// pipeline leaves as it is has been settled by it and is forgotten.
+#[derive(Debug, Default)]
+pub struct Renames {
+    counts: HashMap<PathBuf, u32>,
+}
+
+impl Renames {
+    /// A record with no renames in it.
+    pub fn new() -> Renames {
+        Renames::default()
+    }
+
+    fn count(&self, file: &Path) -> u32 {
+        self.counts.get(file).copied().unwrap_or(0)
+    }
+
+    fn forget(&mut self, file: &Path) {
+        self.counts.remove(file);
+    }
+
+    fn renamed(&mut self, from: &Path, to: PathBuf, count: u32) {
+        self.counts.remove(from);
+        // Past the ceiling a batch may hold the record stops growing, so its memory stays bounded.
+        if self.counts.len() < MAX_BATCH_FILES {
+            self.counts.insert(to, count);
+        }
+    }
+}
+
 /// Plans a ready batch through the pipelines of its watch, with the folder configurations that apply,
 /// and runs the effects on what was planned. Paths are relative to the source.
-pub fn process_batch(watch: &Watch, unit: &Path, files: &[PathBuf]) -> Vec<Processed> {
+pub fn process_batch(
+    watch: &Watch,
+    unit: &Path,
+    files: &[PathBuf],
+    renames: &mut Renames,
+) -> Vec<Processed> {
     let mut processed = Vec::new();
     let layers = folder_configs(&watch.source, unit, &mut processed);
     let effective = watch.under(&layers);
@@ -105,9 +145,36 @@ pub fn process_batch(watch: &Watch, unit: &Path, files: &[PathBuf]) -> Vec<Proce
                     .iter()
                     .find(|(name, _)| Some(name) == entry.pipeline.as_ref())
                     .map(|(_, pipeline)| pipeline);
+                let in_place = effective.target.is_none();
+                let count = renames.count(&entry.origin);
                 match pipeline {
+                    Some(_)
+                        if in_place
+                            && record.plan() != record.origin()
+                            && count >= MAX_IN_PLACE_RENAMES =>
+                    {
+                        What::Refused(format!(
+                            "renamed in place {count} times in a row; the pipeline may name its own result again"
+                        ))
+                    }
                     Some(pipeline) => {
-                        effects_of(pipeline, &record, unit, &roots, effective.dry_run)
+                        let what = effects_of(pipeline, &record, unit, &roots, effective.dry_run);
+                        if in_place {
+                            match &what {
+                                What::Moved(to) => {
+                                    if let Ok(relative) = to.strip_prefix(&effective.source) {
+                                        renames.renamed(
+                                            &entry.origin,
+                                            relative.to_path_buf(),
+                                            count + 1,
+                                        );
+                                    }
+                                }
+                                What::Unchanged => renames.forget(&entry.origin),
+                                _ => {}
+                            }
+                        }
+                        what
                     }
                     None => What::Unclaimed,
                 }

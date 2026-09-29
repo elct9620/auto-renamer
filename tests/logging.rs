@@ -5,7 +5,7 @@ mod common;
 use std::thread;
 use std::time::Duration;
 
-use common::{Program, Sandbox, eventually};
+use common::{Program, Sandbox, eventually, eventually_within};
 
 // @behavior RUN-005
 #[test]
@@ -143,4 +143,22 @@ fn should_not_let_a_file_renamed_in_place_hold_the_folder() {
         "{}",
         program.log()
     );
+}
+
+// @behavior RUN-016
+#[test]
+fn should_stop_a_pipeline_that_names_its_own_result_again() {
+    let sandbox = Sandbox::new();
+    let program = Program::start_in_place(&sandbox, r#"[{ format = "x{name}" }, "move"]"#);
+
+    sandbox.write("source/a.mkv", "video");
+
+    assert!(
+        eventually_within(30, || program.log().contains("times in a row")),
+        "{}",
+        program.log()
+    );
+    let names = sandbox.names_in("source");
+    assert_eq!(names.len(), 1, "{names:?}");
+    assert_eq!(names[0].matches('x').count(), 5, "{names:?}");
 }

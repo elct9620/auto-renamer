@@ -107,7 +107,12 @@ fn should_move_a_file_by_its_own_bytes() {
     ))
     .unwrap();
 
-    auto_renamer::process_batch(&config.watches()[0], Path::new("Show"), &[odd_path()]);
+    auto_renamer::process_batch(
+        &config.watches()[0],
+        Path::new("Show"),
+        &[odd_path()],
+        &mut auto_renamer::Renames::new(),
+    );
 
     let moved = std::fs::read_to_string(sandbox.path("target/Show").join(name));
     assert_eq!(moved.as_deref().ok(), Some("video"));
