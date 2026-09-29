@@ -16,7 +16,7 @@ use reader::{Reader, invalid};
 pub use unit::Unit;
 
 /// The most a folder configuration may hold, because it comes from downloaded content.
-const MAX_FOLDER_CONFIG_BYTES: usize = 64 * 1024;
+pub(crate) const MAX_FOLDER_CONFIG_BYTES: usize = 64 * 1024;
 
 const DEFAULT_BATCH_WINDOW: Duration = Duration::from_secs(5 * 60);
 const DEFAULT_BATCH_MAX_WAIT: Duration = Duration::from_secs(30 * 60);

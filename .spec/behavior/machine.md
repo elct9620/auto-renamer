@@ -68,7 +68,7 @@ The machine decides when the settled files of a unit are handed over as a batch.
 | --- | --- |
 | Given | the same watch with a batch limit of 2, and three files settled in `Show` |
 | When | the machine is asked when they are due |
-| Then | the batch is reported as skipped with the count 3, and no files are handed over |
+| Then | the batch is reported as skipped, with its three files, and no batch is handed over |
 
 ## `WCH-009` A batch at the limit is handed over
 

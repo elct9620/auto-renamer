@@ -78,3 +78,10 @@ A batch is planned as a whole: files are put in name order, each is claimed by t
 | When | the batch is planned |
 | Then | `x.mkv` gets 1 and `y.mp4` gets 2 |
 
+## `BAT-010` A judgment names the pipeline that claimed the file
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline `video` for `mkv` and the file `a.mkv` |
+| When | the batch is planned |
+| Then | the judgment of `a.mkv` names the pipeline `video` |

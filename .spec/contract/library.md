@@ -793,3 +793,161 @@ impl Machine {
     pub fn next_deadline(&self) -> Option<SystemTime> {}
 }
 ```
+
+## `Translated`
+
+What a filesystem notification means for the watcher: an event for a file, or a folder to be scanned.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub enum Translated {}
+```
+
+## `translate`
+
+Translate a filesystem notification into what happened to files of the source.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub fn translate(notification: &notify::Event, source: &Path, is_dir: impl Fn(&Path) -> bool) -> Vec<Translated> {}
+```
+
+## `scan_folder`
+
+List the regular files below a folder as found-at-start events, without following links.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub fn scan_folder(source: &Path, folder: &Path) -> Vec<Event> {}
+```
+
+## `FsTarget`
+
+The target folder as the filesystem holds it.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct FsTarget {}
+```
+
+## `FsTarget::new`
+
+A target over the folder at the root.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl FsTarget {
+    pub fn new(root: PathBuf) -> FsTarget {}
+}
+```
+
+## `What`
+
+What became of one file of a batch.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub enum What {}
+```
+
+## `Processed`
+
+One file of a processed batch and what became of it.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct Processed {}
+```
+
+## `process_batch`
+
+Plan a ready batch through the pipelines of its watch, with the folder configurations that apply, and run the effects on what was planned.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub fn process_batch(watch: &Watch, unit: &Path, files: &[PathBuf]) -> Vec<Processed> {}
+```
+
+## `Command`
+
+What the command line asks for.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub enum Command {}
+```
+
+## `Options`
+
+The settings of a run that come from the command line.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct Options {}
+```
+
+## `parse_args`
+
+Read the command line, refusing what it does not know.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub fn parse_args(args: impl IntoIterator<Item = String>) -> Result<Command, String> {}
+```
+
+## `run`
+
+Watch the sources of a configuration until told to stop, following the configuration file as it changes.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub fn run(options: &Options, stop: &AtomicBool) -> Result<(), RunError> {}
+```
+
+## `RunError`
+
+Why the watcher could not start or stopped.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub enum RunError {}
+```

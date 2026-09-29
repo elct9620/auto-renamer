@@ -9,6 +9,10 @@ use std::time::{Duration, SystemTime};
 
 use crate::config::{Unit, Watch};
 
+mod notification;
+
+pub use notification::{Translated, translate};
+
 /// The name of a folder configuration, which is read as settings and never renamed.
 const FOLDER_CONFIG: &str = "auto-renamer.toml";
 
@@ -29,7 +33,7 @@ pub enum Event {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Ready {
     Batch { unit: PathBuf, files: Vec<PathBuf> },
-    Skipped { unit: PathBuf, files: usize },
+    Skipped { unit: PathBuf, files: Vec<PathBuf> },
 }
 
 struct Pending {
@@ -238,7 +242,7 @@ impl Machine {
             _ if files.is_empty() => None,
             Some(limit) if files.len() > limit => Some(Ready::Skipped {
                 unit: unit.to_path_buf(),
-                files: files.len(),
+                files,
             }),
             _ => Some(Ready::Batch {
                 unit: unit.to_path_buf(),

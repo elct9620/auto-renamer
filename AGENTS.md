@@ -24,6 +24,7 @@ cargo test --locked
 - **GitHub Actions**: pin every action to a full commit SHA with a version comment. `actions/*`, `docker/*` and `googleapis/release-please-action` are approved; any other third-party action needs the user's approval first.
 - **sumi is pinned by hand in `ci.yml`**: `SUMI_VERSION` and `SUMI_SHA256` change together, because nothing watches a release asset fetched over curl. The specification lives in `.spec/`; `sumi verify` and `sumi fmt --check` must pass.
 - **`tests/examples.rs` reads its pipelines from `docs/design.md`**: keep each example as a `toml` block with a `[pipeline.<name>]` table, or the test stops finding it. The Docker build context excludes `docs/`, so this test runs on the host or in a mounted container, not inside `docker build`.
+- **notify reports only `Close(Write)` on Linux for finished writes**: `translate` treats a create or data change as still writing, so a file settles only on close-write or move-in; `runner` is `cfg(target_os = "linux")` and its tests run in a Linux container.
 - **Image runtime is `scratch`** with a static musl binary: no CA certificates, timezone data or shell. Adding HTTPS or similar needs a different final stage.
 
 ## Index
@@ -37,5 +38,6 @@ cargo test --locked
 | `release-please-config.json`, `.release-please-manifest.json` | Versioning config (`release-type: rust`) |
 | `.claude/settings.json`, `.claude/hooks/` | Hook registration and scripts |
 | `docs/design.md`, `docs/cases.md`, `docs/architecture.md` | Design, test cases derived from it, module structure |
+| `src/{watcher,scan,service,cli,runner}` | notify translation, folder scan, batch processing, arguments, the watch loop |
 | `tests/` | Integration tests through the public API; each claims a behavior with `// @behavior ID` |
 | `.spec/`, `.sumi.json` | sumi specification: glossary, behavior, contract |

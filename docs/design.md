@@ -93,7 +93,7 @@ source 與 target 分離，媒體伺服器只掃描 target，它產生的 `.nfo`
 |---|---|---|
 | 寫入完成 | `Access(Close(Write))` | 檔案可以處理 |
 | 搬入 | `Modify(Name(To))` | 同檔案系統的 `mv` 沒有寫入完成事件 |
-| 建立資料夾 | `Create(Folder)` | 加入遞迴監看 |
+| 資料夾出現 | `Create(Folder)`、`Name(To)` | 掃描內容，補上未逐一通報的檔案 |
 
 每個 watch 遞迴監看自己的 source，事件由 notify crate 的 inotify 後端提供。
 
@@ -277,7 +277,7 @@ stages = [
 ]
 ```
 
-資料夾內的 `auto-renamer.toml` 覆蓋 watch 的設定，處理例外。作用方式如 `.gitignore`：管該資料夾與其下層，最近的優先。
+資料夾內的 `auto-renamer.toml` 覆蓋 watch 的設定，處理例外。作用方式如 `.gitignore`：管該資料夾與其下層，最近的優先。單元所在的資料夾由 source 往下逐層尋找，由遠到近套用。
 
 ### 3.4 覆寫順序
 

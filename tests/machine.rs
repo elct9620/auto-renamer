@@ -129,7 +129,7 @@ fn should_skip_a_batch_over_the_limit_whole() {
         ready,
         [Ready::Skipped {
             unit: path("Show"),
-            files: 3
+            files: vec![path("Show/a.mkv"), path("Show/b.mkv"), path("Show/c.mkv")]
         }]
     );
 }

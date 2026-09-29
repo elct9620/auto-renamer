@@ -18,6 +18,8 @@ pub enum Verdict {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Judged {
     pub origin: PathBuf,
+    /// The pipeline that claimed the file, or none when no pipeline did.
+    pub pipeline: Option<String>,
     pub verdict: Verdict,
 }
 
@@ -94,13 +96,17 @@ pub fn plan_batch(
     slots
         .into_iter()
         .zip(origins)
-        .map(|(slot, origin)| Judged {
-            origin,
-            verdict: match slot {
-                Slot::Waiting(_) => Verdict::Unclaimed,
-                Slot::Live { record, .. } => Verdict::Planned(record),
-                Slot::Done { verdict, .. } => verdict,
-            },
+        .map(|(slot, origin)| {
+            let (pipeline, verdict) = match slot {
+                Slot::Waiting(_) => (None, Verdict::Unclaimed),
+                Slot::Live { pipeline, record } => (Some(pipeline), Verdict::Planned(record)),
+                Slot::Done { pipeline, verdict } => (pipeline, verdict),
+            };
+            Judged {
+                origin,
+                pipeline: pipeline.map(|index| pipelines[index].0.clone()),
+                verdict,
+            }
         })
         .collect()
 }
