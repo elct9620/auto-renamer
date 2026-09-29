@@ -218,6 +218,10 @@ fn effects_of(
     roots: &Roots,
     dry_run: bool,
 ) -> What {
+    // A pipeline with no effect stage only ever previews.
+    if !pipeline.has_effect() {
+        return What::Previewed(roots.target.join(record.plan()));
+    }
     let run = apply_effects(pipeline, record, unit, roots, dry_run);
     let moved = run.done.into_iter().find_map(|done| match done {
         Done::Moved(applied) => Some(applied),
@@ -237,6 +241,7 @@ fn effects_of(
         Some(Applied::Preview { to, .. }) => What::Previewed(to),
         Some(Applied::Skipped(SkipReason::Link)) => What::Skipped("link".to_string()),
         Some(Applied::Skipped(SkipReason::NotAFile)) => What::Skipped("not a file".to_string()),
+        Some(Applied::Unchanged(at)) if dry_run => What::Previewed(at),
         Some(Applied::Unchanged(_)) | None => What::Unchanged,
     }
 }

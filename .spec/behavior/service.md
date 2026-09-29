@@ -125,3 +125,19 @@ Processing a batch is what a ready batch of settled files turns into: the files 
 | Given | the same watch whose pipeline moves the file and then has an effect that fails, and a file in `Show` |
 | When | the batch is processed |
 | Then | the file is reported as moved to the target together with why the later effect failed |
+
+## `SVC-016` A pipeline without an effect stage reports where each file would go
+
+| Step | Statement |
+| --- | --- |
+| Given | the same watch whose pipeline only formats the name, and the file `Show/x.mkv` |
+| When | the batch is processed |
+| Then | the file is reported as previewed at its planned path under the target |
+
+## `SVC-017` A dry run reports a file whose plan is where it already is
+
+| Step | Statement |
+| --- | --- |
+| Given | a dry run of a watch without a target whose pipeline keeps the name, and the file `x.mkv` |
+| When | the batch is processed |
+| Then | the file is reported as previewed at the path it already has |

@@ -344,3 +344,42 @@ fn should_report_a_file_moved_before_a_later_effect_failed_as_moved_with_the_fai
             if to == run.sandbox.path("target/Show/Alpha.mkv") && reason.contains("is not there")
     ));
 }
+
+// @behavior SVC-016
+#[test]
+fn should_preview_where_each_file_would_go_with_a_pipeline_without_an_effect_stage() {
+    let run = setup(r#"[{ format = "{show}" }]"#, "vars = { show = \"Alpha\" }");
+    run.sandbox.write("source/Show/x.mkv", "video");
+
+    let processed = run.process("Show", &["Show/x.mkv"]);
+
+    assert_eq!(
+        run.what(&processed, "Show/x.mkv"),
+        What::Previewed(run.sandbox.path("target/Show/Alpha.mkv"))
+    );
+}
+
+// @behavior SVC-017
+#[test]
+fn should_preview_a_file_whose_plan_is_where_it_already_is_in_a_dry_run() {
+    let sandbox = Sandbox::new();
+    sandbox.make_dir("source");
+    let text = format!(
+        "[pipeline.p]\nstages = [\"move\"]\n\n[watch.w]\nsource = \"{}\"\npipelines = [\"p\"]\ndry_run = true\n",
+        sandbox.path("source").display(),
+    );
+    let config = Config::parse(&text).expect("the configuration should be accepted");
+    sandbox.write("source/x.mkv", "video");
+
+    let processed = process_batch(
+        &config.watches()[0],
+        Path::new(""),
+        &[PathBuf::from("x.mkv")],
+        &mut Renames::new(),
+    );
+
+    assert_eq!(
+        processed[0].what,
+        What::Previewed(sandbox.path("source/x.mkv"))
+    );
+}
