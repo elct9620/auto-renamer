@@ -9,14 +9,16 @@ Only what the source cannot tell you is recorded here; the index points at where
 The Stop hook (`.claude/hooks/stop.sh`) blocks finishing until these pass, so run the same commands:
 
 ```
+sumi fmt --check
+sumi verify
 cargo fmt --check
 cargo clippy --all-targets --locked -- -D warnings
 cargo test --locked
 ```
 
-The Linux-only tests (watch loop, cross-filesystem moves) run with `docker compose run --rm test`.
+The Linux-only tests (watch loop, signals, cross-filesystem moves) skip on other systems; run them on macOS with `docker compose run --rm test`. The Stop hook skips the two `sumi` commands when `sumi` is not installed; CI does not.
 
-`.claude/hooks/edit.sh` formats edited `.rs` files automatically (edition 2024).
+`.claude/hooks/edit.sh` formats edited `.rs` files (edition 2024) and, through `sumi fmt`, the files under `.spec/`.
 
 ## Constraints
 
@@ -34,7 +36,7 @@ The Linux-only tests (watch loop, cross-filesystem moves) run with `docker compo
 
 | Path | What is there |
 |------|---------------|
-| `src/` | Application source (Rust binary crate `auto-renamer`) |
+| `src/` | Application source (Rust binary crate `auto-renamer`); modules are mapped in `docs/architecture.md` |
 | `Dockerfile`, `.dockerignore` | Multi-stage image build with a `test` stage; `.dockerignore` is an allow-list |
 | `docker-compose.yml` | `test` service: mounts the repo, two filesystems for cross-device tests |
 | `.github/workflows/ci.yml` | PR / main checks and an image build without push |
@@ -42,6 +44,5 @@ The Linux-only tests (watch loop, cross-filesystem moves) run with `docker compo
 | `release-please-config.json`, `.release-please-manifest.json` | Versioning config (`release-type: rust`) |
 | `.claude/settings.json`, `.claude/hooks/` | Hook registration and scripts |
 | `docs/design.md`, `docs/cases.md`, `docs/architecture.md` | Design, test cases derived from it, module structure |
-| `src/{watcher,scan,service,cli,runner}` | notify translation, folder scan, batch processing, arguments, the watch loop |
 | `tests/` | Integration tests through the public API; each claims a behavior with `// @behavior ID` |
 | `.spec/`, `.sumi.json` | sumi specification: glossary, behavior, contract |

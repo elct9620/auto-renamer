@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stop: block finishing while the project fails lint or tests.
+# Stop: block finishing while the project fails the specification, lint or tests.
 set -uo pipefail
 
 cd "${CLAUDE_PROJECT_DIR:-.}"
@@ -13,6 +13,14 @@ fail() {
   exit 2
 }
 
+# The specification is cheap to check, so it goes first. CI installs sumi; a machine without it skips these.
+if command -v sumi > /dev/null; then
+  out=$(sumi fmt --check 2>&1) || fail "sumi fmt --check" "$out"
+  out=$(sumi verify 2>&1) || fail "sumi verify" "$out"
+else
+  echo "sumi is not installed; the specification was not checked." >&2
+fi
+
 out=$(cargo fmt --check 2>&1) || fail "cargo fmt --check" "$out"
-out=$(cargo clippy --all-targets -- -D warnings 2>&1) || fail "cargo clippy" "$out"
-out=$(cargo test 2>&1) || fail "cargo test" "$out"
+out=$(cargo clippy --all-targets --locked -- -D warnings 2>&1) || fail "cargo clippy" "$out"
+out=$(cargo test --locked 2>&1) || fail "cargo test" "$out"

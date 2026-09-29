@@ -8,7 +8,6 @@ chrono = { version = "0.4.45", default-features = false, features = ["std"] }
 globset = "0.4.20"
 notify = "8"
 regex = "1.13.1"
-serde = { version = "1.0.229", features = ["derive"] }
 signal-hook = "0.4.4"
 toml = "1.1.6"
 
