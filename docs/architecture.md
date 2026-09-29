@@ -22,11 +22,12 @@ auto-renamer 是單一套件：`src/lib.rs` 放全部邏輯，`src/main.rs` 只�
 ## 模組地圖
 
 ```
-  main ─► runner ─► service ─► engine ─► pipeline ─► stages ─► template ─► record
-                                        └────► context
-             │          │
-             └─► config ┘
-  engine ─► effects            only effects touch the filesystem
+  main ─► runner ─┬─► service ─┬─► engine ──► pipeline ─► stages ─┬─► template ─► record
+                  │            ├─► effects ─► stages               ├─► context
+                  │            └─► config ──► pipeline, reader     └─► reader ───► record
+                  ├─► watcher ─► config
+                  └─► scan ────► watcher
+  only effects, scan, service and runner touch the filesystem
 ```
 
 依賴由外向內指向 `record`，內層不知道外層。
@@ -41,14 +42,15 @@ auto-renamer 是單一套件：`src/lib.rs` 放全部邏輯，`src/main.rs` 只�
 | `stages` | 階段型別、宣告解析與行為 | 否 |
 | `pipeline` | 階段清單與順序驗證 | 否 |
 | `engine` | 批次、認領與管線執行 | 否 |
-| `config` | 設定解析、層疊與驗證 | 讀檔 |
+| `reader` | 逐鍵讀取 TOML 表格，拒絕剩下的鍵 | 否 |
+| `config` | 設定解析、層疊與驗證 | 否 |
 | `effects` | `move` 與 `cleanup` | 檔案系統 |
 | `watcher` | 事件、單元與批次收束的狀態機 | 否 |
 | `watcher` 的翻譯 | notify 事件轉成單元事件 | 否 |
 | `scan` | 列出資料夾內的一般檔案 | 檔案系統 |
 | `service` | 批次處理、目錄設定、改名次數 | 檔案系統 |
 | `cli` | 命令列參數 | 否 |
-| `runner` | notify、時鐘、重新載入、停止 | notify、時間 |
+| `runner` | notify、時鐘、重新載入、停止 | notify、時間、設定檔 |
 
 `engine` 與 `watcher` 的狀態機吃注入的資料與時鐘，所以不需要真實的檔案系統就能測試。
 
