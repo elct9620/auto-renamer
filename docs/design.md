@@ -104,7 +104,7 @@ source 與 target 分離，媒體伺服器只掃描 target，它產生的 `.nfo`
   finished   close-write | moved-to  settled
 ```
 
-只有穩定的檔案才進入處理。下載器、複製與 `mv` 三種來源，都以同一組事件判定。寫到一半的檔案不會產生寫入完成事件。
+只有穩定的檔案才進入處理。下載器、複製與 `mv` 三種來源，都以同一組事件判定。寫到一半的檔案不會產生寫入完成事件，它讓所屬單元保持開啟，直到它穩定、消失，或停止超過最大等待。
 
 ### 1.3 單元
 
@@ -144,10 +144,10 @@ source 與 target 分離，媒體伺服器只掃描 target，它產生的 `.nfo`
 
 ```
   start ─► scan source ─► existing files ─► settled ─► batch
-                                   └ mtime within batch_window: wait for close-write
+                                   └ mtime within batch_window: settled after a quiet window
 ```
 
-啟動時掃描 source 內既有的檔案，視同穩定事件進入批次，停機期間到達的檔案不會被遺漏。修改時間在 `batch_window` 內的檔案視為寫入中，等它的寫入完成事件。
+啟動時掃描 source 內既有的檔案，視同穩定事件進入批次，停機期間到達的檔案不會被遺漏。修改時間在 `batch_window` 內的檔案，等修改時間過了一個視窗且期間沒有寫入事件才算穩定，因為它之後不會再有寫入完成事件。
 
 ## 2 管線
 

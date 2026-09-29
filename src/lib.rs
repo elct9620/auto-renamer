@@ -8,6 +8,7 @@ pub mod pipeline;
 pub mod record;
 pub mod stages;
 pub mod template;
+pub mod watcher;
 
 pub use config::{Config, ConfigError, FolderConfig, Unit, Watch};
 pub use context::{Context, Target};
@@ -20,3 +21,4 @@ pub use pipeline::{Pipeline, PipelineError};
 pub use record::{Record, Value};
 pub use stages::{DeclareError, Outcome, Rejection, Stage};
 pub use template::{RenderError, Template, TemplateError};
+pub use watcher::{Event, Machine, Ready};

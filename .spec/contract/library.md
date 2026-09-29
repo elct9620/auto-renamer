@@ -701,3 +701,95 @@ Run the effect stages of a pipeline in order on a planned file, stopping at the 
 ```rust
 pub fn apply_effects(pipeline: &Pipeline, record: &Record, unit: &Path, roots: &Roots, dry_run: bool) -> EffectsRun {}
 ```
+
+## `Event`
+
+What happened to a file of the source, as far as the machine needs to know.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub enum Event {}
+```
+
+## `Ready`
+
+A batch the machine hands over, or one it skipped for being too large.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub enum Ready {}
+```
+
+## `Machine`
+
+Decides when the settled files of a unit are handed over as a batch, from what it is told and what time it is.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct Machine {}
+```
+
+## `Machine::new`
+
+Start a machine for a watch, with its unit, window, maximum wait and batch limit.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Machine {
+    pub fn new(watch: &Watch) -> Machine {}
+}
+```
+
+## `Machine::observe`
+
+Tell the machine what happened to a file and when.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Machine {
+    pub fn observe(&mut self, event: Event, now: SystemTime) {}
+}
+```
+
+## `Machine::ready`
+
+The batches that are ready at a time, each handed over once.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Machine {
+    pub fn ready(&mut self, now: SystemTime) -> Vec<Ready> {}
+}
+```
+
+## `Machine::next_deadline`
+
+The earliest time at which asking again could change the answer, or none when nothing is waiting.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Machine {
+    pub fn next_deadline(&self) -> Option<SystemTime> {}
+}
+```

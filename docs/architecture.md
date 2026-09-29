@@ -43,7 +43,8 @@ auto-renamer 是單一套件：`src/lib.rs` 放全部邏輯，`src/main.rs` 只�
 | `engine` | 批次、認領與管線執行 | 否 |
 | `config` | 設定解析、層疊與驗證 | 讀檔 |
 | `effects` | `move` 與 `cleanup` | 檔案系統 |
-| `watcher` | 事件、單元與批次收束 | notify、時間 |
+| `watcher` | 事件、單元與批次收束的狀態機 | 否 |
+| `watcher` 的轉接 | notify 事件與真實時鐘 | notify、時間 |
 
 `engine` 與 `watcher` 的狀態機吃注入的資料與時鐘，所以不需要真實的檔案系統就能測試。
 
