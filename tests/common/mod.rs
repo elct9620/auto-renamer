@@ -243,14 +243,29 @@ pub struct Program {
 impl Program {
     /// Starts the program with a pipeline of `stages`, and `extra` lines in the watch.
     pub fn start(sandbox: &Sandbox, stages: &str, extra: &str) -> Program {
-        sandbox.make_dir("source");
         sandbox.make_dir("target");
+        let target = format!("target = \"{}\"\n", sandbox.path("target").display());
+        Program::launch(sandbox, stages, &target, "3s", extra)
+    }
+
+    /// Starts the program without a target, so that files are renamed where they are, with a long maximum wait.
+    pub fn start_in_place(sandbox: &Sandbox, stages: &str) -> Program {
+        Program::launch(sandbox, stages, "", "60s", "")
+    }
+
+    fn launch(
+        sandbox: &Sandbox,
+        stages: &str,
+        target: &str,
+        max_wait: &str,
+        extra: &str,
+    ) -> Program {
+        sandbox.make_dir("source");
         sandbox.write(
             "config.toml",
             &format!(
-                "[pipeline.p]\nstages = {stages}\n\n[watch.w]\nsource = \"{}\"\ntarget = \"{}\"\npipelines = [\"p\"]\nunit = \"source\"\nbatch_window = \"1s\"\nbatch_max_wait = \"3s\"\n{extra}\n",
+                "[pipeline.p]\nstages = {stages}\n\n[watch.w]\nsource = \"{}\"\n{target}pipelines = [\"p\"]\nunit = \"source\"\nbatch_window = \"1s\"\nbatch_max_wait = \"{max_wait}\"\n{extra}\n",
                 sandbox.path("source").display(),
-                sandbox.path("target").display(),
             ),
         );
         let log = sandbox.path("log.txt");

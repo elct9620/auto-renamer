@@ -119,3 +119,11 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | Given | the program running whose pipeline keeps the name |
 | When | the configuration is changed without a notification and the program is sent a hangup signal, and a file is written |
 | Then | the file appears in the target as `renamed` |
+
+## `RUN-015` A file renamed in place does not hold the folder
+
+| Step | Statement |
+| --- | --- |
+| Given | a running watcher without a target, a long maximum wait, and a file renamed in place |
+| When | another file is written into the same folder |
+| Then | it is renamed too, well before the maximum wait |

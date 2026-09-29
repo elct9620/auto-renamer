@@ -166,3 +166,11 @@ A move puts a file at its plan under the target, and it is the only thing that t
 | Given | a file on one filesystem, a target on another that holds a hidden `.y.mkv.part` left by an earlier move, and the plan `y.mkv` |
 | When | the file is moved |
 | Then | the target holds the same bytes as `y.mkv` |
+
+## `MV-021` A move within a filesystem is seen as a file moved in
+
+| Step | Statement |
+| --- | --- |
+| Given | a file in a watched folder and a plan that renames it within the same folder |
+| When | the file is moved and the notifications are translated |
+| Then | the new name is settled and is never taken for a file being written |

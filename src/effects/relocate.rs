@@ -152,10 +152,24 @@ fn copy_to(from: &Path, temporary: &Path) -> io::Result<()> {
 /// set-user-id or set-group-id bit from untrusted content must not reach the library.
 const KEPT_PERMISSIONS: u32 = 0o666;
 
-/// Puts a file where it is wanted without ever replacing one that is there: a hard link fails when the
-/// destination exists, so nothing can appear between the check and the move and be lost. Where the
-/// filesystem has no hard links the file is renamed instead.
+/// Puts a file where it is wanted without ever replacing one that is there.
+///
+/// On Linux the file is renamed with `RENAME_NOREPLACE`, which fails when the destination exists, so
+/// nothing can appear between the check and the move and be lost, and a watcher sees the file moved in
+/// rather than created and never closed. Where the filesystem cannot do that, and elsewhere, a hard
+/// link takes the same care, and a filesystem without hard links renames the file.
 pub(crate) fn put(from: &Path, to: &Path) -> io::Result<()> {
+    #[cfg(target_os = "linux")]
+    {
+        use rustix::fs::{CWD, RenameFlags, renameat_with};
+        use rustix::io::Errno;
+
+        match renameat_with(CWD, from, CWD, to, RenameFlags::NOREPLACE) {
+            Ok(()) => return Ok(()),
+            Err(Errno::INVAL | Errno::NOSYS) => {}
+            Err(errno) => return Err(errno.into()),
+        }
+    }
     match fs::hard_link(from, to) {
         Ok(()) => fs::remove_file(from),
         Err(error) if error.kind() == io::ErrorKind::AlreadyExists => Err(error),

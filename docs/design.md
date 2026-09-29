@@ -348,7 +348,7 @@ dry_run = true      # log each plan, run no effect stage
   a.mp4 exists ─► a_v2.mp4 ─ exists ─► reject       on_conflict = "suffix"
 ```
 
-`move` 預設在目標已存在時拒絕，檔案留在 source。設 `on_conflict = "suffix"` 會加上 `suffix`（預設 `_v2`）重試一次，仍撞名就拒絕。任何情況都不覆寫既有檔案，符號連結與資料夾不處理也不跟隨。
+`move` 預設在目標已存在時拒絕，檔案留在 source。設 `on_conflict = "suffix"` 會加上 `suffix`（預設 `_v2`）重試一次，仍撞名就拒絕。任何情況都不覆寫既有檔案，符號連結與資料夾不處理也不跟隨。同一檔案系統以不覆寫的 rename 搬移，監看者看到的是搬入。
 
 ### 4.4 冪等
 

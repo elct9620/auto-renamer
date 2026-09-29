@@ -425,3 +425,36 @@ fn should_not_be_blocked_by_a_temporary_file_an_earlier_move_left() {
 
     assert_eq!(target.read("y.mkv").as_deref(), Some("some bytes"));
 }
+
+// @behavior MV-021
+#[cfg(target_os = "linux")]
+#[test]
+fn should_be_seen_as_a_file_moved_in_when_renamed_within_a_folder() {
+    use auto_renamer::{Event, Translated, translate};
+    use notify::Watcher;
+
+    let sandbox = Sandbox::new();
+    sandbox.write("x.mkv", "some bytes");
+    let (sender, receiver) = std::sync::mpsc::channel();
+    let mut watcher = notify::recommended_watcher(sender).unwrap();
+    watcher
+        .watch(&sandbox.path(""), notify::RecursiveMode::Recursive)
+        .unwrap();
+    let roots = Roots {
+        source: sandbox.path(""),
+        target: sandbox.path(""),
+    };
+
+    move_file(&reject(), &planned("x.mkv", "y.mkv"), &roots, false).unwrap();
+
+    std::thread::sleep(std::time::Duration::from_millis(500));
+    let seen: Vec<Translated> = receiver
+        .try_iter()
+        .filter_map(Result::ok)
+        .flat_map(|notification| translate(&notification, &sandbox.path(""), |_| false))
+        .collect();
+    let settled = Translated::Event(Event::Settled("y.mkv".into()));
+    let writing = Translated::Event(Event::Writing("y.mkv".into()));
+    assert!(seen.contains(&settled), "{seen:?}");
+    assert!(!seen.contains(&writing), "{seen:?}");
+}

@@ -123,3 +123,24 @@ fn should_read_the_configuration_again_on_a_hangup() {
         program.log()
     );
 }
+
+// @behavior RUN-015
+#[test]
+fn should_not_let_a_file_renamed_in_place_hold_the_folder() {
+    let sandbox = Sandbox::new();
+    let program = Program::start_in_place(&sandbox, r#"[{ strip = {} }, "move"]"#);
+
+    sandbox.write("source/[Team] a.mkv", "one");
+    assert!(
+        eventually(|| sandbox.exists("source/a.mkv")),
+        "{}",
+        program.log()
+    );
+    sandbox.write("source/[Team] b.mkv", "two");
+
+    assert!(
+        eventually(|| sandbox.exists("source/b.mkv")),
+        "{}",
+        program.log()
+    );
+}
