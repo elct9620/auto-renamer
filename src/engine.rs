@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::context::Context;
 use crate::pipeline::Pipeline;
 use crate::record::Record;
-use crate::stages::{Earlier, EarlierFiles, Flow, Rank, Rejection, Stage, Stop, Take};
+use crate::stages::{Batch, Flow, Rejection, Stage, Stop};
 
 /// What a batch made of one file.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -12,6 +12,17 @@ pub enum Verdict {
     Excluded,
     Unclaimed,
     Rejected(Rejection),
+}
+
+impl Verdict {
+    /// The verdict on a file its pipeline ran to the end, or stopped.
+    fn of(flow: Flow) -> Verdict {
+        match flow {
+            Ok(record) => Verdict::Planned(record),
+            Err(Stop::Excluded) => Verdict::Excluded,
+            Err(Stop::Rejected(rejection)) => Verdict::Rejected(rejection),
+        }
+    }
 }
 
 /// One file of a batch with the verdict on it.
@@ -23,53 +34,6 @@ pub struct Judged {
     pub verdict: Verdict,
 }
 
-enum Slot {
-    Waiting(Record),
-    Live {
-        pipeline: usize,
-        record: Record,
-    },
-    Done {
-        pipeline: Option<usize>,
-        verdict: Verdict,
-    },
-}
-
-impl Slot {
-    fn is_live_in(&self, pipeline: usize) -> bool {
-        matches!(self, Slot::Live { pipeline: owner, .. } if *owner == pipeline)
-    }
-
-    /// Takes the record out of a slot that is running in the pipeline, leaving the slot to be filled again.
-    fn take_live(&mut self, pipeline: usize) -> Option<Record> {
-        if !self.is_live_in(pipeline) {
-            return None;
-        }
-        let vacated = Slot::Done {
-            pipeline: None,
-            verdict: Verdict::Unclaimed,
-        };
-        match std::mem::replace(self, vacated) {
-            Slot::Live { record, .. } => Some(record),
-            _ => None,
-        }
-    }
-
-    fn settle(pipeline: usize, flow: Flow) -> Slot {
-        match flow {
-            Ok(record) => Slot::Live { pipeline, record },
-            Err(Stop::Excluded) => Slot::Done {
-                pipeline: Some(pipeline),
-                verdict: Verdict::Excluded,
-            },
-            Err(Stop::Rejected(rejection)) => Slot::Done {
-                pipeline: Some(pipeline),
-                verdict: Verdict::Rejected(rejection),
-            },
-        }
-    }
-}
-
 /// Plans a whole batch through the pipelines of a watch, in the order they are listed.
 ///
 /// Files are taken in the order of their paths. Each is claimed by the first pipeline whose leading filters
@@ -77,30 +41,39 @@ impl Slot {
 /// that touches the filesystem.
 pub fn plan_batch(
     pipelines: &[(String, Pipeline)],
-    mut records: Vec<Record>,
+    records: Vec<Record>,
     context: &mut Context,
 ) -> Vec<Judged> {
-    records.sort_by(|a, b| a.origin().cmp(b.origin()));
-    let origins: Vec<PathBuf> = records
-        .iter()
-        .map(|record| record.origin().to_path_buf())
-        .collect();
-    let mut slots: Vec<Slot> = records.into_iter().map(Slot::Waiting).collect();
+    let mut batch = Batch::new(records);
 
-    for (index, (_, pipeline)) in pipelines.iter().enumerate() {
-        claim(pipeline, index, &mut slots, context);
-        run_stages(pipelines, index, &origins, &mut slots, context);
-        finish(index, &mut slots);
+    for (name, pipeline) in pipelines {
+        let (filters, rest) = pipeline.split_at_claim();
+        batch.claim(name, |record| {
+            filters
+                .iter()
+                .all(|filter| filter.apply(record.clone(), context).is_ok())
+        });
+        for stage in rest.iter().take_while(|stage| !stage.is_effect()) {
+            match stage {
+                Stage::Rank(rank) => {
+                    let mut flows = rank.run(batch.live().cloned().collect()).into_iter();
+                    batch.each(|_| flows.next().expect("a rank answers once for each record"));
+                }
+                Stage::Take(take) => {
+                    let earlier = batch.earlier();
+                    batch.each(|record| take.run(record, &earlier));
+                }
+                _ => batch.each(|record| stage.apply(record, context)),
+            }
+        }
     }
 
-    slots
-        .into_iter()
-        .zip(origins)
-        .map(|(slot, origin)| {
-            let (pipeline, verdict) = match slot {
-                Slot::Waiting(_) => (None, Verdict::Unclaimed),
-                Slot::Live { pipeline, record } => (Some(pipeline), Verdict::Planned(record)),
-                Slot::Done { pipeline, verdict } => (pipeline, verdict),
+    batch
+        .into_files()
+        .map(|(origin, claimed)| {
+            let (pipeline, verdict) = match claimed {
+                None => (None, Verdict::Unclaimed),
+                Some((pipeline, flow)) => (Some(pipeline), Verdict::of(flow)),
             };
             Judged {
                 origin,
@@ -109,119 +82,4 @@ pub fn plan_batch(
             }
         })
         .collect()
-}
-
-fn leading_filters(pipeline: &Pipeline) -> usize {
-    pipeline
-        .stages()
-        .iter()
-        .take_while(|stage| matches!(stage, Stage::Filter(_)))
-        .count()
-}
-
-/// The pipeline claims each waiting file that every one of its leading filters lets through.
-fn claim(pipeline: &Pipeline, index: usize, slots: &mut [Slot], context: &mut Context) {
-    let filters = &pipeline.stages()[..leading_filters(pipeline)];
-    for slot in slots {
-        let Slot::Waiting(record) = slot else {
-            continue;
-        };
-        let claimed = filters
-            .iter()
-            .all(|filter| filter.apply(record.clone(), context).is_ok());
-        if claimed {
-            *slot = Slot::Live {
-                pipeline: index,
-                record: record.clone(),
-            };
-        }
-    }
-}
-
-fn run_stages(
-    pipelines: &[(String, Pipeline)],
-    index: usize,
-    origins: &[PathBuf],
-    slots: &mut [Slot],
-    context: &mut Context,
-) {
-    let (_, pipeline) = &pipelines[index];
-    let stages = pipeline
-        .stages()
-        .iter()
-        .skip(leading_filters(pipeline))
-        .take_while(|stage| !stage.is_effect());
-
-    for stage in stages {
-        match stage {
-            Stage::Rank(rank) => run_rank(rank, index, slots),
-            Stage::Take(take) => run_take(take, pipelines, index, origins, slots),
-            _ => map_live(slots, index, |record| stage.apply(record, context)),
-        }
-    }
-}
-
-/// Runs a change over every record the pipeline still holds live, settling each on what the change answers.
-fn map_live(slots: &mut [Slot], index: usize, mut change: impl FnMut(Record) -> Flow) {
-    for slot in slots {
-        if let Some(record) = slot.take_live(index) {
-            *slot = Slot::settle(index, change(record));
-        }
-    }
-}
-
-fn run_rank(rank: &Rank, index: usize, slots: &mut [Slot]) {
-    let live: Vec<usize> = (0..slots.len())
-        .filter(|&position| slots[position].is_live_in(index))
-        .collect();
-    let records: Vec<Record> = live
-        .iter()
-        .filter_map(|&position| slots[position].take_live(index))
-        .collect();
-    let flows = rank.run(records);
-    for (position, flow) in live.into_iter().zip(flows) {
-        slots[position] = Slot::settle(index, flow);
-    }
-}
-
-fn run_take(
-    take: &Take,
-    pipelines: &[(String, Pipeline)],
-    index: usize,
-    origins: &[PathBuf],
-    slots: &mut [Slot],
-) {
-    let earlier: Vec<Earlier> = slots
-        .iter()
-        .zip(origins)
-        .filter_map(|(slot, origin)| match slot {
-            Slot::Done {
-                pipeline: Some(owner),
-                verdict,
-            } if *owner < index => Some(Earlier {
-                pipeline: pipelines[*owner].0.clone(),
-                origin: origin.clone(),
-                planned: match verdict {
-                    Verdict::Planned(record) => Some(record.clone()),
-                    _ => None,
-                },
-            }),
-            _ => None,
-        })
-        .collect();
-
-    let earlier = EarlierFiles::new(earlier);
-    map_live(slots, index, |record| take.run(record, &earlier));
-}
-
-/// What the pipeline still holds live is planned.
-fn finish(index: usize, slots: &mut [Slot]) {
-    for slot in slots {
-        if let Some(record) = slot.take_live(index) {
-            *slot = Slot::Done {
-                pipeline: Some(index),
-                verdict: Verdict::Planned(record),
-            };
-        }
-    }
 }

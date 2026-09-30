@@ -1,5 +1,6 @@
 //! The stages a pipeline is stacked from, as declared in configuration.
 
+mod batch;
 mod declare;
 mod filter;
 mod format;
@@ -20,8 +21,9 @@ use crate::context::Context;
 use crate::record::{Record, Value, is_usable_file_name};
 use crate::template::Template;
 
+pub(crate) use batch::Batch;
 pub use declare::DeclareError;
-pub(crate) use take::{Earlier, EarlierFiles};
+use take::EarlierFiles;
 
 /// What a stage answers for one record: the record to go on with, or what stops it.
 pub type Flow = Result<Record, Stop>;

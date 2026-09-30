@@ -84,6 +84,16 @@ impl Pipeline {
         &self.stages
     }
 
+    /// The pipeline in two parts: the filters it opens with, which say what it claims, and the stages after them.
+    pub(crate) fn split_at_claim(&self) -> (&[Stage], &[Stage]) {
+        let filters = self
+            .stages
+            .iter()
+            .take_while(|stage| matches!(stage, Stage::Filter(_)))
+            .count();
+        self.stages.split_at(filters)
+    }
+
     /// Whether the pipeline ends in a stage that touches the filesystem.
     pub fn has_effect(&self) -> bool {
         self.stages.iter().any(Stage::is_effect)
