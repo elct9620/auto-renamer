@@ -5,10 +5,10 @@ mod common;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::{self, JoinHandle};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use auto_renamer::{Options, RunError, run};
-use common::Sandbox;
+use common::{Sandbox, eventually, eventually_within};
 
 fn config_of(sandbox: &Sandbox, stages: &str) -> String {
     format!(
@@ -54,18 +54,6 @@ impl Drop for Running {
             let _ = thread.join();
         }
     }
-}
-
-/// Whether the condition came true within ten seconds.
-fn eventually(condition: impl Fn() -> bool) -> bool {
-    let until = Instant::now() + Duration::from_secs(10);
-    while Instant::now() < until {
-        if condition() {
-            return true;
-        }
-        thread::sleep(Duration::from_millis(100));
-    }
-    condition()
 }
 
 /// Long enough for a change to the configuration to be read.
@@ -134,6 +122,48 @@ fn should_process_a_folder_moved_into_the_source_with_what_it_holds() {
     std::fs::rename(sandbox.path("outside/Show"), sandbox.path("source/Show")).unwrap();
 
     assert!(eventually(|| sandbox.exists("target/Show/a.mkv")));
+}
+
+// @behavior RUN-019
+#[test]
+fn should_not_miss_a_file_written_into_a_folder_that_has_just_appeared() {
+    let sandbox = Sandbox::new();
+    let _running = Running::start(&sandbox, r#"["move"]"#);
+    let folders: Vec<String> = (0..300).map(|number| format!("Big/{number:04}")).collect();
+    for folder in &folders {
+        sandbox.make_dir(&format!("outside/{folder}"));
+    }
+
+    std::fs::rename(sandbox.path("outside/Big"), sandbox.path("source/Big")).unwrap();
+    for folder in &folders {
+        sandbox.write(&format!("source/{folder}/a.mkv"), "video");
+    }
+
+    let missing = || {
+        folders
+            .iter()
+            .filter(|folder| !sandbox.exists(&format!("target/{folder}/a.mkv")))
+            .count()
+    };
+    assert!(
+        eventually_within(30, || missing() == 0),
+        "{} missing",
+        missing()
+    );
+}
+
+// @behavior RUN-021
+#[test]
+fn should_process_a_folder_renamed_inside_the_source_under_its_new_name() {
+    let sandbox = Sandbox::new();
+    let _running = Running::start(&sandbox, r#"["move"]"#);
+    sandbox.write("source/Old/a.mkv", "video");
+    thread::sleep(Duration::from_millis(200));
+
+    std::fs::rename(sandbox.path("source/Old"), sandbox.path("source/New")).unwrap();
+
+    assert!(eventually(|| sandbox.exists("target/New/a.mkv")));
+    assert!(!sandbox.exists("target/Old"));
 }
 
 // @behavior RUN-009

@@ -162,3 +162,21 @@ fn should_stop_a_pipeline_that_names_its_own_result_again() {
     assert_eq!(names.len(), 1, "{names:?}");
     assert_eq!(names[0].matches('x').count(), 5, "{names:?}");
 }
+
+// @behavior RUN-020
+#[test]
+fn should_name_a_folder_that_cannot_be_watched() {
+    use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
+    let sandbox = Sandbox::new();
+    let program = Program::start_unprivileged(&sandbox, r#"["move"]"#);
+
+    std::fs::DirBuilder::new()
+        .mode(0o000)
+        .create(sandbox.path("source/Locked"))
+        .unwrap();
+
+    let named = eventually(|| program.log().contains("Locked is not watched"));
+    let open = std::fs::Permissions::from_mode(0o755);
+    std::fs::set_permissions(sandbox.path("source/Locked"), open).unwrap();
+    assert!(named, "{}", program.log());
+}

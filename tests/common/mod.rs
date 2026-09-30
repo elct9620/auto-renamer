@@ -233,6 +233,25 @@ pub fn cleanup_stage(declaration: &str) -> auto_renamer::stages::Cleanup {
     }
 }
 
+/// The user and group every Linux keeps for what should own nothing.
+const NOBODY: u32 = 65534;
+
+#[derive(PartialEq)]
+enum User {
+    Same,
+    Unprivileged,
+}
+
+fn runs_as_root(sandbox: &Sandbox) -> bool {
+    use std::os::unix::fs::MetadataExt;
+    std::fs::metadata(sandbox.path("")).is_ok_and(|folder| folder.uid() == 0)
+}
+
+fn target_of(sandbox: &Sandbox) -> String {
+    sandbox.make_dir("target");
+    format!("target = \"{}\"\n", sandbox.path("target").display())
+}
+
 /// The program running over a sandbox with `source` and `target` folders, killed if a test ends before it did.
 pub struct Program {
     child: std::process::Child,
@@ -242,14 +261,32 @@ pub struct Program {
 impl Program {
     /// Starts the program with a pipeline of `stages`, and `extra` lines in the watch.
     pub fn start(sandbox: &Sandbox, stages: &str, extra: &str) -> Program {
-        sandbox.make_dir("target");
-        let target = format!("target = \"{}\"\n", sandbox.path("target").display());
-        Program::launch(sandbox, stages, &target, "3s", extra)
+        Program::launch(
+            sandbox,
+            stages,
+            &target_of(sandbox),
+            "3s",
+            extra,
+            User::Same,
+        )
     }
 
     /// Starts the program without a target, so that files are renamed where they are, with a long maximum wait.
     pub fn start_in_place(sandbox: &Sandbox, stages: &str) -> Program {
-        Program::launch(sandbox, stages, "", "60s", "")
+        Program::launch(sandbox, stages, "", "60s", "", User::Same)
+    }
+
+    /// Starts the program as a user that a folder can be closed to, which the user of the tests is not
+    /// when they run as root.
+    pub fn start_unprivileged(sandbox: &Sandbox, stages: &str) -> Program {
+        Program::launch(
+            sandbox,
+            stages,
+            &target_of(sandbox),
+            "3s",
+            "",
+            User::Unprivileged,
+        )
     }
 
     fn launch(
@@ -258,6 +295,7 @@ impl Program {
         target: &str,
         max_wait: &str,
         extra: &str,
+        user: User,
     ) -> Program {
         sandbox.make_dir("source");
         sandbox.write(
@@ -268,12 +306,16 @@ impl Program {
             ),
         );
         let log = sandbox.path("log.txt");
-        let child = std::process::Command::new(env!("CARGO_BIN_EXE_auto-renamer"))
+        let mut command = std::process::Command::new(env!("CARGO_BIN_EXE_auto-renamer"));
+        command
             .arg("--config")
             .arg(sandbox.path("config.toml"))
-            .stderr(std::fs::File::create(&log).expect("the log should be created"))
-            .spawn()
-            .expect("the program should start");
+            .stderr(std::fs::File::create(&log).expect("the log should be created"));
+        if user == User::Unprivileged && runs_as_root(sandbox) {
+            use std::os::unix::process::CommandExt;
+            command.uid(NOBODY).gid(NOBODY);
+        }
+        let child = command.spawn().expect("the program should start");
         std::thread::sleep(std::time::Duration::from_millis(1500));
         Program { child, log }
     }

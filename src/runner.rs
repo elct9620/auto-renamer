@@ -46,7 +46,7 @@ struct Session {
     config: Config,
     machines: Vec<Machine>,
     renames: Vec<Renames>,
-    _watcher: RecommendedWatcher,
+    watcher: RecommendedWatcher,
 }
 
 impl Session {
@@ -89,7 +89,7 @@ impl Session {
             config,
             machines,
             renames,
-            _watcher: watcher,
+            watcher,
         })
     }
 
@@ -100,6 +100,7 @@ impl Session {
                 match translated {
                     Translated::Event(event) => machine.observe(event, now),
                     Translated::Scan(folder) => {
+                        confirm_watched(&mut self.watcher, &watch.source, &folder);
                         for event in scan_folder(&watch.source, &folder) {
                             machine.observe(event, now);
                         }
@@ -123,6 +124,18 @@ impl Session {
             .iter()
             .filter_map(Machine::next_deadline)
             .min()
+    }
+}
+
+/// Has a folder that appeared watched before it is scanned. The notification of a folder arrives before
+/// the watch on it is in place, so a file created in between would be neither found by the scan nor
+/// reported; asking for the watch waits until it is there. A folder that is gone again needs none.
+fn confirm_watched(watcher: &mut RecommendedWatcher, source: &Path, folder: &Path) {
+    if let Err(error) = watcher.watch(folder, RecursiveMode::Recursive)
+        && !matches!(error.kind, notify::ErrorKind::PathNotFound)
+    {
+        let name = folder.strip_prefix(source).unwrap_or(folder);
+        eprintln!("[warn] {} is not watched: {error}", name.display());
     }
 }
 

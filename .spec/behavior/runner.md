@@ -151,3 +151,27 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | Given | a watch whose source is a link to the folder holding the configuration file |
 | When | the watcher is started |
 | Then | it stops with a configuration error naming the source |
+
+## `RUN-019` A file written into a folder that has just appeared is not missed
+
+| Step | Statement |
+| --- | --- |
+| Given | a running watcher and a folder holding many folders outside the source |
+| When | the folder is moved into the source and a file is written into each folder under it at once |
+| Then | every file appears in the target |
+
+## `RUN-020` A folder that cannot be watched is named
+
+| Step | Statement |
+| --- | --- |
+| Given | the program running and a folder it is not permitted to read |
+| When | the folder is moved into the source |
+| Then | its error output says the folder is not watched |
+
+## `RUN-021` A folder renamed inside the source is processed under its new name
+
+| Step | Statement |
+| --- | --- |
+| Given | a running watcher and a folder made in the source while it runs, holding a file |
+| When | the folder is renamed inside the source before its batch is handed over |
+| Then | the file appears in the target under the new name of the folder |
