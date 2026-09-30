@@ -372,10 +372,10 @@ dry_run = true      # log each plan, run no effect stage
 
 ```
   same filesystem    rename ─► done
-  other filesystem   copy to temp name ─► rename ─► delete source
+  other filesystem   copy to temp name, a part at a time ─► rename ─► delete source
 ```
 
-容器內 source 與 target 常是不同的掛載，`rename` 無法跨越。先寫成 `.` 開頭的暫存名，保留修改時間，只留讀寫權限，再改名，媒體伺服器就不會掃到寫到一半的檔案。暫存名每次不同，中斷時留下的暫存檔不會擋住下次搬移。
+容器內 source 與 target 常是不同掛載，`rename` 無法跨越。先寫成 `.` 開頭的暫存名再改名，媒體伺服器不會掃到寫到一半的檔案；修改時間保留，只留讀寫權限。暫存名每次不同，中斷留下的不擋下次搬移。複製一次寫一段並落盤，待寫入的量不隨檔案變大（見 4.6）。
 
 ### 4.3 撞名
 
@@ -420,6 +420,7 @@ dry_run = true      # log each plan, run no effect stage
 | 通知佇列 | 有上限 | 測試 |
 | `next` | 一批對一個 target 資料夾只列一次 | 測試 |
 | 記憶體 | 隨等待數與批次成長，過後回落 | 量測 |
+| 跨檔案系統搬移 | 上限 32 MB 以上不被終止 | 量測 |
 
 在這個範圍內，每個事件與每次到期檢查的成本不隨等待中的檔案數成長。超過 10 萬個不在保證之內。量測用 `scripts/measure.sh`，它在容器裡讀程序的 CPU 時間與記憶體，數字隨機器而異。
 

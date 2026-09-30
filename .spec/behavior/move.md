@@ -167,6 +167,14 @@ A move puts a file at its plan under the target, and it is the only thing that t
 | When | the file is moved |
 | Then | the target holds the same bytes as `y.mkv` |
 
+## `MV-022` A file larger than one part arrives whole between filesystems
+
+| Step | Statement |
+| --- | --- |
+| Given | a file of 40 MiB and a few bytes more on one filesystem, whose bytes differ all along, a target on another, and the plan `y.mkv` |
+| When | the file is moved |
+| Then | `y.mkv` holds the same bytes |
+
 ## `MV-021` A move within a filesystem is seen as a file moved in
 
 | Step | Statement |

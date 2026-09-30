@@ -1,5 +1,5 @@
 use std::fs::{self, File, OpenOptions, Permissions};
-use std::io;
+use std::io::{self, Read};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Component, Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -134,18 +134,33 @@ fn copy_then_remove(from: &Path, to: &Path) -> Result<(), EffectError> {
 }
 
 fn copy_to(from: &Path, temporary: &Path) -> io::Result<()> {
-    let mut source = File::open(from)?;
+    let source = File::open(from)?;
     let metadata = source.metadata()?;
-    let mut copy = OpenOptions::new()
+    let copy = OpenOptions::new()
         .write(true)
         .create_new(true)
         .open(temporary)?;
-    io::copy(&mut source, &mut copy)?;
+    write_in_parts(&source, &copy)?;
     copy.set_permissions(Permissions::from_mode(
         metadata.permissions().mode() & KEPT_PERMISSIONS,
     ))?;
     copy.set_modified(metadata.modified()?)?;
     copy.sync_all()
+}
+
+/// How much of a file is written before it is flushed to the disk.
+const PART: u64 = 16 * 1024 * 1024;
+
+/// Copies a file a part at a time, each flushed before the next is written.
+///
+/// What waits to be written counts against the memory a container is allowed, and a file written whole
+/// and flushed at the end can wait in more than that, for which the kernel ends the program. Written a
+/// part at a time, no more than a part ever waits, however large the file.
+fn write_in_parts(source: &File, mut copy: &File) -> io::Result<()> {
+    while io::copy(&mut source.take(PART), &mut copy)? > 0 {
+        copy.sync_data()?;
+    }
+    Ok(())
 }
 
 /// Only the read and write bits of a downloaded file are kept: a data file needs no execute bit, and a

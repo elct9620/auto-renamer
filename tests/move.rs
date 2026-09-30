@@ -426,6 +426,32 @@ fn should_not_be_blocked_by_a_temporary_file_an_earlier_move_left() {
     assert_eq!(target.read("y.mkv").as_deref(), Some("some bytes"));
 }
 
+// @behavior MV-022
+#[cfg(target_os = "linux")]
+#[test]
+fn should_bring_a_file_larger_than_one_part_whole_between_filesystems() {
+    let Some(target) = other_filesystem() else {
+        eprintln!("skipped: no second filesystem here");
+        return;
+    };
+    let source = Sandbox::new();
+    // No two stretches of it are alike, so a part missing, repeated or out of place shows.
+    let bytes: Vec<u8> = (0..40 * 1024 * 1024 + 123_u32)
+        .map(|place| (place.wrapping_mul(2_654_435_761) >> 24) as u8)
+        .collect();
+    std::fs::write(source.path("x.mkv"), &bytes).unwrap();
+    let roots = Roots {
+        source: source.path(""),
+        target: target.path(""),
+    };
+
+    move_file(&reject(), &planned("x.mkv", "y.mkv"), &roots, false).unwrap();
+
+    let moved = std::fs::read(target.path("y.mkv")).unwrap();
+    assert_eq!(moved.len(), bytes.len());
+    assert!(moved == bytes, "the bytes differ");
+}
+
 // @behavior MV-021
 #[cfg(target_os = "linux")]
 #[test]
