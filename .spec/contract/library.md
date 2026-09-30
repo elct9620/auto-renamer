@@ -478,7 +478,7 @@ pub enum Verdict {}
 
 ## `Judged`
 
-One file of a batch with the verdict on it, and the place in the list of the pipeline that claimed it.
+One file of a batch with the verdict on it, the place in the list of the pipeline that claimed it, and the effects its pipeline asks for.
 
 | Attribute | Value |
 | --- | --- |
@@ -742,6 +742,18 @@ What one effect stage did.
 pub enum Done {}
 ```
 
+## `Effect`
+
+What an effect stage asks to be done to a planned file: a move or a cleanup, as the stage was declared.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub enum Effect {}
+```
+
 ## `EffectsRun`
 
 What the effect stages of a pipeline did to one file, and the failure that stopped them if there was one.
@@ -756,14 +768,14 @@ pub struct EffectsRun {}
 
 ## `apply_effects`
 
-Run the effect stages of a pipeline in order on a planned file, stopping at the first failure.
+Carry out the effects a planned file carries, in their order, stopping at the first failure.
 
 | Attribute | Value |
 | --- | --- |
 | internal | yes |
 
 ```rust
-pub fn apply_effects(pipeline: &Pipeline, record: &Record, unit: &Path, roots: &Roots, dry_run: bool) -> EffectsRun {}
+pub fn apply_effects(effects: &[Effect], record: &Record, unit: &Path, roots: &Roots, dry_run: bool) -> EffectsRun {}
 ```
 
 ## `Event`

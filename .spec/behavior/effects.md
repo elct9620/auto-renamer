@@ -1,6 +1,6 @@
 # Effects
 
-A pipeline ends in effect stages, which run in the order they are written on the file that was planned. If one fails, none after it runs, and what already happened is reported with the failure.
+A pipeline ends in effect stages. Planning only notes what each asks for on the files that reach it; once the whole batch is planned, the effects of a file run in the order they are written. If one fails, none after it runs, and what already happened is reported with the failure.
 
 ## Includes
 
@@ -45,3 +45,27 @@ A pipeline ends in effect stages, which run in the order they are written on the
 | Given | the `move` stage and a record for `x.mkv` |
 | When | the stage is applied to the record |
 | Then | the record goes on as it was |
+
+## `EFF-006` A planned file carries the effects of its pipeline in the order they are written
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline that cleans up and then moves, and a file it claims |
+| When | the batch is planned |
+| Then | the file is planned with a cleanup and then a move to be done |
+
+## `EFF-007` A file a stage stopped carries no effect
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline of a `format` that needs a field the file lacks, then `move` |
+| When | the batch is planned |
+| Then | the file is refused with nothing to be done to it |
+
+## `EFF-008` A file carries only the effects of the pipeline that claimed it
+
+| Step | Statement |
+| --- | --- |
+| Given | a first pipeline for `mkv` without an effect stage, a second pipeline of `move`, and an `mkv` file |
+| When | the batch is planned |
+| Then | the file is planned by the first pipeline with nothing to be done to it |

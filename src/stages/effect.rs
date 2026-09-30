@@ -1,15 +1,23 @@
-//! The stages that touch the filesystem, as far as planning is concerned.
+//! The stages that touch the filesystem, as far as planning is concerned: each only notes what it asks for.
 
 use super::{Batch, Cleanup, Move, Run};
 use crate::context::Context;
+
+/// What an effect stage asks to be done to a planned file, as the stage was declared.
+#[derive(Debug, Clone, Copy)]
+pub enum Effect<'p> {
+    Move(&'p Move),
+    Cleanup(&'p Cleanup),
+}
 
 impl Run for Move {
     fn name(&self) -> &'static str {
         "move"
     }
 
-    /// An effect does not rewrite the plan, so planning passes every record on.
-    fn run(&self, _: &mut Batch, _: &mut Context) {}
+    fn run<'p>(&'p self, batch: &mut Batch<'p>, _: &mut Context) {
+        batch.schedule(Effect::Move(self));
+    }
 }
 
 impl Run for Cleanup {
@@ -17,6 +25,7 @@ impl Run for Cleanup {
         "cleanup"
     }
 
-    /// An effect does not rewrite the plan, so planning passes every record on.
-    fn run(&self, _: &mut Batch, _: &mut Context) {}
+    fn run<'p>(&'p self, batch: &mut Batch<'p>, _: &mut Context) {
+        batch.schedule(Effect::Cleanup(self));
+    }
 }

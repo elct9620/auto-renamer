@@ -23,6 +23,7 @@ use crate::template::Template;
 
 pub use batch::Batch;
 pub use declare::DeclareError;
+pub use effect::Effect;
 
 /// What a stage answers for one record: the record to go on with, or what stops it.
 pub type Flow = Result<Record, Stop>;
@@ -104,7 +105,7 @@ pub trait Run {
 
     /// Runs the stage over the files the running pipeline still holds, with what the batch and the
     /// target let it know.
-    fn run(&self, batch: &mut Batch, context: &mut Context);
+    fn run<'p>(&'p self, batch: &mut Batch<'p>, context: &mut Context);
 }
 
 /// Fixed values written into records by `set` and `default`.
@@ -160,7 +161,7 @@ impl Stage {
     }
 
     /// Runs the stage over the files the running pipeline still holds.
-    pub(crate) fn run(&self, batch: &mut Batch, context: &mut Context) {
+    pub(crate) fn run<'p>(&'p self, batch: &mut Batch<'p>, context: &mut Context) {
         self.as_run().run(batch, context);
     }
 
@@ -171,7 +172,7 @@ impl Stage {
         self.run(&mut batch, context);
         batch
             .into_files()
-            .find_map(|(_, claimed)| claimed)
+            .find_map(|file| file.claimed)
             .map(|(_, flow)| flow)
             .expect("a batch of one holds its file")
     }

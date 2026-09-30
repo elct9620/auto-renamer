@@ -104,3 +104,11 @@ What a stage answers for one record: the record to go on with, or the stop that 
 #### Rejected
 
 - `Outcome` - Flow is a result, so a stage passes a stop on instead of matching on it.
+
+### Effect
+
+What an effect stage asks to be done to a planned file: a move or a cleanup. Planning only notes it, and it is carried out once the whole batch is planned.
+
+#### Rejected
+
+- `Action` - Effect is what the design calls it.

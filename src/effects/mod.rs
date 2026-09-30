@@ -8,9 +8,8 @@ use std::path::{Path, PathBuf};
 mod cleanup;
 mod relocate;
 
-use crate::pipeline::Pipeline;
 use crate::record::Record;
-use crate::stages::Stage;
+use crate::stages::Effect;
 
 pub use cleanup::cleanup_folders;
 pub use relocate::move_file;
@@ -97,10 +96,10 @@ pub struct EffectsRun {
     pub error: Option<EffectError>,
 }
 
-/// Runs the effect stages of a pipeline in the order they are written on a planned file,
-/// stopping at the first failure so nothing after a failed step acts on what it did not do.
+/// Carries out the effects a planned file carries, in their order, stopping at the first failure so
+/// nothing after a failed effect acts on what it did not do.
 pub fn apply_effects(
-    pipeline: &Pipeline,
+    effects: &[Effect],
     record: &Record,
     unit: &Path,
     roots: &Roots,
@@ -110,17 +109,16 @@ pub fn apply_effects(
         done: Vec::new(),
         error: None,
     };
-    for stage in pipeline.stages().iter().filter(|stage| stage.is_effect()) {
-        let step = match stage {
-            Stage::Move(policy) => move_file(policy, record, roots, dry_run).map(Done::Moved),
+    for effect in effects {
+        let done = match effect {
+            Effect::Move(policy) => move_file(policy, record, roots, dry_run).map(Done::Moved),
             // A dry run leaves the file where it is, so no folder it would empty is empty yet.
-            Stage::Cleanup(_) if dry_run => continue,
-            Stage::Cleanup(policy) => {
+            Effect::Cleanup(_) if dry_run => continue,
+            Effect::Cleanup(policy) => {
                 cleanup_folders(policy, record.origin(), unit, roots).map(Done::Cleaned)
             }
-            _ => continue,
         };
-        match step {
+        match done {
             Ok(done) => run.done.push(done),
             Err(error) => {
                 run.error = Some(error);

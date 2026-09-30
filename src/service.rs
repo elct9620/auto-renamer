@@ -11,8 +11,8 @@ use crate::config::{FOLDER_CONFIG, FolderConfig, MAX_FOLDER_CONFIG_BYTES, Watch}
 use crate::context::{Context, Target};
 use crate::effects::{Applied, Done, Roots, SkipReason, apply_effects};
 use crate::engine::{Verdict, plan_batch};
-use crate::pipeline::Pipeline;
 use crate::record::Record;
+use crate::stages::Effect;
 
 /// The target folder as the filesystem holds it.
 pub struct FsTarget {
@@ -145,14 +145,13 @@ pub fn process_batch(
     let target = FsTarget::new(target_root);
     let judged = plan_batch(&pipelines, records, &mut Context::new(&target));
     for entry in judged {
-        let what = match (entry.verdict, entry.pipeline) {
-            (Verdict::Planned(record), Some(index)) => {
-                let pipeline = &pipelines[index].1;
-                apply_planned(pipeline, &record, unit, &roots, &effective, renames)
+        let what = match entry.verdict {
+            Verdict::Planned(record) => {
+                apply_planned(&entry.effects, &record, unit, &roots, &effective, renames)
             }
-            (Verdict::Planned(_) | Verdict::Unclaimed, _) => What::Unclaimed,
-            (Verdict::Excluded, _) => What::Excluded,
-            (Verdict::Rejected(rejection), _) => {
+            Verdict::Unclaimed => What::Unclaimed,
+            Verdict::Excluded => What::Excluded,
+            Verdict::Rejected(rejection) => {
                 What::Refused(format!("{}: {}", rejection.stage, rejection.reason))
             }
         };
@@ -168,7 +167,7 @@ pub fn process_batch(
 /// Runs the effects of a planned file, unless it has been renamed in place too many times in a row,
 /// and keeps count of its renames in place.
 fn apply_planned(
-    pipeline: &Pipeline,
+    effects: &[Effect],
     record: &Record,
     unit: &Path,
     roots: &Roots,
@@ -183,7 +182,7 @@ fn apply_planned(
             "renamed in place {count} times in a row; the pipeline may name its own result again"
         ));
     }
-    let what = effects_of(pipeline, record, unit, roots, watch.dry_run);
+    let what = effects_of(effects, record, unit, roots, watch.dry_run);
     if in_place {
         match &what {
             What::Moved(to) | What::MovedThenFailed { to, .. } => {
@@ -217,17 +216,17 @@ fn read_record(watch: &Watch, origin: &Path) -> Result<Record, What> {
 }
 
 fn effects_of(
-    pipeline: &Pipeline,
+    effects: &[Effect],
     record: &Record,
     unit: &Path,
     roots: &Roots,
     dry_run: bool,
 ) -> What {
     // A pipeline with no effect stage only ever previews.
-    if !pipeline.has_effect() {
+    if effects.is_empty() {
         return What::Previewed(roots.target.join(record.plan()));
     }
-    let run = apply_effects(pipeline, record, unit, roots, dry_run);
+    let run = apply_effects(effects, record, unit, roots, dry_run);
     let moved = run.done.into_iter().find_map(|done| match done {
         Done::Moved(applied) => Some(applied),
         Done::Cleaned(_) => None,

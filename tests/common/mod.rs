@@ -111,10 +111,12 @@ pub fn pipelines(list: &[(&str, &str)]) -> Vec<(String, Pipeline)> {
         .collect()
 }
 
-/// A batch planned against an empty target.
-pub fn planned_batch(list: &[(&str, &str)], records: Vec<Record>) -> Vec<Judged> {
+/// A batch planned against an empty target. What is planned points at the effect stages of its
+/// pipelines, so the pipelines are kept for as long as the test runs.
+pub fn planned_batch(list: &[(&str, &str)], records: Vec<Record>) -> Vec<Judged<'static>> {
     let files = Files::none();
-    plan_batch(&pipelines(list), records, &mut Context::new(&files))
+    let pipelines: &'static [(String, Pipeline)] = Box::leak(pipelines(list).into_boxed_slice());
+    plan_batch(pipelines, records, &mut Context::new(&files))
 }
 
 pub fn verdict<'a>(judged: &'a [Judged], origin: &str) -> &'a Verdict {
