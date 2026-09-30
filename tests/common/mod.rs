@@ -331,6 +331,16 @@ impl Program {
 
     /// Whether the program exited successfully within five seconds.
     pub fn exits_successfully(&mut self) -> bool {
+        self.exit_status().is_some_and(|status| status.success())
+    }
+
+    /// Whether the program exited with a failure within five seconds.
+    pub fn exits_with_a_failure(&mut self) -> bool {
+        self.exit_status().is_some_and(|status| !status.success())
+    }
+
+    /// How the program ended, when it did within five seconds.
+    fn exit_status(&mut self) -> Option<std::process::ExitStatus> {
         let until = std::time::Instant::now() + std::time::Duration::from_secs(5);
         while std::time::Instant::now() < until {
             if let Some(status) = self
@@ -338,11 +348,11 @@ impl Program {
                 .try_wait()
                 .expect("the program should be waited on")
             {
-                return status.success();
+                return Some(status);
             }
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
-        false
+        None
     }
 
     /// What the program has written to its error output so far.

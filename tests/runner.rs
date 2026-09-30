@@ -222,6 +222,18 @@ fn should_answer_a_stop_between_batches() {
     );
 }
 
+// @behavior RUN-024
+#[test]
+fn should_process_a_file_written_into_a_folder_that_was_there_at_start() {
+    let sandbox = Sandbox::new();
+    sandbox.make_dir("source/Show/Season 01");
+    let _running = Running::start(&sandbox, r#"["move"]"#);
+
+    sandbox.write("source/Show/Season 01/a.mkv", "video");
+
+    assert!(eventually(|| sandbox.exists("target/Show/Season 01/a.mkv")));
+}
+
 // @behavior RUN-009
 #[test]
 fn should_follow_a_configuration_replaced_by_another_file() {

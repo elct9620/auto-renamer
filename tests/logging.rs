@@ -175,8 +175,29 @@ fn should_name_a_folder_that_cannot_be_watched() {
         .create(sandbox.path("source/Locked"))
         .unwrap();
 
-    let named = eventually(|| program.log().contains("Locked is not watched"));
+    let named =
+        eventually(|| program.log().contains("not watched") && program.log().contains("Locked"));
     let open = std::fs::Permissions::from_mode(0o755);
     std::fs::set_permissions(sandbox.path("source/Locked"), open).unwrap();
     assert!(named, "{}", program.log());
+}
+
+// @behavior RUN-025
+#[test]
+fn should_stop_for_a_folder_that_cannot_be_watched_at_start() {
+    use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
+    let sandbox = Sandbox::new();
+    sandbox.make_dir("source");
+    std::fs::DirBuilder::new()
+        .mode(0o000)
+        .create(sandbox.path("source/Locked"))
+        .unwrap();
+
+    let mut program = Program::start_unprivileged(&sandbox, r#"["move"]"#);
+
+    let failed = program.exits_with_a_failure();
+    let open = std::fs::Permissions::from_mode(0o755);
+    std::fs::set_permissions(sandbox.path("source/Locked"), open).unwrap();
+    assert!(failed, "{}", program.log());
+    assert!(program.log().contains("Locked"), "{}", program.log());
 }

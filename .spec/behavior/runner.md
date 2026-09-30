@@ -191,3 +191,19 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | Given | a watcher with 3000 batches ready at once |
 | When | it is told to stop as the first file reaches the target |
 | Then | it stops with files still in the source |
+
+## `RUN-024` A file written into a folder that was there at start is processed
+
+| Step | Statement |
+| --- | --- |
+| Given | a source holding the folder `Show/Season 01` when the watcher starts |
+| When | a file is written into `Show/Season 01` |
+| Then | the file appears in the target |
+
+## `RUN-025` A folder that cannot be watched at start stops the watcher
+
+| Step | Statement |
+| --- | --- |
+| Given | a source holding a folder the program is not permitted to read |
+| When | the program is started |
+| Then | it stops with an error naming the folder |

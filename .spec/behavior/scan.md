@@ -53,3 +53,11 @@ A scan lists the regular files below a folder with the time each was last change
 | Given | a folder holding 100 empty folders |
 | When | a scan of it looks at 110 entries |
 | Then | the scan is not finished |
+
+## `SCN-007` A scan tells of each folder before it reads it
+
+| Step | Statement |
+| --- | --- |
+| Given | a folder holding `A/1.mkv` and `A/B/2.mkv` |
+| When | the folder is scanned by someone who is told of each folder entered |
+| Then | they are told of `A` before `A/1.mkv` is found and of `A/B` before `A/B/2.mkv` is found |

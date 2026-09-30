@@ -28,13 +28,17 @@ impl Scan {
 
     /// Looks at up to a number of entries and answers the files found among them. A folder that is
     /// opened counts as one, so many folders holding nothing cost as much as many files.
-    pub fn look_at(&mut self, entries: usize) -> Vec<Event> {
+    ///
+    /// Each folder is told to `entering` before it is read. Whoever watches the folder from there on
+    /// misses nothing: what was in it before is found, and what comes after is reported.
+    pub fn look_at(&mut self, entries: usize, mut entering: impl FnMut(&Path)) -> Vec<Event> {
         let mut found = Vec::new();
         for _ in 0..entries {
             let Some(reading) = self.reading.as_mut() else {
                 let Some(folder) = self.folders.pop() else {
                     break;
                 };
+                entering(&folder);
                 self.reading = fs::read_dir(folder).ok();
                 continue;
             };

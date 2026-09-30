@@ -56,6 +56,8 @@ struct Session {
     renames: Vec<Renames>,
     watcher: RecommendedWatcher,
     scans: VecDeque<(usize, Scan)>,
+    /// How many of the scans at the front are those a session starts with.
+    starting: usize,
     ready: VecDeque<(usize, Ready)>,
 }
 
@@ -81,7 +83,7 @@ impl Session {
         let mut scans = VecDeque::new();
         for (index, watch) in config.watches().iter().enumerate() {
             watcher
-                .watch(&watch.source, RecursiveMode::Recursive)
+                .watch(&watch.source, RecursiveMode::NonRecursive)
                 .map_err(|error| RunError::Watch(format!("{}: {error}", watch.source.display())))?;
             machines.push(Machine::new(watch));
             renames.push(Renames::new());
@@ -97,6 +99,7 @@ impl Session {
             machines,
             renames,
             watcher,
+            starting: scans.len(),
             scans,
             ready: VecDeque::new(),
         })
@@ -108,22 +111,41 @@ impl Session {
             for translated in translate(notification, &watch.source, is_folder) {
                 match translated {
                     Translated::Event(event) => self.machines[index].observe(event, now),
-                    Translated::Scan(folder) => {
-                        confirm_watched(&mut self.watcher, &watch.source, &folder);
-                        self.scans
-                            .push_back((index, Scan::new(&watch.source, &folder)));
-                    }
+                    Translated::Scan(folder) => self
+                        .scans
+                        .push_back((index, Scan::new(&watch.source, &folder))),
                 }
             }
         }
     }
 
-    /// Goes on with the scan that is next for one turn.
-    fn scan(&mut self, now: SystemTime) {
+    /// Goes on with the scan that is next for one turn, watching each folder before it is read.
+    ///
+    /// A folder that cannot be watched stops a session that is starting, as a source that cannot be
+    /// watched does. One that appears later and cannot be watched is named and the watcher goes on.
+    fn scan(&mut self, now: SystemTime) -> Result<(), RunError> {
         let Some((index, scan)) = self.scans.front_mut() else {
-            return;
+            return Ok(());
         };
-        let found = scan.look_at(SCANNED_PER_TURN);
+        let source = &self.config.watches()[*index].source;
+        let watcher = &mut self.watcher;
+        let mut unwatched = Vec::new();
+        let found = scan.look_at(SCANNED_PER_TURN, |folder| {
+            if let Err(error) = watcher.watch(folder, RecursiveMode::NonRecursive)
+                && !matches!(error.kind, notify::ErrorKind::PathNotFound)
+            {
+                unwatched.push((folder.to_path_buf(), error));
+            }
+        });
+        if self.starting > 0
+            && let Some((folder, error)) = unwatched.first()
+        {
+            return Err(RunError::Watch(format!("{}: {error}", folder.display())));
+        }
+        for (folder, error) in unwatched {
+            let name = folder.strip_prefix(source).unwrap_or(&folder);
+            eprintln!("[warn] {} is not watched: {error}", name.display());
+        }
         let finished = scan.is_finished();
         let machine = &mut self.machines[*index];
         for event in found {
@@ -131,7 +153,9 @@ impl Session {
         }
         if finished {
             self.scans.pop_front();
+            self.starting = self.starting.saturating_sub(1);
         }
+        Ok(())
     }
 
     /// Processes one batch that is ready. A watch with a scan still going hands nothing over, since a
@@ -160,18 +184,6 @@ impl Session {
             .iter()
             .filter_map(Machine::next_deadline)
             .min()
-    }
-}
-
-/// Has a folder that appeared watched before it is scanned. The notification of a folder arrives before
-/// the watch on it is in place, so a file created in between would be neither found by the scan nor
-/// reported; asking for the watch waits until it is there. A folder that is gone again needs none.
-fn confirm_watched(watcher: &mut RecommendedWatcher, source: &Path, folder: &Path) {
-    if let Err(error) = watcher.watch(folder, RecursiveMode::Recursive)
-        && !matches!(error.kind, notify::ErrorKind::PathNotFound)
-    {
-        let name = folder.strip_prefix(source).unwrap_or(folder);
-        eprintln!("[warn] {} is not watched: {error}", name.display());
     }
 }
 
@@ -206,7 +218,7 @@ pub fn run(options: &Options, stop: &AtomicBool, reload: &AtomicBool) -> Result<
         if reload.swap(false, Ordering::SeqCst) {
             reload_at = Some(now);
         }
-        session.scan(now);
+        session.scan(now)?;
         session.process_one(now);
         if reload_at.is_some_and(|due| due <= now) {
             reload_at = None;

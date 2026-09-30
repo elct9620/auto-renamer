@@ -14,7 +14,7 @@ fn scan_folder(source: &Path, folder: &Path) -> Vec<Event> {
 fn found_by(mut scan: Scan, entries: usize) -> Vec<Event> {
     let mut found = Vec::new();
     while !scan.is_finished() {
-        found.extend(scan.look_at(entries));
+        found.extend(scan.look_at(entries, |_| {}));
     }
     found
 }
@@ -117,7 +117,38 @@ fn should_count_a_folder_a_scan_opens_as_an_entry_looked_at() {
     }
     let mut scan = Scan::new(&sandbox.path(""), &sandbox.path("Empty"));
 
-    scan.look_at(110);
+    scan.look_at(110, |_| {});
 
     assert!(!scan.is_finished());
+}
+
+// @behavior SCN-007
+#[test]
+fn should_tell_of_each_folder_before_a_scan_reads_it() {
+    let sandbox = Sandbox::new();
+    sandbox.write("A/1.mkv", "x");
+    sandbox.write("A/B/2.mkv", "x");
+    let mut scan = Scan::new(&sandbox.path(""), &sandbox.path("A"));
+    let mut seen: Vec<PathBuf> = Vec::new();
+
+    while !scan.is_finished() {
+        let mut entered = Vec::new();
+        let found = scan.look_at(1, |folder| entered.push(folder.to_path_buf()));
+        seen.extend(entered);
+        seen.extend(
+            found_paths(&found)
+                .into_iter()
+                .map(|file| sandbox.path("").join(file)),
+        );
+    }
+
+    let place = |path: &str| seen.iter().position(|seen| *seen == sandbox.path(path));
+    assert!(
+        place("A").is_some() && place("A") < place("A/1.mkv"),
+        "{seen:?}"
+    );
+    assert!(
+        place("A/B").is_some() && place("A/B") < place("A/B/2.mkv"),
+        "{seen:?}"
+    );
 }

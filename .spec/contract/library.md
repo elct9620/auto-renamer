@@ -922,7 +922,7 @@ impl Scan {
 
 ## `Scan::look_at`
 
-Look at up to a number of entries, folders counted as well as files, and answer the files found among them.
+Look at up to a number of entries, folders counted as well as files, and answer the files found among them. Each folder is told to `entering` before it is read, which is where a watch on it is asked for.
 
 | Attribute | Value |
 | --- | --- |
@@ -930,7 +930,7 @@ Look at up to a number of entries, folders counted as well as files, and answer 
 
 ```rust
 impl Scan {
-    pub fn look_at(&mut self, entries: usize) -> Vec<Event> {}
+    pub fn look_at(&mut self, entries: usize, entering: impl FnMut(&Path)) -> Vec<Event> {}
 }
 ```
 
