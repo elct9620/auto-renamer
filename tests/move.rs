@@ -2,6 +2,8 @@ mod common;
 
 use std::path::{Path, PathBuf};
 
+#[cfg(target_os = "linux")]
+use auto_renamer::effects::COPY_PART;
 use auto_renamer::{Applied, EffectError, Record, Roots, SkipReason, move_file};
 use common::{Sandbox, move_stage, record};
 
@@ -426,32 +428,6 @@ fn should_not_be_blocked_by_a_temporary_file_an_earlier_move_left() {
     assert_eq!(target.read("y.mkv").as_deref(), Some("some bytes"));
 }
 
-// @behavior MV-022
-#[cfg(target_os = "linux")]
-#[test]
-fn should_bring_a_file_larger_than_one_part_whole_between_filesystems() {
-    let Some(target) = other_filesystem() else {
-        eprintln!("skipped: no second filesystem here");
-        return;
-    };
-    let source = Sandbox::new();
-    // No two stretches of it are alike, so a part missing, repeated or out of place shows.
-    let bytes: Vec<u8> = (0..40 * 1024 * 1024 + 123_u32)
-        .map(|place| (place.wrapping_mul(2_654_435_761) >> 24) as u8)
-        .collect();
-    std::fs::write(source.path("x.mkv"), &bytes).unwrap();
-    let roots = Roots {
-        source: source.path(""),
-        target: target.path(""),
-    };
-
-    move_file(&reject(), &planned("x.mkv", "y.mkv"), &roots, false).unwrap();
-
-    let moved = std::fs::read(target.path("y.mkv")).unwrap();
-    assert_eq!(moved.len(), bytes.len());
-    assert!(moved == bytes, "the bytes differ");
-}
-
 // @behavior MV-021
 #[cfg(target_os = "linux")]
 #[test]
@@ -483,4 +459,51 @@ fn should_be_seen_as_a_file_moved_in_when_renamed_within_a_folder() {
     let writing = Translated::Event(Event::Writing("y.mkv".into()));
     assert!(seen.contains(&settled), "{seen:?}");
     assert!(!seen.contains(&writing), "{seen:?}");
+}
+
+/// Moves a file of a length to another filesystem and says whether it arrived as it was, which it is
+/// taken to have where there is no second filesystem to try. No two stretches of it are alike, so a
+/// part missing, repeated or out of place shows.
+#[cfg(target_os = "linux")]
+fn arrives_whole(length: u64) -> bool {
+    let Some(target) = other_filesystem() else {
+        eprintln!("skipped: no second filesystem here");
+        return true;
+    };
+    let source = Sandbox::new();
+    let bytes: Vec<u8> = (0..length as u32)
+        .map(|place| (place.wrapping_mul(2_654_435_761) >> 24) as u8)
+        .collect();
+    std::fs::write(source.path("x.mkv"), &bytes).unwrap();
+    let roots = Roots {
+        source: source.path(""),
+        target: target.path(""),
+    };
+
+    move_file(&reject(), &planned("x.mkv", "y.mkv"), &roots, false).unwrap();
+
+    std::fs::read(target.path("y.mkv")).unwrap() == bytes
+}
+
+// @behavior MV-022
+#[cfg(target_os = "linux")]
+#[test]
+fn should_bring_a_file_larger_than_one_part_whole_between_filesystems() {
+    let length = COPY_PART * 2 + COPY_PART / 2 + 123;
+
+    assert!(arrives_whole(length));
+}
+
+// @behavior MV-023
+#[cfg(target_os = "linux")]
+#[test]
+fn should_bring_a_file_of_exactly_two_parts_whole_between_filesystems() {
+    assert!(arrives_whole(COPY_PART * 2));
+}
+
+// @behavior MV-024
+#[cfg(target_os = "linux")]
+#[test]
+fn should_bring_an_empty_file_empty_between_filesystems() {
+    assert!(arrives_whole(0));
 }

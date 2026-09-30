@@ -148,8 +148,8 @@ fn copy_to(from: &Path, temporary: &Path) -> io::Result<()> {
     copy.sync_all()
 }
 
-/// How much of a file is written before it is flushed to the disk.
-const PART: u64 = 16 * 1024 * 1024;
+/// How much of a file copied between filesystems is written before it is flushed to the disk.
+pub const COPY_PART: u64 = 16 * 1024 * 1024;
 
 /// Copies a file a part at a time, each flushed before the next is written.
 ///
@@ -157,7 +157,7 @@ const PART: u64 = 16 * 1024 * 1024;
 /// and flushed at the end can wait in more than that, for which the kernel ends the program. Written a
 /// part at a time, no more than a part ever waits, however large the file.
 fn write_in_parts(source: &File, mut copy: &File) -> io::Result<()> {
-    while io::copy(&mut source.take(PART), &mut copy)? > 0 {
+    while io::copy(&mut source.take(COPY_PART), &mut copy)? > 0 {
         copy.sync_data()?;
     }
     Ok(())

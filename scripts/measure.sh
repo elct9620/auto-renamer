@@ -7,7 +7,7 @@
 #   scripts/measure.sh single N        N folders of 10 files, moved as one batch
 #   scripts/measure.sh rounds N        N folders of 10 files arriving while it runs, five times over
 #   scripts/measure.sh copy GIB [RUNS] one file of GIB gibibytes moved across filesystems, RUNS times
-#   scripts/measure.sh all             the scenarios the promises of docs/design.md 4.6 were measured with
+#   scripts/measure.sh all             every scenario once, with no memory limit
 #
 # It needs docker and nothing else, so it runs on the machine the watcher is meant for. The image is
 # built from this repository unless AUTO_RENAMER_IMAGE names one to measure instead, and AUTO_RENAMER_MEMORY
@@ -262,15 +262,15 @@ CONFIG
 
 # Milliseconds the machine has been up, for timing what the watcher does from outside it.
 clock_ms() {
-  docker exec "$PROBE" awk '{ printf "%d", $1 * 1000 }' /proc/uptime
+  docker exec "$PROBE" awk '{ printf "%.0f", $1 * 1000 }' /proc/uptime
 }
 
 COPY_WINDOW_S=6
 
 # The source is kept in memory and the target on disk, so the move has to copy. The move starts when the
-# batch window has passed since the file was closed, so what is left of the wait is about the move: the
-# clock is read once the container that wrote the file has ended, a few tenths of a second after the
-# close, and the log is asked every tenth of a second.
+# batch window has passed since the file was closed, so what is left of the wait is the move to within
+# a few tenths of a second: the clock is read once the container that wrote the file has ended, which
+# is that long after the close, and each look at the log takes about as long.
 copy_once() {
   prepare
   docker volume create --driver local --opt type=tmpfs --opt device=tmpfs \
@@ -306,6 +306,12 @@ CONFIG
 # A limit set too low does not end every move, so one run says little: a move that is ended ends the
 # measurement, and all the runs finishing is what a limit has to show.
 copy() {
+  case "$2" in
+    '' | *[!0-9]* | 0)
+      echo "RUNS has to be a whole number, one or more" >&2
+      exit 2
+      ;;
+  esac
   local run
   for run in $(seq 1 "$2"); do
     copy_once "$1" "$run"

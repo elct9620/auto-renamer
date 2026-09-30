@@ -167,14 +167,6 @@ A move puts a file at its plan under the target, and it is the only thing that t
 | When | the file is moved |
 | Then | the target holds the same bytes as `y.mkv` |
 
-## `MV-022` A file larger than one part arrives whole between filesystems
-
-| Step | Statement |
-| --- | --- |
-| Given | a file of 40 MiB and a few bytes more on one filesystem, whose bytes differ all along, a target on another, and the plan `y.mkv` |
-| When | the file is moved |
-| Then | `y.mkv` holds the same bytes |
-
 ## `MV-021` A move within a filesystem is seen as a file moved in
 
 | Step | Statement |
@@ -182,3 +174,27 @@ A move puts a file at its plan under the target, and it is the only thing that t
 | Given | a file in a watched folder and a plan that renames it within the same folder |
 | When | the file is moved and the notifications are translated |
 | Then | the new name is settled and is never taken for a file being written |
+
+## `MV-022` A file larger than one part arrives whole between filesystems
+
+| Step | Statement |
+| --- | --- |
+| Given | a file of two parts and a half and a few bytes more on one filesystem, whose bytes differ all along, a target on another, and the plan `y.mkv` |
+| When | the file is moved |
+| Then | `y.mkv` holds the same bytes |
+
+## `MV-023` A file of exactly two parts arrives whole between filesystems
+
+| Step | Statement |
+| --- | --- |
+| Given | a file of exactly two parts on one filesystem, whose bytes differ all along, a target on another, and the plan `y.mkv` |
+| When | the file is moved |
+| Then | `y.mkv` holds the same bytes |
+
+## `MV-024` An empty file arrives empty between filesystems
+
+| Step | Statement |
+| --- | --- |
+| Given | an empty file on one filesystem, a target on another, and the plan `y.mkv` |
+| When | the file is moved |
+| Then | `y.mkv` is there and empty |
