@@ -98,8 +98,8 @@ fn text_field<'a>(stage: &str, record: &'a Record, name: &str) -> Result<&'a str
     }
 }
 
-/// What every stage does: one function over a batch, whatever the stage is.
-pub trait Run {
+/// One small function over a batch, which every stage there is implements.
+pub trait Stage {
     /// The name the stage is declared by.
     fn name(&self) -> &'static str;
 
@@ -111,9 +111,9 @@ pub trait Run {
 /// Fixed values written into records by `set` and `default`.
 pub type Fields = BTreeMap<String, Value>;
 
-/// One small function of a pipeline, declared with its parameters.
+/// One stage as a pipeline declares it, with its parameters: the closed list of the stages there are.
 #[derive(Debug, Clone)]
-pub enum Stage {
+pub enum Declared {
     Filter(Filter),
     Number(Number),
     Regex(Pattern),
@@ -132,37 +132,37 @@ pub enum Stage {
     Cleanup(Cleanup),
 }
 
-impl Stage {
+impl Declared {
     /// What the stage does, whichever stage it was declared as.
-    fn as_run(&self) -> &dyn Run {
+    fn as_stage(&self) -> &dyn Stage {
         match self {
-            Stage::Filter(stage) => stage,
-            Stage::Number(stage) => stage,
-            Stage::Regex(stage) => stage,
-            Stage::Set(stage) => stage,
-            Stage::Default(stage) => stage,
-            Stage::Replace(stage) => stage,
-            Stage::Case(stage) => stage,
-            Stage::Strip(stage) => stage,
-            Stage::Format(stage) => stage,
-            Stage::Folder(stage) => stage,
-            Stage::Lift(stage) => stage,
-            Stage::Next(stage) => stage,
-            Stage::Rank(stage) => stage,
-            Stage::Take(stage) => stage,
-            Stage::Move(stage) => stage,
-            Stage::Cleanup(stage) => stage,
+            Declared::Filter(stage) => stage,
+            Declared::Number(stage) => stage,
+            Declared::Regex(stage) => stage,
+            Declared::Set(stage) => stage,
+            Declared::Default(stage) => stage,
+            Declared::Replace(stage) => stage,
+            Declared::Case(stage) => stage,
+            Declared::Strip(stage) => stage,
+            Declared::Format(stage) => stage,
+            Declared::Folder(stage) => stage,
+            Declared::Lift(stage) => stage,
+            Declared::Next(stage) => stage,
+            Declared::Rank(stage) => stage,
+            Declared::Take(stage) => stage,
+            Declared::Move(stage) => stage,
+            Declared::Cleanup(stage) => stage,
         }
     }
 
     /// The name the stage is declared by.
     pub fn name(&self) -> &'static str {
-        self.as_run().name()
+        self.as_stage().name()
     }
 
     /// Runs the stage over the files the running pipeline still holds.
     pub(crate) fn run(&self, batch: &mut Batch, context: &mut Context) {
-        self.as_run().run(batch, context);
+        self.as_stage().run(batch, context);
     }
 
     /// Runs the stage on one record, which is a batch of one, with what the target lets it know.
@@ -179,12 +179,12 @@ impl Stage {
 
     /// Whether the stage touches the filesystem, and so must come after every stage that only rewrites the plan.
     pub fn is_effect(&self) -> bool {
-        matches!(self, Stage::Move(_) | Stage::Cleanup(_))
+        matches!(self, Declared::Move(_) | Declared::Cleanup(_))
     }
 
     /// Whether the stage rewrites the folders of the plan.
     pub fn is_path(&self) -> bool {
-        matches!(self, Stage::Lift(_) | Stage::Folder(_))
+        matches!(self, Declared::Lift(_) | Declared::Folder(_))
     }
 }
 

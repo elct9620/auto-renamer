@@ -1,11 +1,11 @@
 use super::{
-    Batch, Case, CaseKind, DefaultFields, Fields, Flow, Replace, Run, SetFields, Strip, text_field,
-    write_field,
+    Batch, Case, CaseKind, DefaultFields, Fields, Flow, Replace, SetFields, Stage, Strip,
+    text_field, write_field,
 };
 use crate::context::Context;
 use crate::record::{Record, Value};
 
-impl Run for SetFields {
+impl Stage for SetFields {
     fn name(&self) -> &'static str {
         "set"
     }
@@ -15,7 +15,7 @@ impl Run for SetFields {
     }
 }
 
-impl Run for DefaultFields {
+impl Stage for DefaultFields {
     fn name(&self) -> &'static str {
         "default"
     }
@@ -29,7 +29,7 @@ impl Run for DefaultFields {
     }
 }
 
-impl Run for Replace {
+impl Stage for Replace {
     fn name(&self) -> &'static str {
         "replace"
     }
@@ -43,7 +43,7 @@ impl Run for Replace {
     }
 }
 
-impl Run for Case {
+impl Stage for Case {
     fn name(&self) -> &'static str {
         "case"
     }
@@ -59,7 +59,7 @@ impl Run for Case {
     }
 }
 
-impl Run for Strip {
+impl Stage for Strip {
     fn name(&self) -> &'static str {
         "strip"
     }

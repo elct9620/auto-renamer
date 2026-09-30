@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use auto_renamer::{
-    ConfigError, Context, Flow, Judged, Pipeline, Record, Stage, Stop, Target, Value, Verdict,
+    ConfigError, Context, Declared, Flow, Judged, Pipeline, Record, Stop, Target, Value, Verdict,
     plan_batch,
 };
 use chrono::{TimeZone, Utc};
@@ -38,11 +38,11 @@ pub fn text(value: &str) -> Value {
 }
 
 /// A stage as it is written in a pipeline, such as `{ number = { into = "episode" } }`.
-pub fn stage(declaration: &str) -> Stage {
+pub fn stage(declaration: &str) -> Declared {
     let document: toml::Table = format!("stage = {declaration}")
         .parse()
         .expect("the declaration should be TOML");
-    Stage::declare(&document["stage"]).expect("the stage should be declared")
+    Declared::read(&document["stage"]).expect("the stage should be declared")
 }
 
 /// The files a target folder holds, by folder.
@@ -220,7 +220,7 @@ impl Drop for Sandbox {
 /// A move stage as it is written in a pipeline, such as `"move"`.
 pub fn move_stage(declaration: &str) -> auto_renamer::stages::Move {
     match stage(declaration) {
-        Stage::Move(stage) => stage,
+        Declared::Move(stage) => stage,
         other => panic!("expected a move stage, got {other:?}"),
     }
 }
@@ -228,7 +228,7 @@ pub fn move_stage(declaration: &str) -> auto_renamer::stages::Move {
 /// A cleanup stage as it is written in a pipeline, such as `{ cleanup = { keep = ["Season *"] } }`.
 pub fn cleanup_stage(declaration: &str) -> auto_renamer::stages::Cleanup {
     match stage(declaration) {
-        Stage::Cleanup(stage) => stage,
+        Declared::Cleanup(stage) => stage,
         other => panic!("expected a cleanup stage, got {other:?}"),
     }
 }

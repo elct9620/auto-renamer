@@ -2,11 +2,11 @@ use std::path::Path;
 
 use regex::Regex;
 
-use super::{Batch, Flow, Next, Run, Stop, refused_by, write_field};
+use super::{Batch, Flow, Next, Stage, Stop, refused_by, write_field};
 use crate::context::Context;
 use crate::record::{Record, Value, split_extension};
 
-impl Run for Next {
+impl Stage for Next {
     fn name(&self) -> &'static str {
         "next"
     }

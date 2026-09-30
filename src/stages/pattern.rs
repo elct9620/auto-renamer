@@ -1,8 +1,8 @@
-use super::{Batch, Flow, Pattern, Run, Stop, write_field, written_field};
+use super::{Batch, Flow, Pattern, Stage, Stop, write_field, written_field};
 use crate::context::Context;
 use crate::record::{Record, Value};
 
-impl Run for Pattern {
+impl Stage for Pattern {
     fn name(&self) -> &'static str {
         "regex"
     }

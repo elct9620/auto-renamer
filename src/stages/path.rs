@@ -1,10 +1,10 @@
 use std::path::{Component, Path, PathBuf};
 
-use super::{Batch, Flow, Folder, Lift, Run, Stop, refused_by};
+use super::{Batch, Flow, Folder, Lift, Stage, Stop, refused_by};
 use crate::context::Context;
 use crate::record::{Record, is_usable_file_name};
 
-impl Run for Lift {
+impl Stage for Lift {
     fn name(&self) -> &'static str {
         "lift"
     }
@@ -14,7 +14,7 @@ impl Run for Lift {
     }
 }
 
-impl Run for Folder {
+impl Stage for Folder {
     fn name(&self) -> &'static str {
         "folder"
     }

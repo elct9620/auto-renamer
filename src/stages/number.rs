@@ -3,7 +3,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use super::{Batch, Flow, Number, Prefix, Run, write_field, written_field};
+use super::{Batch, Flow, Number, Prefix, Stage, write_field, written_field};
 use crate::context::Context;
 use crate::record::{Record, Value};
 
@@ -58,7 +58,7 @@ static DIGITS: LazyLock<Regex> =
 
 const RESOLUTIONS: [&str; 7] = ["480", "720", "1080", "2160", "4320", "360", "540"];
 
-impl Run for Number {
+impl Stage for Number {
     fn name(&self) -> &'static str {
         "number"
     }

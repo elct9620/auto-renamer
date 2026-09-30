@@ -1,5 +1,5 @@
 use auto_renamer::stages::OnConflict;
-use auto_renamer::{DeclareError, Pipeline, PipelineError, Stage};
+use auto_renamer::{DeclareError, Declared, Pipeline, PipelineError};
 
 fn read(stages: &str) -> Result<Pipeline, PipelineError> {
     Pipeline::from_toml(&format!("stages = {stages}"))
@@ -21,7 +21,7 @@ fn refused_declaration(stages: &str) -> DeclareError {
 }
 
 fn names(pipeline: &Pipeline) -> Vec<&'static str> {
-    pipeline.stages().iter().map(Stage::name).collect()
+    pipeline.stages().iter().map(Declared::name).collect()
 }
 
 fn assert_invalid(error: DeclareError, stage: &str, parameter: Option<&str>) {
@@ -98,7 +98,7 @@ fn should_refuse_a_filter_with_neither_extension_nor_pattern() {
 fn should_hold_extensions_in_lower_case() {
     let pipeline = declared(r#"[{ filter = { ext = ["MKV", "Mp4"] } }]"#);
 
-    let Stage::Filter(filter) = &pipeline.stages()[0] else {
+    let Declared::Filter(filter) = &pipeline.stages()[0] else {
         panic!("expected a filter");
     };
     assert_eq!(filter.ext, ["mkv", "mp4"]);
@@ -273,7 +273,7 @@ fn should_refuse_a_conflict_suffix_that_reaches_outside_the_file_name() {
 fn should_default_the_conflict_policy_to_reject() {
     let pipeline = declared(r#"["move"]"#);
 
-    let Stage::Move(policy) = &pipeline.stages()[0] else {
+    let Declared::Move(policy) = &pipeline.stages()[0] else {
         panic!("expected a move");
     };
     assert_eq!(policy.on_conflict, OnConflict::Reject);

@@ -5,8 +5,8 @@ use regex::RegexBuilder;
 use toml::Value as Toml;
 
 use super::{
-    Case, CaseKind, Cleanup, DefaultFields, Fields, Filter, Folder, Format, Lift, Move, Next,
-    Number, OnConflict, Pattern, Prefix, Rank, Replace, SetFields, Stage, Strip, Take,
+    Case, CaseKind, Cleanup, Declared, DefaultFields, Fields, Filter, Folder, Format, Lift, Move,
+    Next, Number, OnConflict, Pattern, Prefix, Rank, Replace, SetFields, Strip, Take,
 };
 use crate::reader::{Reader, Scope};
 use crate::template::Template;
@@ -56,9 +56,9 @@ impl fmt::Display for DeclareError {
 
 impl std::error::Error for DeclareError {}
 
-impl Stage {
+impl Declared {
     /// Reads one stage from its declaration, refusing a mistaken one.
-    pub fn declare(value: &Toml) -> Result<Stage, DeclareError> {
+    pub fn read(value: &Toml) -> Result<Declared, DeclareError> {
         match value {
             Toml::String(name) => declare_named(name, None),
             Toml::Table(table) => {
@@ -73,18 +73,20 @@ impl Stage {
     }
 }
 
-fn declare_named(name: &str, value: Option<&Toml>) -> Result<Stage, DeclareError> {
+fn declare_named(name: &str, value: Option<&Toml>) -> Result<Declared, DeclareError> {
     match name {
         "filter" => filter(value),
         "number" => number(value),
         "regex" => regex(value),
-        "set" => fields("set", value).map(|fields| Stage::Set(SetFields(fields))),
-        "default" => fields("default", value).map(|fields| Stage::Default(DefaultFields(fields))),
+        "set" => fields("set", value).map(|fields| Declared::Set(SetFields(fields))),
+        "default" => {
+            fields("default", value).map(|fields| Declared::Default(DefaultFields(fields)))
+        }
         "replace" => replace(value),
         "case" => case(value),
         "strip" => strip(value),
-        "format" => template("format", value).map(|template| Stage::Format(Format(template))),
-        "folder" => template("folder", value).map(|template| Stage::Folder(Folder(template))),
+        "format" => template("format", value).map(|template| Declared::Format(Format(template))),
+        "folder" => template("folder", value).map(|template| Declared::Folder(Folder(template))),
         "lift" => lift(value),
         "next" => next(value),
         "rank" => rank(value),
@@ -164,7 +166,7 @@ fn field_or_default(args: &mut Args, key: &str) -> Result<String, DeclareError> 
         .unwrap_or_else(|| DEFAULT_FIELD.to_string()))
 }
 
-fn filter(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+fn filter(value: Option<&Toml>) -> Result<Declared, DeclareError> {
     let mut args = required("filter", value)?;
     let ext: Vec<String> = args
         .strings("ext")?
@@ -181,10 +183,10 @@ fn filter(value: Option<&Toml>) -> Result<Stage, DeclareError> {
         return Err(args.invalid("ext", "needs `ext` or `glob` to say which files it means"));
     }
     args.finish()?;
-    Ok(Stage::Filter(Filter { ext, glob, invert }))
+    Ok(Declared::Filter(Filter { ext, glob, invert }))
 }
 
-fn number(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+fn number(value: Option<&Toml>) -> Result<Declared, DeclareError> {
     let mut args = required("number", value)?;
     let from = field_or_default(&mut args, "from")?;
     let into = args.required_string("into")?;
@@ -200,7 +202,7 @@ fn number(value: Option<&Toml>) -> Result<Stage, DeclareError> {
     };
     let exclude = args.strings("exclude")?.unwrap_or_default();
     args.finish()?;
-    Ok(Stage::Number(Number {
+    Ok(Declared::Number(Number {
         from,
         into,
         nth,
@@ -209,7 +211,7 @@ fn number(value: Option<&Toml>) -> Result<Stage, DeclareError> {
     }))
 }
 
-fn regex(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+fn regex(value: Option<&Toml>) -> Result<Declared, DeclareError> {
     let mut args = required("regex", value)?;
     let source = args.required_string("pattern")?;
     let from = field_or_default(&mut args, "from")?;
@@ -223,7 +225,7 @@ fn regex(value: Option<&Toml>) -> Result<Stage, DeclareError> {
         .build()
         .map_err(|error| args.invalid("pattern", error.to_string()))?;
     args.finish()?;
-    Ok(Stage::Regex(Pattern {
+    Ok(Declared::Regex(Pattern {
         pattern,
         from,
         into,
@@ -235,7 +237,7 @@ fn fields(stage: &'static str, value: Option<&Toml>) -> Result<Fields, DeclareEr
     required(stage, value)?.into_values()
 }
 
-fn replace(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+fn replace(value: Option<&Toml>) -> Result<Declared, DeclareError> {
     let mut args = required("replace", value)?;
     let find = args.required_string("find")?;
     if find.is_empty() {
@@ -244,10 +246,10 @@ fn replace(value: Option<&Toml>) -> Result<Stage, DeclareError> {
     let with = args.required_string("with")?;
     let field = field_or_default(&mut args, "field")?;
     args.finish()?;
-    Ok(Stage::Replace(Replace { find, with, field }))
+    Ok(Declared::Replace(Replace { find, with, field }))
 }
 
-fn case(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+fn case(value: Option<&Toml>) -> Result<Declared, DeclareError> {
     let mut args = required("case", value)?;
     let to = match args.required_string("to")?.as_str() {
         "lower" => CaseKind::Lower,
@@ -257,10 +259,10 @@ fn case(value: Option<&Toml>) -> Result<Stage, DeclareError> {
     };
     let field = field_or_default(&mut args, "field")?;
     args.finish()?;
-    Ok(Stage::Case(Case { to, field }))
+    Ok(Declared::Case(Case { to, field }))
 }
 
-fn strip(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+fn strip(value: Option<&Toml>) -> Result<Declared, DeclareError> {
     let mut args = optional("strip", value)?;
     let sources = args
         .strings("groups")?
@@ -279,7 +281,7 @@ fn strip(value: Option<&Toml>) -> Result<Stage, DeclareError> {
     }
     let field = field_or_default(&mut args, "field")?;
     args.finish()?;
-    Ok(Stage::Strip(Strip { groups, field }))
+    Ok(Declared::Strip(Strip { groups, field }))
 }
 
 fn template(stage: &'static str, value: Option<&Toml>) -> Result<Template, DeclareError> {
@@ -292,11 +294,11 @@ fn template(stage: &'static str, value: Option<&Toml>) -> Result<Template, Decla
     }
 }
 
-fn lift(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+fn lift(value: Option<&Toml>) -> Result<Declared, DeclareError> {
     match value {
         None => Err(DeclareError::NeedsParameters("lift".to_string())),
         Some(Toml::Integer(levels)) if *levels >= 1 => {
-            Ok(Stage::Lift(Lift::Levels(*levels as usize)))
+            Ok(Declared::Lift(Lift::Levels(*levels as usize)))
         }
         Some(Toml::Integer(_)) => Err(invalid("lift", None, "lifts at least one level")),
         Some(other) => {
@@ -304,12 +306,12 @@ fn lift(value: Option<&Toml>) -> Result<Stage, DeclareError> {
             let source = args.required_string("to")?;
             let matcher = glob(&args, "to", &source)?;
             args.finish()?;
-            Ok(Stage::Lift(Lift::To(matcher)))
+            Ok(Declared::Lift(Lift::To(matcher)))
         }
     }
 }
 
-fn next(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+fn next(value: Option<&Toml>) -> Result<Declared, DeclareError> {
     let mut args = required("next", value)?;
     let into = args.required_string("into")?;
     let source = args.required_string("like")?;
@@ -318,27 +320,27 @@ fn next(value: Option<&Toml>) -> Result<Stage, DeclareError> {
         return Err(args.invalid("like", "must mention the field it fills"));
     }
     args.finish()?;
-    Ok(Stage::Next(Next { into, like }))
+    Ok(Declared::Next(Next { into, like }))
 }
 
-fn rank(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+fn rank(value: Option<&Toml>) -> Result<Declared, DeclareError> {
     let mut args = required("rank", value)?;
     let into = args.required_string("into")?;
     let by = required_fields(&mut args, "by")?;
     let prefer = args.strings("prefer")?.unwrap_or_default();
     args.finish()?;
-    Ok(Stage::Rank(Rank { into, by, prefer }))
+    Ok(Declared::Rank(Rank { into, by, prefer }))
 }
 
-fn take(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+fn take(value: Option<&Toml>) -> Result<Declared, DeclareError> {
     let mut args = required("take", value)?;
     let fields = required_fields(&mut args, "fields")?;
     let from = args.string("from")?;
     args.finish()?;
-    Ok(Stage::Take(Take { fields, from }))
+    Ok(Declared::Take(Take { fields, from }))
 }
 
-fn move_stage(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+fn move_stage(value: Option<&Toml>) -> Result<Declared, DeclareError> {
     let mut args = optional("move", value)?;
     let on_conflict = match args.string("on_conflict")?.as_deref() {
         None | Some("reject") => OnConflict::Reject,
@@ -355,18 +357,18 @@ fn move_stage(value: Option<&Toml>) -> Result<Stage, DeclareError> {
         ));
     }
     args.finish()?;
-    Ok(Stage::Move(Move {
+    Ok(Declared::Move(Move {
         on_conflict,
         suffix,
     }))
 }
 
-fn cleanup(value: Option<&Toml>) -> Result<Stage, DeclareError> {
+fn cleanup(value: Option<&Toml>) -> Result<Declared, DeclareError> {
     let mut args = optional("cleanup", value)?;
     let mut keep = Vec::new();
     for source in args.strings("keep")?.unwrap_or_default() {
         keep.push(glob(&args, "keep", &source)?);
     }
     args.finish()?;
-    Ok(Stage::Cleanup(Cleanup { keep }))
+    Ok(Declared::Cleanup(Cleanup { keep }))
 }

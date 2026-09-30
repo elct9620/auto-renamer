@@ -190,19 +190,19 @@ Why a template was refused for one record.
 pub enum RenderError {}
 ```
 
-## `Stage`
+## `Declared`
 
-One small function of a pipeline, declared with its parameters.
+One stage as a pipeline declares it, with its parameters: the closed list of the stages there are.
 
 | Attribute | Value |
 | --- | --- |
 | internal | yes |
 
 ```rust
-pub enum Stage {}
+pub enum Declared {}
 ```
 
-## `Stage::declare`
+## `Declared::read`
 
 Read one stage from its declaration, refusing a mistaken one.
 
@@ -211,8 +211,8 @@ Read one stage from its declaration, refusing a mistaken one.
 | internal | yes |
 
 ```rust
-impl Stage {
-    pub fn declare(value: &toml::Value) -> Result<Stage, DeclareError> {}
+impl Declared {
+    pub fn read(value: &toml::Value) -> Result<Declared, DeclareError> {}
 }
 ```
 
@@ -278,7 +278,7 @@ The declared stages in the order they were written.
 
 ```rust
 impl Pipeline {
-    pub fn stages(&self) -> &[Stage] {}
+    pub fn stages(&self) -> &[Declared] {}
 }
 ```
 
@@ -332,7 +332,7 @@ Why a stage refused a record, and which stage it was.
 pub struct Rejection {}
 ```
 
-## `Stage::apply`
+## `Declared::apply`
 
 Run the stage on one record, with what the batch and the target let it know.
 
@@ -341,24 +341,24 @@ Run the stage on one record, with what the batch and the target let it know.
 | internal | yes |
 
 ```rust
-impl Stage {
+impl Declared {
     pub fn apply(&self, record: Record, context: &mut Context) -> Flow {}
 }
 ```
 
-## `Run`
+## `Stage`
 
-What every stage does: one function over a batch, whatever the stage is.
+One small function over a batch, which every stage there is implements.
 
 | Attribute | Value |
 | --- | --- |
 | internal | yes |
 
 ```rust
-pub trait Run {}
+pub trait Stage {}
 ```
 
-## `Run::name`
+## `Stage::name`
 
 The name the stage is declared by.
 
@@ -367,12 +367,12 @@ The name the stage is declared by.
 | internal | yes |
 
 ```rust
-pub trait Run {
+pub trait Stage {
     fn name(&self) -> &'static str;
 }
 ```
 
-## `Run::run`
+## `Stage::run`
 
 Run the stage over the files the running pipeline still holds, with what the batch and the target let it know.
 
@@ -381,7 +381,7 @@ Run the stage over the files the running pipeline still holds, with what the bat
 | internal | yes |
 
 ```rust
-pub trait Run {
+pub trait Stage {
     fn run(&self, batch: &mut Batch, context: &mut Context);
 }
 ```

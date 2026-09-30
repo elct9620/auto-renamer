@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use super::{Batch, Flow, Run, Stop, Take, refused_by, write_field};
+use super::{Batch, Flow, Stage, Stop, Take, refused_by, write_field};
 use crate::context::Context;
 use crate::record::{Record, split_extension};
 
@@ -52,7 +52,7 @@ impl EarlierFiles {
     }
 }
 
-impl Run for Take {
+impl Stage for Take {
     fn name(&self) -> &'static str {
         "take"
     }

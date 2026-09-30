@@ -1,8 +1,8 @@
-use super::{Batch, Filter, Run, Stop};
+use super::{Batch, Filter, Stage, Stop};
 use crate::context::Context;
 use crate::record::{Record, Value};
 
-impl Run for Filter {
+impl Stage for Filter {
     fn name(&self) -> &'static str {
         "filter"
     }

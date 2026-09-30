@@ -59,11 +59,11 @@ auto-renamer 是單一套件：`src/lib.rs` 放全部邏輯，`src/main.rs` 只�
 ### 階段 trait
 
 ```
-  trait Run { name; run(batch, context) }
-  Stage (enum) ── one match ──► &dyn Run
+  trait Stage { name; run(batch, context) }
+  Declared (enum) ── one match ──► &dyn Stage
 ```
 
-每個階段實作 `Run`，是一個作用在批次上的函式。`Stage` enum 只是可宣告的封閉清單，全 crate 只有一處把它轉成 `&dyn Run`，新增階段時編譯器會在那裡要求補上。
+每個階段實作 `Stage`，是一個作用在批次上的函式。`Declared` enum 只是可宣告的封閉清單，全 crate 只有一處把它轉成 `&dyn Stage`，新增階段時編譯器會在那裡要求補上。
 
 ### 批次組合
 
@@ -97,7 +97,7 @@ effect 階段在規劃時只記下要做的事，整批規劃完才由 `effects`
 
 | 情況 | 要重新決定的事 |
 |---|---|
-| 階段由外部提供 | enum 換成 `Box<dyn Run>` |
+| 階段由外部提供 | enum 換成 `Box<dyn Stage>` |
 | effect 要看前一個的結果 | effect 改為當場執行 |
 | 支援非 UTF-8 路徑 | 記錄帶位元組形狀 |
 

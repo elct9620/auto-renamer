@@ -1,11 +1,11 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use super::{Batch, Rank, Run, Stop, unfit, write_field};
+use super::{Batch, Rank, Stage, Stop, unfit, write_field};
 use crate::context::Context;
 use crate::record::{Record, Value};
 
-impl Run for Rank {
+impl Stage for Rank {
     fn name(&self) -> &'static str {
         "rank"
     }

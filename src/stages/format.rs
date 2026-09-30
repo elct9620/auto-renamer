@@ -1,8 +1,8 @@
-use super::{Batch, Format, Run, refused_by, write_field};
+use super::{Batch, Format, Stage, refused_by, write_field};
 use crate::context::Context;
 use crate::record::Value;
 
-impl Run for Format {
+impl Stage for Format {
     fn name(&self) -> &'static str {
         "format"
     }

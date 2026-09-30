@@ -2,7 +2,7 @@ use std::fmt;
 
 use toml::Value as Toml;
 
-use crate::stages::{DeclareError, Filter, Stage};
+use crate::stages::{DeclareError, Declared, Filter};
 
 /// The most stages a pipeline may hold, because a declaration may come from downloaded content.
 const MAX_STAGES: usize = 64;
@@ -10,7 +10,7 @@ const MAX_STAGES: usize = 64;
 /// The ordered stages a watch applies to the files it claims.
 #[derive(Debug, Clone)]
 pub struct Pipeline {
-    stages: Vec<Stage>,
+    stages: Vec<Declared>,
 }
 
 /// Why a pipeline was refused.
@@ -61,7 +61,7 @@ impl Pipeline {
             .iter()
             .enumerate()
             .map(|(index, value)| {
-                Stage::declare(value).map_err(|error| PipelineError::Declare { index, error })
+                Declared::read(value).map_err(|error| PipelineError::Declare { index, error })
             })
             .collect::<Result<Vec<_>, _>>()?;
         check_order(&stages)?;
@@ -80,17 +80,17 @@ impl Pipeline {
     }
 
     /// The declared stages in the order they were written.
-    pub fn stages(&self) -> &[Stage] {
+    pub fn stages(&self) -> &[Declared] {
         &self.stages
     }
 
     /// The pipeline in two parts: the filters it opens with, which say what it claims, and the stages after them.
-    pub(crate) fn split_at_claim(&self) -> (Vec<&Filter>, &[Stage]) {
+    pub(crate) fn split_at_claim(&self) -> (Vec<&Filter>, &[Declared]) {
         let filters: Vec<&Filter> = self
             .stages
             .iter()
             .map_while(|stage| match stage {
-                Stage::Filter(filter) => Some(filter),
+                Declared::Filter(filter) => Some(filter),
                 _ => None,
             })
             .collect();
@@ -100,11 +100,11 @@ impl Pipeline {
 
     /// Whether the pipeline ends in a stage that touches the filesystem.
     pub fn has_effect(&self) -> bool {
-        self.stages.iter().any(Stage::is_effect)
+        self.stages.iter().any(Declared::is_effect)
     }
 }
 
-fn check_order(stages: &[Stage]) -> Result<(), PipelineError> {
+fn check_order(stages: &[Declared]) -> Result<(), PipelineError> {
     let mut seen_effect = false;
     let mut seen_next = false;
     for stage in stages {
@@ -120,7 +120,7 @@ fn check_order(stages: &[Stage]) -> Result<(), PipelineError> {
                 stage: stage.name().to_string(),
             });
         }
-        seen_next |= matches!(stage, Stage::Next(_));
+        seen_next |= matches!(stage, Declared::Next(_));
     }
     Ok(())
 }

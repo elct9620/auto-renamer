@@ -1,6 +1,6 @@
 //! The stages that touch the filesystem, as far as planning is concerned: each only notes what it asks for.
 
-use super::{Batch, Cleanup, Move, Run};
+use super::{Batch, Cleanup, Move, Stage};
 use crate::context::Context;
 
 /// What an effect stage asks to be done to a planned file, with the settings the stage was declared with.
@@ -10,7 +10,7 @@ pub enum Effect {
     Cleanup(Cleanup),
 }
 
-impl Run for Move {
+impl Stage for Move {
     fn name(&self) -> &'static str {
         "move"
     }
@@ -20,7 +20,7 @@ impl Run for Move {
     }
 }
 
-impl Run for Cleanup {
+impl Stage for Cleanup {
     fn name(&self) -> &'static str {
         "cleanup"
     }
