@@ -1,0 +1,15 @@
+# Runs the tests on Linux: `docker compose -f docker-compose.test.yml run --rm sut`
+# `sut` is the system under test, the service Docker's automated tests run.
+services:
+  sut:
+    build:
+      context: .
+      target: test
+    volumes:
+      - .:/app
+      - target:/app/target
+      - cargo:/usr/local/cargo/registry
+
+volumes:
+  target:
+  cargo:

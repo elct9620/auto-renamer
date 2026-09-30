@@ -112,7 +112,7 @@ effect 階段在規劃時只記下要做的事，整批規劃完才由 `effects`
 | `effects` | 暫存目錄 |
 | `watcher` 狀態機 | 注入時鐘與事件 |
 | `scan`、`service` | 暫存目錄 |
-| notify 與跨檔案系統 | 容器內的 Linux，兩個 volume，一個掛兩處 |
+| notify 與跨檔案系統 | 容器內的 Linux 與 `/dev/shm` |
 | 訊號與 log | 啟動真實的程式，讀它的結束碼與 stderr |
 
 邊界內的行為由 `.spec/behavior` 宣告，測試以 `@behavior` 認領。

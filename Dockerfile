@@ -18,8 +18,8 @@ RUN mkdir src && echo 'fn main() {}' > src/main.rs \
 COPY src ./src
 RUN cargo build --release --locked
 
-# Linux to run the tests on: real inotify, and a second filesystem for cross-device moves.
-# The source is mounted rather than copied, see docker-compose.yml.
+# Linux to run the tests on: real inotify, and /dev/shm as a second filesystem for moves between mounts.
+# The source is mounted rather than copied, see docker-compose.test.yml.
 FROM rust:${RUST_VERSION} AS test
 COPY --from=busybox /bin/busybox /usr/local/bin/mv
 WORKDIR /app

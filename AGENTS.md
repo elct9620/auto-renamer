@@ -23,7 +23,7 @@ Each part has a boundary; what lies past it belongs to the operating system and 
 `.claude/hooks/stop.sh` blocks finishing until the checks CI runs pass. Linux-only code (`runner`, and the tests of watching, signals and moves between filesystems) is compiled out on macOS, where the checks pass without running it. Run it in the test container:
 
 ```
-docker compose run --rm test
+docker compose -f docker-compose.test.yml run --rm sut
 ```
 
 ## Releases
@@ -67,7 +67,7 @@ Where to look for each part of the project.
 |------|---------------|
 | `src/` | Application source; modules are mapped in `docs/architecture.md` |
 | `Dockerfile`, `.dockerignore` | Image build with a `test` stage; `.dockerignore` is an allow-list |
-| `docker-compose.yml` | `test` service: the repo mounted, two filesystems, one mounted twice |
+| `docker-compose.test.yml` | `sut` service: the tests on Linux, the repo mounted |
 | `.github/workflows/` | `ci.yml` checks and publishes `latest`; `release.yml` releases |
 | `docs/design.md`, `docs/cases.md`, `docs/architecture.md` | Design, test cases derived from it, module structure |
 | `tests/` | Integration tests; each claims a behavior with `// @behavior ID` |

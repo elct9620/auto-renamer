@@ -90,7 +90,7 @@ cargo clippy --all-targets --locked -- -D warnings
 cargo test --locked
 ```
 
-Linux 專屬的測試（監看、訊號、跨檔案系統）在其他系統上略過，用 `docker compose run --rm test` 執行。提交依 Conventional Commits，版本由 release-please 管理。
+Linux 專屬的測試（監看、訊號、跨檔案系統）在其他系統上略過，用 `docker compose -f docker-compose.test.yml run --rm sut` 執行。提交依 Conventional Commits，版本由 release-please 管理。
 
 ## 授權
 
