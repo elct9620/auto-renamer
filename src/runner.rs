@@ -13,7 +13,7 @@ use crate::cli::Options;
 use crate::config::Config;
 use crate::scan::scan_folder;
 use crate::service::{Renames, process_batch};
-use crate::watcher::{Machine, Ready, Translated, rewrites, translate};
+use crate::watcher::{Machine, Ready, Translated, pass_changes, rewrites, translate};
 
 /// How long a change to the configuration file is awaited for more changes before it is read.
 const RELOAD_DELAY: Duration = Duration::from_secs(1);
@@ -63,7 +63,7 @@ impl Session {
             eprintln!("[warn] {warning}");
         }
         let mut watcher = RecommendedWatcher::new(
-            sender.clone(),
+            pass_changes(sender.clone()),
             notify::Config::default().with_follow_symlinks(false),
         )
         .map_err(|error| RunError::Watch(error.to_string()))?;

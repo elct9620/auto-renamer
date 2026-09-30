@@ -12,7 +12,7 @@ use crate::config::{FOLDER_CONFIG, MAX_BATCH_FILES, Unit, Watch};
 
 mod notification;
 
-pub use notification::{Translated, rewrites, translate};
+pub use notification::{Translated, pass_changes, rewrites, translate};
 
 /// What happened to a file of the source, as far as the machine needs to know. Paths are relative to the source.
 #[derive(Debug, Clone, PartialEq, Eq)]

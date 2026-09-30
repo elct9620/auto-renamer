@@ -133,3 +133,35 @@ The filesystem reports what happened in its own words, and only some of it matte
 | Given | a notification that `/c/other.toml` was closed after writing |
 | When | it is asked whether it rewrites `/c/config.toml` |
 | Then | it does not |
+
+## `TRN-017` A notification that something changed is passed on
+
+| Step | Statement |
+| --- | --- |
+| Given | the handler given to the filesystem watcher |
+| When | it is handed a notification that a file was closed after writing |
+| Then | the notification reaches the runner |
+
+## `TRN-018` A notification that nothing changed is dropped
+
+| Step | Statement |
+| --- | --- |
+| Given | the handler given to the filesystem watcher |
+| When | it is handed notifications that a file was opened, closed after reading, and had its attributes changed |
+| Then | none of them reaches the runner |
+
+## `TRN-019` An error is passed on
+
+| Step | Statement |
+| --- | --- |
+| Given | the handler given to the filesystem watcher |
+| When | it is handed an error of the filesystem watcher |
+| Then | the error reaches the runner |
+
+## `TRN-020` Whatever is translated or rewrites the configuration is passed on
+
+| Step | Statement |
+| --- | --- |
+| Given | the handler given to the filesystem watcher and a notification of every kind a translation or a rewrite answers to |
+| When | it is handed each of them |
+| Then | each reaches the runner |

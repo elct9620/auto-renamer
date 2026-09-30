@@ -1054,6 +1054,18 @@ Whether a filesystem notification says a file was written, created or replaced, 
 pub fn rewrites(notification: &notify::Event, file: &Path) -> bool {}
 ```
 
+## `pass_changes`
+
+The handler to give the filesystem watcher: it passes on what says something changed and every error, and drops what only says a file was opened, read or had its attributes changed.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub fn pass_changes(sender: Sender<notify::Result<notify::Event>>) -> impl FnMut(notify::Result<notify::Event>) + Send + 'static {}
+```
+
 ## `Renames`
 
 How many times each file was renamed in place in a row, kept while the program runs.
