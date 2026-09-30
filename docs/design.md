@@ -371,11 +371,11 @@ dry_run = true      # log each plan, run no effect stage
 ### 4.2 跨檔案系統
 
 ```
-  same filesystem    rename ─► done
-  other filesystem   copy to temp name, a part at a time ─► rename ─► delete source
+  same mount         rename ─► done
+  anything else      copy to temp name, a part at a time ─► rename ─► delete source
 ```
 
-容器內 source 與 target 常是不同掛載，`rename` 無法跨越。先寫成 `.` 開頭的暫存名再改名，媒體伺服器不會掃到寫到一半的檔案；修改時間保留，只留讀寫權限。暫存名每次不同，中斷留下的不擋下次搬移。複製一次寫一段並落盤，待寫入的量不隨檔案變大（見 4.6）。
+`rename` 跨不過掛載點，同一顆硬碟掛成兩處也要複製。先寫成 `.` 開頭的暫存名再改名，媒體伺服器不會掃到寫到一半的檔案；修改時間保留，只留讀寫權限。暫存名每次不同，中斷留下的不擋下次搬移。一次寫一段並落盤，待寫入的量不隨檔案變大（見 4.6）。
 
 ### 4.3 撞名
 

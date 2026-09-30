@@ -43,12 +43,20 @@ auto-renamer --config /etc/auto-renamer/config.toml
 ```
 docker run -d \
   -v ./config:/etc/auto-renamer \
-  -v /srv/downloads:/Downloads \
-  -v /srv/video:/Video \
+  -v /srv/media:/media \
   ghcr.io/elct9620/auto-renamer
 ```
 
 掛載設定檔所在的資料夾，編輯後會自動重新載入。單獨掛載一個檔案時沒有事件，改送 `SIGHUP`。
+
+### 掛載方式
+
+| source 與 target | 搬移 |
+|---|---|
+| 同一個掛載底下 | 改名，瞬間完成 |
+| 各自掛載 | 複製再刪除 |
+
+把兩者的共同上層掛成一個掛載，設定寫 `/media/Downloads` 與 `/media/Video`。各自掛載時即使在同一顆硬碟也無法改名，大檔要整個複製一次。btrfs 的 subvolume 之間也一樣，Synology 的共用資料夾各是一個。
 
 ## 執行行為
 
