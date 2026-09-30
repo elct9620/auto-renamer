@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, Instant, SystemTime};
 
 use auto_renamer::{Config, Event, Machine, Ready};
 
@@ -326,4 +326,102 @@ fn should_release_the_holds_under_a_folder_that_is_gone() {
     machine.observe(Event::Gone(path("Sub")), at(1, 0));
 
     assert_eq!(machine.ready(at(5, 0)), [batch("", &["Show/a.mkv"])]);
+}
+
+// @behavior WCH-025
+#[test]
+fn should_take_the_units_under_a_folder_that_is_gone_and_no_other() {
+    let mut machine = machine("");
+    settled(&mut machine, "Show/S1/a.mkv", at(0, 0));
+    settled(&mut machine, "Show/S2/b.mkv", at(0, 0));
+    settled(&mut machine, "Show-2/c.mkv", at(0, 0));
+
+    machine.observe(Event::Gone(path("Show")), at(1, 0));
+
+    assert_eq!(
+        machine.ready(at(5, 0)),
+        [batch("Show-2", &["Show-2/c.mkv"])]
+    );
+}
+
+// @behavior WCH-026
+#[test]
+fn should_leave_nothing_to_wait_for_of_the_units_under_a_folder_that_is_gone() {
+    let mut machine = machine("");
+    machine.observe(Event::Writing(path("Show/S1/a.mkv")), at(0, 0));
+
+    machine.observe(Event::Gone(path("Show")), at(1, 0));
+
+    assert_eq!(machine.next_deadline(), None);
+}
+
+/// How long a machine may take over many files before its cost is taken to grow with how many wait.
+/// Work that grows with them takes minutes here, and work that does not takes a fraction of a second.
+const QUICK: Duration = Duration::from_secs(5);
+
+/// Runs the step the given number of times, stopping as soon as it has taken too long.
+fn stays_quick(times: usize, mut step: impl FnMut(usize)) {
+    let started = Instant::now();
+    for turn in 0..times {
+        step(turn);
+        assert!(started.elapsed() < QUICK, "too slow by turn {turn}");
+    }
+}
+
+fn file(folder: usize, number: usize) -> PathBuf {
+    PathBuf::from(format!("T{folder:05}/{number:02}.mkv"))
+}
+
+// @behavior WCH-027
+#[test]
+fn should_stay_quick_to_ask_however_many_files_are_held() {
+    let mut machine = machine("");
+    for folder in 0..10_000 {
+        for number in 0..10 {
+            let found = Event::Found {
+                path: file(folder, number),
+                modified: at(0, 0),
+            };
+            machine.observe(found, at(1, 0));
+        }
+    }
+
+    stays_quick(10_000, |_| {
+        machine.ready(at(1, 0));
+        machine.next_deadline();
+    });
+}
+
+// @behavior WCH-028
+#[test]
+fn should_stay_quick_to_ask_with_many_units_waiting_beside_many_held_files() {
+    let mut machine = machine("");
+    for folder in 0..5_000 {
+        settled(&mut machine, &format!("S{folder:05}/a.mkv"), at(0, 0));
+    }
+    for folder in 0..5_000 {
+        for number in 0..10 {
+            machine.observe(Event::Writing(file(folder, number)), at(0, 0));
+        }
+    }
+
+    stays_quick(1_000, |_| {
+        machine.ready(at(1, 0));
+        machine.next_deadline();
+    });
+}
+
+// @behavior WCH-029
+#[test]
+fn should_stay_quick_to_forget_files_however_many_are_waiting() {
+    let mut machine = machine("");
+    for folder in 0..10_000 {
+        for number in 0..10 {
+            machine.observe(Event::Settled(file(folder, number)), at(0, 0));
+        }
+    }
+
+    stays_quick(10_000, |turn| {
+        machine.observe(Event::Gone(file(turn, 0)), at(1, 0));
+    });
 }

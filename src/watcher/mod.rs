@@ -4,6 +4,7 @@
 //! ready, so it runs without a filesystem or a clock.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::ops::Bound;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
@@ -47,7 +48,17 @@ struct Hold {
     due: Option<SystemTime>,
 }
 
+/// What the machine looks at again when its time comes: a hold that ends, or a unit that may be due.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+enum Waiting {
+    Hold(PathBuf),
+    Unit(PathBuf),
+}
+
 /// Decides when the settled files of a unit are handed over as a batch, from what it is told and what time it is.
+///
+/// What an event or a question costs does not grow with how many files wait: the times to look again are
+/// kept in order, and whether a unit is held open is counted rather than asked of every hold.
 pub struct Machine {
     unit: Unit,
     window: Duration,
@@ -55,6 +66,8 @@ pub struct Machine {
     pending: BTreeMap<PathBuf, Pending>,
     touched: BTreeMap<PathBuf, SystemTime>,
     holds: BTreeMap<PathBuf, Hold>,
+    holds_in: BTreeMap<PathBuf, usize>,
+    deadlines: BTreeSet<(SystemTime, Waiting)>,
 }
 
 impl Machine {
@@ -67,6 +80,8 @@ impl Machine {
             pending: BTreeMap::new(),
             touched: BTreeMap::new(),
             holds: BTreeMap::new(),
+            holds_in: BTreeMap::new(),
+            deadlines: BTreeSet::new(),
         }
     }
 
@@ -85,75 +100,81 @@ impl Machine {
 
     /// The batches that are ready at a time, each handed over once.
     pub fn ready(&mut self, now: SystemTime) -> Vec<Ready> {
-        self.resolve_holds(now);
-        let due: Vec<PathBuf> = self
-            .pending
-            .iter()
-            .filter(|(unit, pending)| self.is_due(unit, pending, now))
-            .map(|(unit, _)| unit.clone())
-            .collect();
-        due.into_iter()
+        for file in self.due(now, Waiting::held_file) {
+            self.resolve_hold(&file, now);
+        }
+        let units: BTreeSet<PathBuf> = self.due(now, Waiting::unit).into_iter().collect();
+        units
+            .into_iter()
             .filter_map(|unit| self.close(&unit))
             .collect()
     }
 
     /// The earliest time at which asking again could change the answer, or none when nothing is waiting.
     pub fn next_deadline(&self) -> Option<SystemTime> {
-        let batches = self
-            .pending
-            .iter()
-            .map(|(unit, pending)| self.checks_again_at(unit, pending));
-        let holds = self.holds.values().map(|hold| self.hold_ends_at(hold));
-        batches.chain(holds).min()
+        self.deadlines.first().map(|(at, _)| *at)
     }
 
     fn settle(&mut self, path: PathBuf, activity: SystemTime) {
         let unit = self.unit.of(&path);
-        self.holds.remove(&path);
-        let pending = self.pending.entry(unit.clone()).or_insert_with(|| Pending {
-            first: activity,
-            files: BTreeSet::new(),
+        self.change(&unit, |machine| {
+            machine.let_go(&path);
+            let pending = machine
+                .pending
+                .entry(unit.clone())
+                .or_insert_with(|| Pending {
+                    first: activity,
+                    files: BTreeSet::new(),
+                });
+            // One file past the ceiling is enough to know the batch is too large.
+            if pending.files.len() <= MAX_BATCH_FILES {
+                pending.files.insert(path);
+            }
+            machine.touch(&unit, activity);
         });
-        // One file past the ceiling is enough to know the batch is too large.
-        if pending.files.len() <= MAX_BATCH_FILES {
-            pending.files.insert(path);
-        }
-        self.touch(unit, activity);
     }
 
     fn write(&mut self, path: PathBuf, now: SystemTime) {
         let unit = self.unit.of(&path);
-        self.unsettle(&unit, &path);
-        self.holds.insert(
-            path,
-            Hold {
-                unit: unit.clone(),
-                since: now,
-                due: None,
-            },
-        );
-        self.touch(unit, now);
+        self.change(&unit, |machine| {
+            machine.unsettle(&unit, &path);
+            machine.hold(path, &unit, now, None);
+            machine.touch(&unit, now);
+        });
     }
 
     /// A file that is gone, or a folder that is gone with every file under it.
     fn forget(&mut self, path: &Path) {
-        let mut units: BTreeSet<PathBuf> = BTreeSet::new();
-        for (unit, pending) in &mut self.pending {
-            let before = pending.files.len();
-            pending.files.retain(|file| !file.starts_with(path));
-            if pending.files.len() != before {
-                units.insert(unit.clone());
-            }
+        let held_files: Vec<PathBuf> = keys_under(&self.holds, path);
+        let below: Vec<PathBuf> = keys_under(&self.pending, path);
+        let above = path
+            .ancestors()
+            .skip(1)
+            .filter(|unit| self.pending.contains_key(*unit));
+        let units: BTreeSet<PathBuf> = held_files
+            .iter()
+            .filter_map(|file| self.holds.get(file))
+            .map(|hold| hold.unit.clone())
+            .chain(below.iter().cloned())
+            .chain(above.map(Path::to_path_buf))
+            .collect();
+
+        for unit in &units {
+            self.unschedule(unit);
         }
-        self.pending.retain(|_, pending| !pending.files.is_empty());
-        self.holds.retain(|file, hold| {
-            let under = file.starts_with(path);
-            if under {
-                units.insert(hold.unit.clone());
-            }
-            !under
-        });
-        units.iter().for_each(|unit| self.release(unit));
+        for file in &held_files {
+            self.let_go(file);
+        }
+        for unit in &below {
+            self.pending.remove(unit);
+        }
+        for unit in path.ancestors().skip(1) {
+            self.unsettle_under(unit, path);
+        }
+        for unit in &units {
+            self.release(unit);
+            self.schedule(unit);
+        }
     }
 
     /// Forgets when a unit was last active once nothing in it is waiting or held.
@@ -168,41 +189,31 @@ impl Machine {
         let modified = modified.min(now);
         let quiet_at = modified + self.window;
         if now >= quiet_at {
-            self.settle(path, modified.min(now));
+            self.settle(path, modified);
         } else {
             let unit = self.unit.of(&path);
-            self.holds.insert(
-                path,
-                Hold {
-                    unit: unit.clone(),
-                    since: now,
-                    due: Some(quiet_at),
-                },
-            );
-            self.touch(unit, modified);
+            self.change(&unit, |machine| {
+                machine.hold(path, &unit, now, Some(quiet_at));
+                machine.touch(&unit, modified);
+            });
         }
     }
 
     /// A file found at start settles once its window has passed with no writes; a hold that has not
     /// resolved for the maximum wait is dropped.
-    fn resolve_holds(&mut self, now: SystemTime) {
-        let window = self.window;
-        let mut quiet = Vec::new();
-        let mut stale = Vec::new();
-        for (path, hold) in &self.holds {
-            match hold.due {
-                Some(due) if now >= due => quiet.push((path.clone(), due - window)),
-                _ if now >= hold.since + self.max_wait => stale.push(path.clone()),
-                _ => {}
+    fn resolve_hold(&mut self, file: &Path, now: SystemTime) {
+        let Some(hold) = self.holds.get(file) else {
+            return;
+        };
+        match hold.due {
+            Some(due) if now >= due => self.settle(file.to_path_buf(), due - self.window),
+            _ => {
+                let unit = hold.unit.clone();
+                self.change(&unit, |machine| {
+                    machine.let_go(file);
+                    machine.release(&unit);
+                });
             }
-        }
-        for path in stale {
-            if let Some(hold) = self.holds.remove(&path) {
-                self.release(&hold.unit);
-            }
-        }
-        for (path, modified) in quiet {
-            self.settle(path, modified);
         }
     }
 
@@ -215,15 +226,55 @@ impl Machine {
         }
     }
 
-    fn touch(&mut self, unit: PathBuf, when: SystemTime) {
+    /// Takes the files under a folder out of a unit that reaches above that folder.
+    fn unsettle_under(&mut self, unit: &Path, folder: &Path) {
+        if let Some(pending) = self.pending.get_mut(unit) {
+            for file in files_under(&pending.files, folder) {
+                pending.files.remove(&file);
+            }
+            if pending.files.is_empty() {
+                self.pending.remove(unit);
+            }
+        }
+    }
+
+    fn touch(&mut self, unit: &Path, when: SystemTime) {
         self.touched
-            .entry(unit)
+            .entry(unit.to_path_buf())
             .and_modify(|last| *last = (*last).max(when))
             .or_insert(when);
     }
 
+    /// Holds a file, in place of any hold it already had.
+    fn hold(&mut self, file: PathBuf, unit: &Path, since: SystemTime, due: Option<SystemTime>) {
+        self.let_go(&file);
+        let hold = Hold {
+            unit: unit.to_path_buf(),
+            since,
+            due,
+        };
+        self.deadlines
+            .insert((self.hold_ends_at(&hold), Waiting::Hold(file.clone())));
+        *self.holds_in.entry(hold.unit.clone()).or_default() += 1;
+        self.holds.insert(file, hold);
+    }
+
+    fn let_go(&mut self, file: &Path) {
+        let Some(hold) = self.holds.remove(file) else {
+            return;
+        };
+        self.deadlines
+            .remove(&(self.hold_ends_at(&hold), Waiting::Hold(file.to_path_buf())));
+        if let Some(count) = self.holds_in.get_mut(&hold.unit) {
+            *count -= 1;
+            if *count == 0 {
+                self.holds_in.remove(&hold.unit);
+            }
+        }
+    }
+
     fn holds_open(&self, unit: &Path) -> bool {
-        self.holds.values().any(|hold| hold.unit == unit)
+        self.holds_in.contains_key(unit)
     }
 
     fn hold_ends_at(&self, hold: &Hold) -> SystemTime {
@@ -235,26 +286,51 @@ impl Machine {
         self.touched.get(unit).copied().unwrap_or(pending.first) + self.window
     }
 
-    fn is_due(&self, unit: &Path, pending: &Pending, now: SystemTime) -> bool {
-        now >= pending.first + self.max_wait
-            || (now >= self.quiet_at(unit, pending) && !self.holds_open(unit))
-    }
-
-    fn checks_again_at(&self, unit: &Path, pending: &Pending) -> SystemTime {
+    /// When a pending unit is due: at its maximum wait, or sooner once it is quiet with nothing held.
+    fn due_at(&self, unit: &Path, pending: &Pending) -> SystemTime {
         let cap = pending.first + self.max_wait;
-        let holds_end = self
-            .holds
-            .values()
-            .filter(|hold| hold.unit == unit)
-            .map(|hold| self.hold_ends_at(hold))
-            .min();
-        match holds_end {
-            Some(ends) => cap.min(ends),
-            None => cap.min(self.quiet_at(unit, pending)),
+        if self.holds_open(unit) {
+            cap
+        } else {
+            cap.min(self.quiet_at(unit, pending))
         }
     }
 
+    /// Changes what a unit holds or waits for, keeping the time it is looked at again in step.
+    fn change(&mut self, unit: &Path, change: impl FnOnce(&mut Machine)) {
+        self.unschedule(unit);
+        change(self);
+        self.schedule(unit);
+    }
+
+    fn schedule(&mut self, unit: &Path) {
+        if let Some(pending) = self.pending.get(unit) {
+            let at = self.due_at(unit, pending);
+            self.deadlines
+                .insert((at, Waiting::Unit(unit.to_path_buf())));
+        }
+    }
+
+    fn unschedule(&mut self, unit: &Path) {
+        if let Some(pending) = self.pending.get(unit) {
+            let at = self.due_at(unit, pending);
+            self.deadlines
+                .remove(&(at, Waiting::Unit(unit.to_path_buf())));
+        }
+    }
+
+    /// What has come due of one kind, earliest first.
+    fn due(&self, now: SystemTime, kind: fn(&Waiting) -> Option<&PathBuf>) -> Vec<PathBuf> {
+        self.deadlines
+            .iter()
+            .take_while(|(at, _)| *at <= now)
+            .filter_map(|(_, waiting)| kind(waiting))
+            .cloned()
+            .collect()
+    }
+
     fn close(&mut self, unit: &Path) -> Option<Ready> {
+        self.unschedule(unit);
         let pending = self.pending.remove(unit)?;
         self.touched.remove(unit);
         let files: Vec<PathBuf> = pending.files.into_iter().collect();
@@ -266,6 +342,40 @@ impl Machine {
             files,
         })
     }
+}
+
+impl Waiting {
+    fn held_file(&self) -> Option<&PathBuf> {
+        match self {
+            Waiting::Hold(file) => Some(file),
+            Waiting::Unit(_) => None,
+        }
+    }
+
+    fn unit(&self) -> Option<&PathBuf> {
+        match self {
+            Waiting::Unit(unit) => Some(unit),
+            Waiting::Hold(_) => None,
+        }
+    }
+}
+
+/// The paths at or under a folder. Paths are ordered part by part, so a folder is followed at once by
+/// everything under it and nothing else comes between.
+fn keys_under<V>(map: &BTreeMap<PathBuf, V>, folder: &Path) -> Vec<PathBuf> {
+    map.range::<Path, _>((Bound::Included(folder), Bound::Unbounded))
+        .map(|(path, _)| path)
+        .take_while(|path| path.starts_with(folder))
+        .cloned()
+        .collect()
+}
+
+fn files_under(files: &BTreeSet<PathBuf>, folder: &Path) -> Vec<PathBuf> {
+    files
+        .range::<Path, _>((Bound::Included(folder), Bound::Unbounded))
+        .take_while(|path| path.starts_with(folder))
+        .cloned()
+        .collect()
 }
 
 fn is_folder_config(path: &Path) -> bool {
