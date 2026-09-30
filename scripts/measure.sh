@@ -6,7 +6,6 @@
 #   scripts/measure.sh batch N         N folders of 10 files, moved as N batches
 #   scripts/measure.sh single N        N folders of 10 files, moved as one batch
 #   scripts/measure.sh rounds N        N folders of 10 files arriving while it runs, five times over
-#   scripts/measure.sh copy GIB [RUNS] one file of GIB gibibytes moved across filesystems, RUNS times
 #   scripts/measure.sh all             every scenario once, with no memory limit
 #
 # It needs docker and nothing else, so it runs on the machine the watcher is meant for. The image is
@@ -260,78 +259,18 @@ CONFIG
   [ "$left" -eq 0 ] && [ "$twice" -eq 0 ]
 }
 
-# Milliseconds the machine has been up, for timing what the watcher does from outside it.
-clock_ms() {
-  docker exec "$PROBE" awk '{ printf "%.0f", $1 * 1000 }' /proc/uptime
-}
-
-COPY_WINDOW_S=6
-
-# The source is kept in memory and the target on disk, so the move has to copy. The move starts when the
-# batch window has passed since the file was closed, so what is left of the wait is the move to within
-# a few tenths of a second: the clock is read once the container that wrote the file has ended, which
-# is that long after the close, and each look at the log takes about as long.
-copy_once() {
-  prepare
-  docker volume create --driver local --opt type=tmpfs --opt device=tmpfs \
-    --opt "o=size=$(($1 + 1))g" "$PREFIX-source" > /dev/null
-  docker volume create "$PREFIX-target" > /dev/null
-  configure << CONFIG
-source = "/source"
-target = "/target"
-pipelines = ["video"]
-vars = { show = "Alpha" }
-batch_window = "${COPY_WINDOW_S}s"
-batch_max_wait = "${COPY_WINDOW_S}s"
-CONFIG
-  start -v "$PREFIX-source:/source" -v "$PREFIX-target:/target"
-  sleep 2
-  docker run --rm -v "$PREFIX-source:/source" alpine sh -c \
-    "mkdir -p /source/Alpha && dd if=/dev/urandom of='/source/Alpha/[Rel] Alpha - 01 [1080p].mkv' bs=1M count=$(($1 * 1024)) 2> /dev/null"
-  local closed written
-  closed=$(clock_ms)
-  still_running
-  written=$(cpu_ms)
-  while [ "$(moved)" -lt 1 ]; do
-    still_running
-    if [ $(($(clock_ms) - closed)) -ge 120000 ]; then
-      echo "the file was not moved in two minutes" >&2
-      exit 1
-    fi
-    sleep 0.1
-  done
-  report "copy gib=$1 run=$2 move_ms=$(($(clock_ms) - closed - COPY_WINDOW_S * 1000)) write_cpu_ms=$written copy_cpu_ms=$(($(cpu_ms) - written))"
-}
-
-# A limit set too low does not end every move, so one run says little: a move that is ended ends the
-# measurement, and all the runs finishing is what a limit has to show.
-copy() {
-  case "$2" in
-    '' | *[!0-9]* | 0)
-      echo "RUNS has to be a whole number, one or more" >&2
-      exit 2
-      ;;
-  esac
-  local run
-  for run in $(seq 1 "$2"); do
-    copy_once "$1" "$run"
-  done
-}
-
 case "${1:-}" in
   idle) idle ;;
   start) start_with "${2:?how many folders}" ;;
   batch) batch "${2:?how many folders}" ;;
   single) single "${2:?how many folders}" ;;
   rounds) rounds "${2:?how many folders}" ;;
-  copy) copy "${2:?how many gibibytes}" "${3:-1}" ;;
   all)
     idle
     for size in 100 1000 10000; do start_with $size; done
     batch 10000
     single 10000
     rounds 1000
-    copy 2 1
     ;;
   *) usage ;;
 esac
