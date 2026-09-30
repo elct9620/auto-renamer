@@ -1,25 +1,41 @@
-use super::{Filter, Flow, Stop};
+use super::{Batch, Filter, Run, Stop};
+use crate::context::Context;
 use crate::record::{Record, Value};
 
-pub(super) fn apply(filter: &Filter, record: Record) -> Flow {
-    let name = text(&record, "name");
-    let ext = text(&record, "ext");
-    let file_name = if ext.is_empty() {
-        name
-    } else {
-        format!("{name}.{ext}")
-    };
+impl Run for Filter {
+    fn name(&self) -> &'static str {
+        "filter"
+    }
 
-    let ext_matches = filter.ext.is_empty() || filter.ext.contains(&ext.to_lowercase());
-    let glob_matches = filter
-        .glob
-        .as_ref()
-        .is_none_or(|glob| glob.is_match(&file_name));
+    fn run(&self, batch: &mut Batch, _: &mut Context) {
+        batch.each(|record| {
+            if self.accepts(&record) {
+                Ok(record)
+            } else {
+                Err(Stop::Excluded)
+            }
+        });
+    }
+}
 
-    if (ext_matches && glob_matches) != filter.invert {
-        Ok(record)
-    } else {
-        Err(Stop::Excluded)
+impl Filter {
+    /// Whether the filter lets the file through.
+    pub(crate) fn accepts(&self, record: &Record) -> bool {
+        let name = text(record, "name");
+        let ext = text(record, "ext");
+        let file_name = if ext.is_empty() {
+            name
+        } else {
+            format!("{name}.{ext}")
+        };
+
+        let ext_matches = self.ext.is_empty() || self.ext.contains(&ext.to_lowercase());
+        let glob_matches = self
+            .glob
+            .as_ref()
+            .is_none_or(|glob| glob.is_match(&file_name));
+
+        (ext_matches && glob_matches) != self.invert
     }
 }
 

@@ -1,7 +1,18 @@
-use super::{Flow, Pattern, Stop, write_field, written_field};
+use super::{Batch, Flow, Pattern, Run, Stop, write_field, written_field};
+use crate::context::Context;
 use crate::record::{Record, Value};
 
-pub(super) fn apply(pattern: &Pattern, mut record: Record) -> Flow {
+impl Run for Pattern {
+    fn name(&self) -> &'static str {
+        "regex"
+    }
+
+    fn run(&self, batch: &mut Batch, _: &mut Context) {
+        batch.each(|record| apply(self, record));
+    }
+}
+
+fn apply(pattern: &Pattern, mut record: Record) -> Flow {
     let text = written_field("regex", &record, &pattern.from)?;
 
     match (&pattern.replace, &pattern.into) {

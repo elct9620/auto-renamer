@@ -1,10 +1,30 @@
 use std::path::{Component, Path, PathBuf};
 
-use super::{Flow, Lift, Stop, refused_by};
+use super::{Batch, Flow, Folder, Lift, Run, Stop, refused_by};
+use crate::context::Context;
 use crate::record::{Record, is_usable_file_name};
-use crate::template::Template;
 
-pub(super) fn lift(lift: &Lift, mut record: Record) -> Flow {
+impl Run for Lift {
+    fn name(&self) -> &'static str {
+        "lift"
+    }
+
+    fn run(&self, batch: &mut Batch, _: &mut Context) {
+        batch.each(|record| lift(self, record));
+    }
+}
+
+impl Run for Folder {
+    fn name(&self) -> &'static str {
+        "folder"
+    }
+
+    fn run(&self, batch: &mut Batch, _: &mut Context) {
+        batch.each(|record| folder(self, record));
+    }
+}
+
+fn lift(lift: &Lift, mut record: Record) -> Flow {
     let plan = record.plan().to_path_buf();
     let Some(file_name) = plan.file_name() else {
         return Ok(record);
@@ -39,8 +59,8 @@ pub(super) fn lift(lift: &Lift, mut record: Record) -> Flow {
     Ok(record)
 }
 
-pub(super) fn folder(template: &Template, mut record: Record) -> Flow {
-    let rendered = template.render(&record).map_err(refused_by("folder"))?;
+fn folder(folder: &Folder, mut record: Record) -> Flow {
+    let rendered = folder.0.render(&record).map_err(refused_by("folder"))?;
     let segments: Vec<&str> = rendered.split('/').collect();
     if let Some(unusable) = segments
         .iter()

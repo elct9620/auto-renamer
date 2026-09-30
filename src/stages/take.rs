@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use super::{Flow, Stop, Take, refused_by, write_field};
+use super::{Batch, Flow, Run, Stop, Take, refused_by, write_field};
+use crate::context::Context;
 use crate::record::{Record, split_extension};
 
 /// What an earlier pipeline made of one file, as far as a take stage needs to know.
@@ -51,10 +52,21 @@ impl EarlierFiles {
     }
 }
 
+impl Run for Take {
+    fn name(&self) -> &'static str {
+        "take"
+    }
+
+    fn run(&self, batch: &mut Batch, _: &mut Context) {
+        let earlier = batch.earlier();
+        batch.each(|record| self.copy_into(record, &earlier));
+    }
+}
+
 impl Take {
     /// Copies fields from what earlier pipelines planned for the file whose name is the longest
     /// beginning of this record's name.
-    pub(crate) fn run(&self, mut record: Record, earlier: &EarlierFiles) -> Flow {
+    fn copy_into(&self, mut record: Record, earlier: &EarlierFiles) -> Flow {
         let own = main_name(record.origin());
         let best = earlier.longest_beginning(own, self.from.as_ref());
 

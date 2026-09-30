@@ -2,7 +2,7 @@ use std::fmt;
 
 use toml::Value as Toml;
 
-use crate::stages::{DeclareError, Stage};
+use crate::stages::{DeclareError, Filter, Stage};
 
 /// The most stages a pipeline may hold, because a declaration may come from downloaded content.
 const MAX_STAGES: usize = 64;
@@ -85,13 +85,17 @@ impl Pipeline {
     }
 
     /// The pipeline in two parts: the filters it opens with, which say what it claims, and the stages after them.
-    pub(crate) fn split_at_claim(&self) -> (&[Stage], &[Stage]) {
-        let filters = self
+    pub(crate) fn split_at_claim(&self) -> (Vec<&Filter>, &[Stage]) {
+        let filters: Vec<&Filter> = self
             .stages
             .iter()
-            .take_while(|stage| matches!(stage, Stage::Filter(_)))
-            .count();
-        self.stages.split_at(filters)
+            .map_while(|stage| match stage {
+                Stage::Filter(filter) => Some(filter),
+                _ => None,
+            })
+            .collect();
+        let rest = &self.stages[filters.len()..];
+        (filters, rest)
     }
 
     /// Whether the pipeline ends in a stage that touches the filesystem.

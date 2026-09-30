@@ -2,6 +2,7 @@
 
 mod batch;
 mod declare;
+mod effect;
 mod filter;
 mod format;
 mod next;
@@ -20,9 +21,8 @@ use crate::context::Context;
 use crate::record::{Record, Value, is_usable_file_name};
 use crate::template::Template;
 
-pub(crate) use batch::Batch;
+pub use batch::Batch;
 pub use declare::DeclareError;
-use take::EarlierFiles;
 
 /// What a stage answers for one record: the record to go on with, or what stops it.
 pub type Flow = Result<Record, Stop>;
@@ -97,6 +97,16 @@ fn text_field<'a>(stage: &str, record: &'a Record, name: &str) -> Result<&'a str
     }
 }
 
+/// What every stage does: one function over a batch, whatever the stage is.
+pub trait Run {
+    /// The name the stage is declared by.
+    fn name(&self) -> &'static str;
+
+    /// Runs the stage over the files the running pipeline still holds, with what the batch and the
+    /// target let it know.
+    fn run(&self, batch: &mut Batch, context: &mut Context);
+}
+
 /// Fixed values written into records by `set` and `default`.
 pub type Fields = BTreeMap<String, Value>;
 
@@ -106,13 +116,13 @@ pub enum Stage {
     Filter(Filter),
     Number(Number),
     Regex(Pattern),
-    Set(Fields),
-    Default(Fields),
+    Set(SetFields),
+    Default(DefaultFields),
     Replace(Replace),
     Case(Case),
     Strip(Strip),
-    Format(Template),
-    Folder(Template),
+    Format(Format),
+    Folder(Folder),
     Lift(Lift),
     Next(Next),
     Rank(Rank),
@@ -122,52 +132,48 @@ pub enum Stage {
 }
 
 impl Stage {
-    /// The name the stage is declared by.
-    pub fn name(&self) -> &'static str {
+    /// What the stage does, whichever stage it was declared as.
+    fn as_run(&self) -> &dyn Run {
         match self {
-            Stage::Filter(_) => "filter",
-            Stage::Number(_) => "number",
-            Stage::Regex(_) => "regex",
-            Stage::Set(_) => "set",
-            Stage::Default(_) => "default",
-            Stage::Replace(_) => "replace",
-            Stage::Case(_) => "case",
-            Stage::Strip(_) => "strip",
-            Stage::Format(_) => "format",
-            Stage::Folder(_) => "folder",
-            Stage::Lift(_) => "lift",
-            Stage::Next(_) => "next",
-            Stage::Rank(_) => "rank",
-            Stage::Take(_) => "take",
-            Stage::Move(_) => "move",
-            Stage::Cleanup(_) => "cleanup",
+            Stage::Filter(stage) => stage,
+            Stage::Number(stage) => stage,
+            Stage::Regex(stage) => stage,
+            Stage::Set(stage) => stage,
+            Stage::Default(stage) => stage,
+            Stage::Replace(stage) => stage,
+            Stage::Case(stage) => stage,
+            Stage::Strip(stage) => stage,
+            Stage::Format(stage) => stage,
+            Stage::Folder(stage) => stage,
+            Stage::Lift(stage) => stage,
+            Stage::Next(stage) => stage,
+            Stage::Rank(stage) => stage,
+            Stage::Take(stage) => stage,
+            Stage::Move(stage) => stage,
+            Stage::Cleanup(stage) => stage,
         }
     }
 
-    /// Runs the stage on one record, with what the batch and the target let it know.
+    /// The name the stage is declared by.
+    pub fn name(&self) -> &'static str {
+        self.as_run().name()
+    }
+
+    /// Runs the stage over the files the running pipeline still holds.
+    pub(crate) fn run(&self, batch: &mut Batch, context: &mut Context) {
+        self.as_run().run(batch, context);
+    }
+
+    /// Runs the stage on one record, which is a batch of one, with what the target lets it know.
     pub fn apply(&self, record: Record, context: &mut Context) -> Flow {
-        match self {
-            Stage::Filter(filter) => filter::apply(filter, record),
-            Stage::Number(number) => number::apply(number, record),
-            Stage::Regex(pattern) => pattern::apply(pattern, record),
-            Stage::Set(fields) => text::set(fields, record),
-            Stage::Default(fields) => text::default(fields, record),
-            Stage::Replace(replace) => text::replace(replace, record),
-            Stage::Case(case) => text::case(case, record),
-            Stage::Strip(strip) => text::strip(strip, record),
-            Stage::Format(template) => format::apply(template, record),
-            Stage::Lift(lift) => path::lift(lift, record),
-            Stage::Folder(template) => path::folder(template, record),
-            Stage::Next(next) => next::apply(next, record, context),
-            // A single record is a batch of one.
-            Stage::Rank(rank) => rank
-                .run(vec![record])
-                .pop()
-                .expect("a rank answers once for each record"),
-            Stage::Take(take) => take.run(record, &EarlierFiles::new(Vec::new())),
-            // An effect does not rewrite the plan, so planning passes the record on.
-            Stage::Move(_) | Stage::Cleanup(_) => Ok(record),
-        }
+        let mut batch = Batch::new(vec![record]);
+        batch.claim("", |_| true);
+        self.run(&mut batch, context);
+        batch
+            .into_files()
+            .find_map(|(_, claimed)| claimed)
+            .map(|(_, flow)| flow)
+            .expect("a batch of one holds its file")
     }
 
     /// Whether the stage touches the filesystem, and so must come after every stage that only rewrites the plan.
@@ -180,6 +186,22 @@ impl Stage {
         matches!(self, Stage::Lift(_) | Stage::Folder(_))
     }
 }
+
+/// The fixed values `set` writes, replacing what a field held.
+#[derive(Debug, Clone)]
+pub struct SetFields(pub Fields);
+
+/// The fixed values `default` writes into the fields that hold nothing yet.
+#[derive(Debug, Clone)]
+pub struct DefaultFields(pub Fields);
+
+/// The template `format` writes the name from.
+#[derive(Debug, Clone)]
+pub struct Format(pub Template);
+
+/// The template `folder` puts the file under.
+#[derive(Debug, Clone)]
+pub struct Folder(pub Template);
 
 #[derive(Debug, Clone)]
 pub struct Filter {

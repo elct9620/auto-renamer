@@ -3,7 +3,8 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use super::{Flow, Number, Prefix, write_field, written_field};
+use super::{Batch, Flow, Number, Prefix, Run, write_field, written_field};
+use crate::context::Context;
 use crate::record::{Record, Value};
 
 /// Markers that say outright which number is the episode, in the order they are tried.
@@ -57,7 +58,17 @@ static DIGITS: LazyLock<Regex> =
 
 const RESOLUTIONS: [&str; 7] = ["480", "720", "1080", "2160", "4320", "360", "540"];
 
-pub(super) fn apply(number: &Number, mut record: Record) -> Flow {
+impl Run for Number {
+    fn name(&self) -> &'static str {
+        "number"
+    }
+
+    fn run(&self, batch: &mut Batch, _: &mut Context) {
+        batch.each(|record| apply(self, record));
+    }
+}
+
+fn apply(number: &Number, mut record: Record) -> Flow {
     let text = written_field("number", &record, &number.from)?;
     let excluded = excluded_values(&record, &number.exclude);
 

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::context::Context;
 use crate::pipeline::Pipeline;
 use crate::record::Record;
-use crate::stages::{Batch, Flow, Rejection, Stage, Stop};
+use crate::stages::{Batch, Flow, Rejection, Stop};
 
 /// What a batch made of one file.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -49,22 +49,10 @@ pub fn plan_batch(
     for (name, pipeline) in pipelines {
         let (filters, rest) = pipeline.split_at_claim();
         batch.claim(name, |record| {
-            filters
-                .iter()
-                .all(|filter| filter.apply(record.clone(), context).is_ok())
+            filters.iter().all(|filter| filter.accepts(record))
         });
         for stage in rest.iter().take_while(|stage| !stage.is_effect()) {
-            match stage {
-                Stage::Rank(rank) => {
-                    let mut flows = rank.run(batch.live().cloned().collect()).into_iter();
-                    batch.each(|_| flows.next().expect("a rank answers once for each record"));
-                }
-                Stage::Take(take) => {
-                    let earlier = batch.earlier();
-                    batch.each(|record| take.run(record, &earlier));
-                }
-                _ => batch.each(|record| stage.apply(record, context)),
-            }
+            stage.run(&mut batch, context);
         }
     }
 

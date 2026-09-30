@@ -346,6 +346,58 @@ impl Stage {
 }
 ```
 
+## `Run`
+
+What every stage does: one function over a batch, whatever the stage is.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub trait Run {}
+```
+
+## `Run::name`
+
+The name the stage is declared by.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub trait Run {
+    fn name(&self) -> &'static str;
+}
+```
+
+## `Run::run`
+
+Run the stage over the files the running pipeline still holds, with what the batch and the target let it know.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub trait Run {
+    fn run(&self, batch: &mut Batch, context: &mut Context);
+}
+```
+
+## `Batch`
+
+The files of a batch in the order of their paths, each waiting for a pipeline, held by the one that claimed it, or stopped by one of its stages.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct Batch {}
+```
+
 ## `Target`
 
 What the target folder holds, as far as a stage needs to know.

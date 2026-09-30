@@ -1,13 +1,33 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use super::{Flow, Rank, Stop, unfit, write_field};
+use super::{Batch, Rank, Run, Stop, unfit, write_field};
+use crate::context::Context;
 use crate::record::{Record, Value};
 
+impl Run for Rank {
+    fn name(&self) -> &'static str {
+        "rank"
+    }
+
+    fn run(&self, batch: &mut Batch, _: &mut Context) {
+        let mut numbers = self.number(batch.live().collect()).into_iter();
+        batch.each(|mut record| {
+            let number = numbers
+                .next()
+                .expect("a rank answers once for each record")?;
+            if let Some(number) = number {
+                write_field("rank", &mut record, &self.into, Value::Number(number))?;
+            }
+            Ok(record)
+        });
+    }
+}
+
 impl Rank {
-    /// Numbers the records among those whose `by` fields agree, in an order the preference can bend;
-    /// a record alone in its group is left without a number. The answers come in the order of the records.
-    pub(crate) fn run(&self, records: Vec<Record>) -> Vec<Flow> {
+    /// The number of each record among those whose `by` fields agree, in an order the preference can
+    /// bend; a record alone in its group has none. The answers come in the order of the records.
+    fn number(&self, records: Vec<&Record>) -> Vec<Result<Option<u64>, Stop>> {
         let keys: Vec<Result<Vec<String>, Stop>> = records
             .iter()
             .map(|record| group_key(record, &self.by))
@@ -33,17 +53,9 @@ impl Rank {
             }
         }
 
-        records
-            .into_iter()
-            .zip(keys)
+        keys.into_iter()
             .zip(numbers)
-            .map(|((mut record, key), number)| {
-                key?;
-                if let Some(number) = number {
-                    write_field("rank", &mut record, &self.into, Value::Number(number))?;
-                }
-                Ok(record)
-            })
+            .map(|(key, number)| key.map(|_| number))
             .collect()
     }
 }

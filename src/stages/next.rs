@@ -2,11 +2,21 @@ use std::path::Path;
 
 use regex::Regex;
 
-use super::{Flow, Next, Stop, refused_by, write_field};
+use super::{Batch, Flow, Next, Run, Stop, refused_by, write_field};
 use crate::context::Context;
 use crate::record::{Record, Value, split_extension};
 
-pub(super) fn apply(next: &Next, mut record: Record, context: &mut Context) -> Flow {
+impl Run for Next {
+    fn name(&self) -> &'static str {
+        "next"
+    }
+
+    fn run(&self, batch: &mut Batch, context: &mut Context) {
+        batch.each(|record| apply(self, record, context));
+    }
+}
+
+fn apply(next: &Next, mut record: Record, context: &mut Context) -> Flow {
     if record.field(&next.into).is_some() {
         return Ok(record);
     }

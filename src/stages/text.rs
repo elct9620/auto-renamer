@@ -1,14 +1,82 @@
-use super::{Case, CaseKind, Fields, Flow, Replace, Strip, text_field, write_field};
+use super::{
+    Batch, Case, CaseKind, DefaultFields, Fields, Flow, Replace, Run, SetFields, Strip, text_field,
+    write_field,
+};
+use crate::context::Context;
 use crate::record::{Record, Value};
 
-pub(super) fn set(fields: &Fields, record: Record) -> Flow {
-    write_all("set", fields, record, |_, _| true)
+impl Run for SetFields {
+    fn name(&self) -> &'static str {
+        "set"
+    }
+
+    fn run(&self, batch: &mut Batch, _: &mut Context) {
+        batch.each(|record| write_all("set", &self.0, record, |_, _| true));
+    }
 }
 
-pub(super) fn default(fields: &Fields, record: Record) -> Flow {
-    write_all("default", fields, record, |record, name| {
-        record.field(name).is_none()
-    })
+impl Run for DefaultFields {
+    fn name(&self) -> &'static str {
+        "default"
+    }
+
+    fn run(&self, batch: &mut Batch, _: &mut Context) {
+        batch.each(|record| {
+            write_all("default", &self.0, record, |record, name| {
+                record.field(name).is_none()
+            })
+        });
+    }
+}
+
+impl Run for Replace {
+    fn name(&self) -> &'static str {
+        "replace"
+    }
+
+    fn run(&self, batch: &mut Batch, _: &mut Context) {
+        batch.each(|record| {
+            rewrite("replace", &self.field, record, |text| {
+                text.replace(&self.find, &self.with)
+            })
+        });
+    }
+}
+
+impl Run for Case {
+    fn name(&self) -> &'static str {
+        "case"
+    }
+
+    fn run(&self, batch: &mut Batch, _: &mut Context) {
+        batch.each(|record| {
+            rewrite("case", &self.field, record, |text| match self.to {
+                CaseKind::Lower => text.to_lowercase(),
+                CaseKind::Upper => text.to_uppercase(),
+                CaseKind::Title => title_case(text),
+            })
+        });
+    }
+}
+
+impl Run for Strip {
+    fn name(&self) -> &'static str {
+        "strip"
+    }
+
+    fn run(&self, batch: &mut Batch, _: &mut Context) {
+        batch.each(|record| {
+            rewrite("strip", &self.field, record, |text| {
+                let stripped = self
+                    .groups
+                    .iter()
+                    .fold(text.to_string(), |text, &(open, close)| {
+                        remove_group(&text, open, close)
+                    });
+                stripped.split_whitespace().collect::<Vec<_>>().join(" ")
+            })
+        });
+    }
 }
 
 fn write_all(
@@ -23,32 +91,6 @@ fn write_all(
         }
     }
     Ok(record)
-}
-
-pub(super) fn replace(replace: &Replace, record: Record) -> Flow {
-    rewrite("replace", &replace.field, record, |text| {
-        text.replace(&replace.find, &replace.with)
-    })
-}
-
-pub(super) fn case(case: &Case, record: Record) -> Flow {
-    rewrite("case", &case.field, record, |text| match case.to {
-        CaseKind::Lower => text.to_lowercase(),
-        CaseKind::Upper => text.to_uppercase(),
-        CaseKind::Title => title_case(text),
-    })
-}
-
-pub(super) fn strip(strip: &Strip, record: Record) -> Flow {
-    rewrite("strip", &strip.field, record, |text| {
-        let stripped = strip
-            .groups
-            .iter()
-            .fold(text.to_string(), |text, &(open, close)| {
-                remove_group(&text, open, close)
-            });
-        stripped.split_whitespace().collect::<Vec<_>>().join(" ")
-    })
 }
 
 /// Rewrites a text field; a field that is missing or is not text is refused.

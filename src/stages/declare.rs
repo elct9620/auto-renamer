@@ -5,8 +5,8 @@ use regex::RegexBuilder;
 use toml::Value as Toml;
 
 use super::{
-    Case, CaseKind, Cleanup, Fields, Filter, Lift, Move, Next, Number, OnConflict, Pattern, Prefix,
-    Rank, Replace, Stage, Strip, Take,
+    Case, CaseKind, Cleanup, DefaultFields, Fields, Filter, Folder, Format, Lift, Move, Next,
+    Number, OnConflict, Pattern, Prefix, Rank, Replace, SetFields, Stage, Strip, Take,
 };
 use crate::reader::{Reader, Scope};
 use crate::template::Template;
@@ -78,13 +78,13 @@ fn declare_named(name: &str, value: Option<&Toml>) -> Result<Stage, DeclareError
         "filter" => filter(value),
         "number" => number(value),
         "regex" => regex(value),
-        "set" => fields("set", value).map(Stage::Set),
-        "default" => fields("default", value).map(Stage::Default),
+        "set" => fields("set", value).map(|fields| Stage::Set(SetFields(fields))),
+        "default" => fields("default", value).map(|fields| Stage::Default(DefaultFields(fields))),
         "replace" => replace(value),
         "case" => case(value),
         "strip" => strip(value),
-        "format" => template("format", value).map(Stage::Format),
-        "folder" => template("folder", value).map(Stage::Folder),
+        "format" => template("format", value).map(|template| Stage::Format(Format(template))),
+        "folder" => template("folder", value).map(|template| Stage::Folder(Folder(template))),
         "lift" => lift(value),
         "next" => next(value),
         "rank" => rank(value),
