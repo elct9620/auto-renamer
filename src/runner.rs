@@ -217,6 +217,7 @@ impl Session {
     /// again for longer than its own thread takes to give them up. The renames in place stay counted,
     /// so that starting over does not let a pipeline that names its own result again go on for ever.
     fn start_over(self, config_path: &Path) -> Result<Session, RunError> {
+        let start = self.successor();
         let Session {
             loaded,
             watcher,
@@ -226,9 +227,19 @@ impl Session {
         } = self;
         drop(watcher);
         drop(queue);
-        let mut session = Session::start(loaded, config_path, Start::Later)?;
+        let mut session = Session::start(loaded, config_path, start)?;
         session.renames = renames;
         Ok(session)
+    }
+
+    /// What a session that takes over from this one is: still the one the program starts with while
+    /// this one has not finished starting, so that taking over early gives up nothing a start promises.
+    fn successor(&self) -> Start {
+        if self.starting > 0 {
+            Start::First
+        } else {
+            Start::Later
+        }
     }
 
     /// Whether the configuration file no longer holds what this session read from it.
@@ -258,7 +269,7 @@ pub fn run(options: &Options, stop: &AtomicBool, reload: &AtomicBool) -> Result<
     let config_path = std::path::absolute(&options.config)
         .map_err(|error| RunError::Config(format!("{}: {error}", options.config.display())))?;
     let mut session = Session::start(load(&config_path)?, &config_path, Start::First)?;
-    let mut reload_at: Option<SystemTime> = None;
+    let mut reload_at = changed_since_read(&session, &config_path, SystemTime::now());
 
     while !stop.load(Ordering::SeqCst) {
         let timeout = wait(&session, reload_at, SystemTime::now());
@@ -274,35 +285,42 @@ pub fn run(options: &Options, stop: &AtomicBool, reload: &AtomicBool) -> Result<
             }
         }
 
+        // Which session goes on is settled before anything is scanned or moved, so that nothing is
+        // moved by a configuration already known to be replaced.
         let now = SystemTime::now();
-        if session.queue.lost() {
+        let lost = session.queue.lost();
+        if lost {
             eprintln!("[warn] notifications were lost, so every source is scanned again");
-            // The notification of a change to the configuration may be among the lost ones.
-            if session.is_outdated(&config_path) {
-                reload_at = Some(now);
-            }
-            session = session.start_over(&config_path)?;
         }
-        if reload.swap(false, Ordering::SeqCst) {
+        if reload.swap(false, Ordering::SeqCst)
+            // The notification of a change to the configuration may be among the lost ones.
+            || (lost && session.is_outdated(&config_path))
+        {
             reload_at = Some(now);
         }
-        session.scan(now)?;
-        session.process_one(now);
+        let mut read = None;
         if reload_at.is_some_and(|due| due <= now) {
             reload_at = None;
-            match read_again(&config_path) {
+            match read_again(&session, &config_path) {
                 Ok(fresh) => {
                     eprintln!("[info] the configuration was read again");
-                    // A change made after the file was read and before it was watched again is
-                    // reported to nobody.
-                    if fresh.is_outdated(&config_path) {
-                        reload_at = Some(now);
-                    }
-                    session = fresh;
+                    read = Some(fresh);
                 }
                 Err(error) => eprintln!("[warn] the configuration is kept as it was: {error}"),
             }
         }
+        let replaced = read.is_some() || lost;
+        if let Some(fresh) = read {
+            session = fresh;
+        } else if lost {
+            session = session.start_over(&config_path)?;
+        }
+        if replaced {
+            reload_at = changed_since_read(&session, &config_path, now);
+        }
+
+        session.scan(now)?;
+        session.process_one(now);
     }
     Ok(())
 }
@@ -326,9 +344,21 @@ fn load(path: &Path) -> Result<Loaded, RunError> {
     Ok(Loaded { text, config })
 }
 
+/// When to read the configuration again for a session that has just started: a change made after the
+/// file was read and before it was watched is reported to nobody, so the file is compared instead.
+fn changed_since_read(
+    session: &Session,
+    config_path: &Path,
+    now: SystemTime,
+) -> Option<SystemTime> {
+    session
+        .is_outdated(config_path)
+        .then_some(now + RELOAD_DELAY)
+}
+
 /// A session over the configuration as its file holds it now.
-fn read_again(config_path: &Path) -> Result<Session, RunError> {
-    load(config_path).and_then(|loaded| Session::start(loaded, config_path, Start::Later))
+fn read_again(session: &Session, config_path: &Path) -> Result<Session, RunError> {
+    load(config_path).and_then(|loaded| Session::start(loaded, config_path, session.successor()))
 }
 
 /// How long to wait for the next notification: not at all while there is work to go on with, and

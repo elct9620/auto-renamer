@@ -62,14 +62,6 @@ The queue holds the notifications that wait for the runner. Only what says somet
 | When | it is handed the notification that the kernel's own queue overflowed |
 | Then | it says notifications were lost |
 
-## `QUE-008` What waited is dropped once a loss is told
-
-| Step | Statement |
-| --- | --- |
-| Given | a queue that lost notifications and has said so |
-| When | the notifications of a turn are taken |
-| Then | none comes |
-
 ## `QUE-009` A loss is told once
 
 | Step | Statement |

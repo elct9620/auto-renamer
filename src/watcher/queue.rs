@@ -62,14 +62,8 @@ impl Queue {
         }
     }
 
-    /// Whether notifications were lost since this was last asked. What still waits is dropped with a
-    /// yes: whoever asks starts over from a scan, and the scan comes after all of it.
+    /// Whether notifications were lost since this was last asked.
     pub fn lost(&self) -> bool {
-        if !self.lost.load(Ordering::SeqCst) {
-            return false;
-        }
-        self.receiver.try_iter().for_each(drop);
-        self.lost.store(false, Ordering::SeqCst);
-        true
+        self.lost.swap(false, Ordering::SeqCst)
     }
 }

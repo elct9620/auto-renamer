@@ -1152,7 +1152,7 @@ impl Queue {
 
 ## `Queue::lost`
 
-Whether notifications were lost since this was last asked. What still waits is dropped with a yes, since whoever asks starts over.
+Whether notifications were lost since this was last asked.
 
 | Attribute | Value |
 | --- | --- |

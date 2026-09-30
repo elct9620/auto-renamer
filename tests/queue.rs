@@ -157,15 +157,6 @@ fn should_count_notifications_the_kernel_lost_as_lost() {
     assert!(queue.lost());
 }
 
-// @behavior QUE-008
-#[test]
-fn should_drop_what_waited_once_a_loss_is_told() {
-    let queue = queue_handed(2, closed(&["a.mkv", "b.mkv", "c.mkv"]));
-    queue.lost();
-
-    assert!(everything_in(&queue).is_empty());
-}
-
 // @behavior QUE-009
 #[test]
 fn should_tell_a_loss_once() {

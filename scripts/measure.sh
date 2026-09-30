@@ -297,7 +297,7 @@ case "${1:-}" in
     idle
     for size in 100 1000 10000; do start_with $size; done
     batch 10000
-    single 1000
+    single 10000
     rounds 1000
     copy 2
     ;;

@@ -202,7 +202,7 @@ fn should_stop_for_a_folder_that_cannot_be_watched_at_start() {
     assert!(program.log().contains("Locked"), "{}", program.log());
 }
 
-// @behavior RUN-026 RUN-030
+// @behavior RUN-026 RUN-030 RUN-031
 #[test]
 fn should_make_up_for_lost_notifications_by_scanning_again() {
     let sandbox = Sandbox::new();
@@ -242,6 +242,12 @@ fn should_make_up_for_lost_notifications_by_scanning_again() {
         program.log().contains("notifications were lost"),
         "{}",
         last_lines(&program.log())
+    );
+
+    let arrived = sandbox.names_in("target/new");
+    assert!(
+        arrived.iter().all(|name| name.starts_with("renamed-")),
+        "{arrived:?}"
     );
 
     let read_again = || program.log().contains("the configuration was read again");

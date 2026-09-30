@@ -247,3 +247,11 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | Given | the program moving a batch of 80000 files, which leaves no room in its queue, and its configuration changed meanwhile to rename files |
 | When | a file is written into the source after the batch |
 | Then | the file appears in the target under the name the changed configuration gives it |
+
+## `RUN-031` Files found after a loss are named by the configuration changed meanwhile
+
+| Step | Statement |
+| --- | --- |
+| Given | the program moving a batch of 80000 files, which leaves no room in its queue, and its configuration changed meanwhile to rename files |
+| When | files are written into the source while it does |
+| Then | they appear in the target under the names the changed configuration gives them |
