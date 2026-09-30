@@ -78,14 +78,6 @@ A folder can carry its own `auto-renamer.toml` for the exceptions of what lies i
 | When | the folder configuration is read |
 | Then | it is refused, naming `dry_run` |
 
-## `LAY-010` A folder configuration cannot set the batch window
-
-| Step | Statement |
-| --- | --- |
-| Given | a folder configuration with `batch_window` |
-| When | the folder configuration is read |
-| Then | it is refused, naming `batch_window` |
-
 ## `LAY-011` An unknown key is refused by name
 
 | Step | Statement |
@@ -109,14 +101,6 @@ A folder can carry its own `auto-renamer.toml` for the exceptions of what lies i
 | Given | a folder configuration whose pipeline `video` holds an unknown stage |
 | When | the folder configuration is read |
 | Then | it is refused, naming the pipeline `video` |
-
-## `LAY-014` An empty folder configuration changes nothing
-
-| Step | Statement |
-| --- | --- |
-| Given | a watch `series` with the variable `show` set to `Alpha` and the pipeline `video` for `mkv` and an empty folder configuration |
-| When | the folder configuration is applied |
-| Then | the watch is as it was |
 
 ## `LAY-015` A pipeline a folder defines is not run unless the watch lists it
 

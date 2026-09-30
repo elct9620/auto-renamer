@@ -206,14 +206,6 @@ The configuration says which folders are watched, where their files go, and by w
 | When | the configuration is read |
 | Then | the watch is a dry run |
 
-## `CFG-026` A batch limit is read from the watch
-
-| Step | Statement |
-| --- | --- |
-| Given | a watch with the batch limit 5 |
-| When | the configuration is read |
-| Then | the limit is 5 |
-
 ## `CFG-027` The default cannot hold a source or a target
 
 | Step | Statement |

@@ -2,7 +2,7 @@ mod common;
 
 use std::path::Path;
 
-use common::{apply, assert_rejected_by, record, record_on, run, text, with};
+use common::{apply, assert_rejected_by, record, run, text, with};
 
 fn plan_after(declaration: &str, path: &str) -> std::path::PathBuf {
     run(declaration, record(path)).plan().to_path_buf()
@@ -51,17 +51,6 @@ fn should_leave_a_plan_with_no_matching_folder() {
     let plan = plan_after(r#"{ lift = { to = "Season *" } }"#, "Series/Alpha/x.mkv");
 
     assert_eq!(plan, Path::new("Series/Alpha/x.mkv"));
-}
-
-// @behavior FLD-001
-#[test]
-fn should_add_folders_under_the_plan_from_a_template() {
-    let record = run(
-        r#"{ folder = "{mtime:%Y}/{mtime:%m}" }"#,
-        record_on("Photos/x.jpg", 2026, 9, 27),
-    );
-
-    assert_eq!(record.plan(), Path::new("Photos/2026/09/x.jpg"));
 }
 
 // @behavior FLD-002

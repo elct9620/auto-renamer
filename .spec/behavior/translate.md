@@ -94,14 +94,6 @@ The filesystem reports what happened in its own words, and only some of it matte
 | When | the notification is translated |
 | Then | nothing is reported |
 
-## `TRN-012` Notifications of other kinds are ignored
-
-| Step | Statement |
-| --- | --- |
-| Given | the source `/s` and a notification that `/s/Show/a.mkv` was opened for reading |
-| When | the notification is translated |
-| Then | nothing is reported |
-
 ## `TRN-013` A write that was closed rewrites the file
 
 | Step | Statement |

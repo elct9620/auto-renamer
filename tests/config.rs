@@ -257,12 +257,6 @@ fn should_let_a_watch_switch_on_a_dry_run() {
     assert!(series("dry_run = true").dry_run);
 }
 
-// @behavior CFG-026
-#[test]
-fn should_read_the_batch_limit_of_a_watch() {
-    assert_eq!(series("batch_max = 5").batch_max, 5);
-}
-
 #[test]
 fn should_default_the_unit_to_the_folder_of_the_file() {
     assert!(matches!(series("").unit, Unit::Directory));

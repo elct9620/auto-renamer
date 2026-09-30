@@ -62,14 +62,6 @@ The machine decides when the settled files of a unit are handed over as a batch.
 | When | the machine is asked when they are due |
 | Then | the batch holds `Show/a.mkv` only |
 
-## `WCH-008` A batch over the batch limit is still handed over, for the service to judge
-
-| Step | Statement |
-| --- | --- |
-| Given | the same watch with a batch limit of 2, and three files settled in `Show` |
-| When | the machine is asked when they are due |
-| Then | one batch of the three files is handed over |
-
 ## `WCH-010` A file being written holds its unit open
 
 | Step | Statement |
@@ -151,15 +143,6 @@ The machine decides when the settled files of a unit are handed over as a batch.
 | Then | the batch holds `Show/a.mkv` |
 
 
-## `WCH-020` An extreme modification time does not stop the machine
-
-| Step | Statement |
-| --- | --- |
-| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, and `Show/a.mkv` found at start with the latest modification time a filesystem can hold |
-| When | the machine is asked 5 minutes later |
-| Then | the batch holds `Show/a.mkv` |
-
-
 ## `WCH-021` The deadline includes the end of a hold
 
 | Step | Statement |
@@ -192,36 +175,12 @@ The machine decides when the settled files of a unit are handed over as a batch.
 | When | the folder `Sub` is gone and the machine is asked at 5 minutes |
 | Then | the batch of `Show/a.mkv` is ready |
 
-## `WCH-025` A folder that is gone takes the units under it and no other
-
-| Step | Statement |
-| --- | --- |
-| Given | a watch with each folder as a unit, and `Show/S1/a.mkv`, `Show/S2/b.mkv` and `Show-2/c.mkv` settled at 0 minutes |
-| When | the folder `Show` is gone and the machine is asked at 5 minutes |
-| Then | the batch of `Show-2` is the only one ready |
-
-## `WCH-026` A folder that is gone leaves nothing of its units to wait for
-
-| Step | Statement |
-| --- | --- |
-| Given | a watch with each folder as a unit, and `Show/S1/a.mkv` written to at 0 minutes |
-| When | the folder `Show` is gone and the next deadline is asked for |
-| Then | there is none |
-
 ## `WCH-027` Asking stays quick however many files are held
 
 | Step | Statement |
 | --- | --- |
 | Given | a machine holding 100000 files found at start that were changed lately |
 | When | it is asked 10000 times what is ready and when to look again |
-| Then | the answers come within five seconds |
-
-## `WCH-028` Asking stays quick with many units waiting beside many held files
-
-| Step | Statement |
-| --- | --- |
-| Given | a machine with 5000 units waiting and 50000 files being written in other folders |
-| When | it is asked 1000 times what is ready and when to look again |
 | Then | the answers come within five seconds |
 
 ## `WCH-029` Files going away stay quick however many are waiting

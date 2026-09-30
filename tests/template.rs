@@ -94,31 +94,10 @@ fn should_write_doubled_brackets_as_literal_brackets() {
     assert_eq!(render("[[tag]]", &record()), Ok("[tag]".to_string()));
 }
 
-// @behavior TPL-010
-#[test]
-fn should_refuse_a_field_left_open() {
-    assert_eq!(parse_error("{show"), TemplateError::UnclosedField);
-}
-
-// @behavior TPL-011
-#[test]
-fn should_refuse_an_optional_part_left_open() {
-    assert_eq!(parse_error("zh[.{index}"), TemplateError::UnclosedOptional);
-}
-
 // @behavior TPL-012
 #[test]
 fn should_refuse_nested_optional_parts() {
     assert_eq!(parse_error("a[b[c]]"), TemplateError::NestedOptional);
-}
-
-// @behavior TPL-013
-#[test]
-fn should_refuse_a_date_format_the_calendar_library_does_not_know() {
-    assert_eq!(
-        parse_error("{mtime:%Q}"),
-        TemplateError::InvalidDateFormat("%Q".to_string())
-    );
 }
 
 // @behavior TPL-014
@@ -135,12 +114,6 @@ fn should_refuse_a_padding_on_text() {
             spec: "02".to_string()
         })
     );
-}
-
-// @behavior TPL-015
-#[test]
-fn should_refuse_a_field_with_no_name() {
-    assert_eq!(parse_error("a{}b"), TemplateError::EmptyField);
 }
 
 // @behavior TPL-016

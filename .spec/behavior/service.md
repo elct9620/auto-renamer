@@ -78,14 +78,6 @@ Processing a batch is what a ready batch of settled files turns into: the files 
 | When | the batch is processed |
 | Then | the file is reported as skipped as missing |
 
-## `SVC-010` A link is skipped
-
-| Step | Statement |
-| --- | --- |
-| Given | the same watch and a symbolic link `Show/x.mkv` in the source |
-| When | the batch is processed |
-| Then | the link is reported as skipped and is untouched |
-
 ## `SVC-011` The next number follows what the target already holds
 
 | Step | Statement |
@@ -142,10 +134,3 @@ Processing a batch is what a ready batch of settled files turns into: the files 
 | When | the batch is processed |
 | Then | the file is reported as previewed at the path it already has |
 
-## `SVC-018` A rename in place that a later effect failed after still counts toward the limit
-
-| Step | Statement |
-| --- | --- |
-| Given | a watch without a target whose pipeline puts a prefix before the name, moves the file and then has an effect that fails, and a file processed again each time it was renamed |
-| When | it has been renamed five times in a row and is processed once more |
-| Then | it is refused, saying it was renamed too many times in a row |

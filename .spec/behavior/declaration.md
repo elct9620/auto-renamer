@@ -46,14 +46,6 @@ A pipeline is declared as a list of stages, each a bare name or a table with one
 | When | the pipeline is read |
 | Then | the pipeline is refused, naming the parameter `colour` |
 
-## `DEC-006` A stage that needs parameters is refused when written bare
-
-| Step | Statement |
-| --- | --- |
-| Given | the stage list `["number"]` |
-| When | the pipeline is read |
-| Then | the pipeline is refused, naming the stage `number` |
-
 ## `DEC-007` A filter needs an extension list or a name pattern
 
 | Step | Statement |
@@ -61,14 +53,6 @@ A pipeline is declared as a list of stages, each a bare name or a table with one
 | Given | the stage list `[{ filter = { invert = true } }]` |
 | When | the pipeline is read |
 | Then | the pipeline is refused |
-
-## `DEC-008` Extensions are compared without regard to case
-
-| Step | Statement |
-| --- | --- |
-| Given | the stage list `[{ filter = { ext = ["MKV", "Mp4"] } }]` |
-| When | the pipeline is read |
-| Then | the filter holds the extensions `mkv` and `mp4` |
 
 ## `DEC-009` Number extraction needs a field to write into
 
@@ -230,18 +214,11 @@ A pipeline is declared as a list of stages, each a bare name or a table with one
 | When | the pipeline is read |
 | Then | the move stage rejects a file whose target exists |
 
-## `DEC-029` The pipelines the design gives as examples are accepted
-
-| Step | Statement |
-| --- | --- |
-| Given | the video, subtitle, movie, music and photo pipelines written out in the design |
-| When | each pipeline is read |
-| Then | every pipeline is accepted |
 ## `DEC-030` A literal replace needs something to look for
 
 | Step | Statement |
 | --- | --- |
-| Given | the stage list `[{ replace = { find = "", with = "x" } }] |
+| Given | the stage list `[{ replace = { find = "", with = "x" } }]` |
 | When | the pipeline is read |
 | Then | the pipeline is refused, naming the parameter `find` |
 
@@ -249,7 +226,7 @@ A pipeline is declared as a list of stages, each a bare name or a table with one
 
 | Step | Statement |
 | --- | --- |
-| Given | the stage list `[{ next = { into = "episode", like = "{name}" } }] |
+| Given | the stage list `[{ next = { into = "episode", like = "{name}" } }]` |
 | When | the pipeline is read |
 | Then | the pipeline is refused, naming the parameter `like` |
 

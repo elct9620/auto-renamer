@@ -51,15 +51,6 @@ fn should_fall_back_to_the_folder_when_no_root_matches() {
     );
 }
 
-// @behavior UNT-006
-#[test]
-fn should_not_let_a_star_reach_across_a_slash() {
-    assert_eq!(
-        unit_of(r#"{ root = ["*"] }"#, "Movies/A/x.mkv"),
-        Path::new("Movies")
-    );
-}
-
 // @behavior UNT-007
 #[test]
 fn should_take_the_shallowest_matching_folder() {

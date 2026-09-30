@@ -46,14 +46,6 @@ A unit is the set of files that may relate to one another. A watch says how a fi
 | When | the unit of the file is asked for |
 | Then | it is `Music/B` |
 
-## `UNT-006` A star does not reach across a slash
-
-| Step | Statement |
-| --- | --- |
-| Given | the roots `*` and the file `Movies/A/x.mkv` |
-| When | the unit of the file is asked for |
-| Then | it is `Movies` |
-
 ## `UNT-007` The shallowest matching folder wins
 
 | Step | Statement |

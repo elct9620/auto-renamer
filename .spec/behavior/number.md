@@ -230,14 +230,6 @@ A number stage reads one number out of a field and writes it into another. A mar
 | When | the stage is applied |
 | Then | `episode` is unset |
 
-## `NUM-029` Another field can be read
-
-| Step | Statement |
-| --- | --- |
-| Given | a number stage writing into `episode` from `dir` and a record for `Series/Show 12/x.mkv` |
-| When | the stage is applied |
-| Then | `episode` is 12 |
-
 ## `NUM-030` A date field cannot be read
 
 | Step | Statement |

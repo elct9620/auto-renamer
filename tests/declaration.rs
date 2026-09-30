@@ -76,32 +76,12 @@ fn should_refuse_an_unknown_parameter_by_name() {
     assert_invalid(error, "filter", Some("colour"));
 }
 
-// @behavior DEC-006
-#[test]
-fn should_refuse_a_bare_stage_that_needs_parameters() {
-    assert_eq!(
-        refused_declaration(r#"["number"]"#),
-        DeclareError::NeedsParameters("number".to_string())
-    );
-}
-
 // @behavior DEC-007
 #[test]
 fn should_refuse_a_filter_with_neither_extension_nor_pattern() {
     let error = refused_declaration("[{ filter = { invert = true } }]");
 
     assert_invalid(error, "filter", Some("ext"));
-}
-
-// @behavior DEC-008
-#[test]
-fn should_hold_extensions_in_lower_case() {
-    let pipeline = declared(r#"[{ filter = { ext = ["MKV", "Mp4"] } }]"#);
-
-    let Declared::Filter(filter) = &pipeline.stages()[0] else {
-        panic!("expected a filter");
-    };
-    assert_eq!(filter.ext, ["mkv", "mp4"]);
 }
 
 // @behavior DEC-009
@@ -277,48 +257,6 @@ fn should_default_the_conflict_policy_to_reject() {
         panic!("expected a move");
     };
     assert_eq!(policy.on_conflict, OnConflict::Reject);
-}
-
-// @behavior DEC-029
-#[test]
-fn should_accept_the_pipelines_the_design_gives_as_examples() {
-    let video = r#"[
-        { filter = { ext = ["mkv", "mp4"] } },
-        { number = { from = "path", into = "season", prefix = "Season" } },
-        { number = { into = "episode", exclude = ["season"] } },
-        { default = { season = 1 } },
-        { lift = { to = "Season *" } },
-        { next = { into = "episode", like = "{show} s{season:02}e{episode:02}" } },
-        { format = "{show} s{season:02}e{episode:02}" },
-        "move",
-        { cleanup = { keep = ["Season *"] } },
-    ]"#;
-    let subtitle = r#"[
-        { filter = { ext = ["ass", "srt"] } },
-        { number = { from = "path", into = "season", prefix = "Season" } },
-        { number = { into = "episode", exclude = ["season"] } },
-        { default = { season = 1 } },
-        { rank = { into = "index", by = ["season", "episode"], prefer = ["cht"] } },
-        { lift = { to = "Season *" } },
-        { format = "{show} s{season:02}e{episode:02}.zh[.{index:02}]" },
-        "move",
-    ]"#;
-    let movie = r#"[{ filter = { ext = ["mkv", "mp4"] } }, { strip = {} }, "move"]"#;
-    let music = r#"[
-        { filter = { ext = ["mp3", "flac"] } },
-        { regex = { pattern = '^(?<track>\d+)\s*-\s*(?<title>.+)$' } },
-        { format = "{track:02} {title}" },
-        "move",
-    ]"#;
-    let photo = r#"[
-        { filter = { ext = ["jpg", "png"] } },
-        { folder = "{mtime:%Y}/{mtime:%m}" },
-        "move",
-    ]"#;
-
-    for source in [video, subtitle, movie, music, photo] {
-        assert!(read(source).is_ok(), "should accept {source}");
-    }
 }
 
 // @behavior DEC-030

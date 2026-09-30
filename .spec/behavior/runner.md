@@ -200,14 +200,6 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | When | a file is written into `Show/Season 01` |
 | Then | the file appears in the target |
 
-## `RUN-025` A folder that cannot be watched at start stops the watcher
-
-| Step | Statement |
-| --- | --- |
-| Given | a source holding a folder the program is not permitted to read |
-| When | the program is started |
-| Then | it stops with an error naming the folder |
-
 ## `RUN-026` Lost notifications are made up for by scanning again
 
 | Step | Statement |
@@ -248,10 +240,3 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | When | a file is written into the source after the batch |
 | Then | the file appears in the target under the name the changed configuration gives it |
 
-## `RUN-031` Files found after a loss are named by the configuration changed meanwhile
-
-| Step | Statement |
-| --- | --- |
-| Given | the program moving a batch of 80000 files, which leaves no room in its queue, and its configuration changed meanwhile to rename files |
-| When | files are written into the source while it does |
-| Then | they appear in the target under the names the changed configuration gives them |

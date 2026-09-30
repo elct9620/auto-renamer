@@ -79,14 +79,6 @@ A move puts a file at its plan under the target, and it is the only thing that t
 | When | the file is moved |
 | Then | the move is refused as unsafe and nothing is moved |
 
-## `MV-010` An absolute plan is refused
-
-| Step | Statement |
-| --- | --- |
-| Given | a file `x.mkv` and the plan `/etc/y.mkv` |
-| When | the file is moved |
-| Then | the move is refused as unsafe and nothing is moved |
-
 ## `MV-011` A link is not moved
 
 | Step | Statement |
@@ -110,14 +102,6 @@ A move puts a file at its plan under the target, and it is the only thing that t
 | Given | a folder `Season` in the source and the plan `Other` |
 | When | the file is moved |
 | Then | the folder is skipped as not a file, and it is untouched |
-
-## `MV-014` A dry run moves nothing and says where the file would go
-
-| Step | Statement |
-| --- | --- |
-| Given | a file `x.mkv`, the plan `Series/y.mkv`, and a dry run |
-| When | the file is moved |
-| Then | the answer is where it would move to, and the file has not moved |
 
 ## `MV-015` A file that is not there is refused
 

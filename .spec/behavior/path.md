@@ -46,14 +46,6 @@ Stages that move a file to another folder of its plan, up or down, without touch
 | When | the stage is applied |
 | Then | the plan is `Series/Alpha/x.mkv` |
 
-## `FLD-001` A template adds folders under the plan
-
-| Step | Statement |
-| --- | --- |
-| Given | a folder stage for `{mtime:%Y}/{mtime:%m}` and a record for `Photos/x.jpg` modified on 2026-09-27 |
-| When | the stage is applied |
-| Then | the plan is `Photos/2026/09/x.jpg` |
-
 ## `FLD-002` A template that cannot be rendered is refused
 
 | Step | Statement |

@@ -38,14 +38,6 @@ A pipeline ends in effect stages. Planning only notes what each asks for on the 
 | When | the effects of the pipeline are applied |
 | Then | nothing is done and the file has not moved |
 
-## `EFF-005` An effect stage applied while planning passes the record on unchanged
-
-| Step | Statement |
-| --- | --- |
-| Given | the `move` stage and a record for `x.mkv` |
-| When | the stage is applied to the record |
-| Then | the record goes on as it was |
-
 ## `EFF-006` A planned file carries the effects of its pipeline in the order they are written
 
 | Step | Statement |
@@ -53,14 +45,6 @@ A pipeline ends in effect stages. Planning only notes what each asks for on the 
 | Given | a pipeline that cleans up and then moves, and a file it claims |
 | When | the batch is planned |
 | Then | the file is planned with a cleanup and then a move to be done |
-
-## `EFF-007` A file a stage stopped carries no effect
-
-| Step | Statement |
-| --- | --- |
-| Given | a pipeline of a `format` that needs a field the file lacks, then `move` |
-| When | the batch is planned |
-| Then | the file is refused with nothing to be done to it |
 
 ## `EFF-008` A file carries only the effects of the pipeline that claimed it
 

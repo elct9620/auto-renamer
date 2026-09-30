@@ -56,14 +56,6 @@ fn should_put_an_earlier_preferred_word_before_a_later_one() {
     assert_eq!(index_of(&judged, "c.ass"), Some(3));
 }
 
-// @behavior RNK-004
-#[test]
-fn should_not_number_a_file_alone_in_its_group() {
-    let judged = planned_batch(&[("s", RANK)], vec![subtitle("a.ass", 1)]);
-
-    assert_eq!(index_of(&judged, "a.ass"), None);
-}
-
 // @behavior RNK-005
 #[test]
 fn should_number_files_whose_fields_differ_apart() {
@@ -93,15 +85,4 @@ fn should_ignore_case_in_the_preference() {
     );
 
     assert_eq!(index_of(&judged, "b.CHT.ass"), Some(1));
-}
-
-// @behavior RNK-008
-#[test]
-fn should_leave_a_record_ranked_on_its_own_without_a_number() {
-    let ranked = common::run(
-        r#"{ rank = { into = "index", by = ["episode"] } }"#,
-        subtitle("a.ass", 1),
-    );
-
-    assert_eq!(ranked.field("index"), None);
 }

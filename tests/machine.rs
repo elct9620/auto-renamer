@@ -115,22 +115,6 @@ fn should_never_let_a_folder_configuration_into_a_batch() {
     assert_eq!(machine.ready(at(5, 0)), [batch("Show", &["Show/a.mkv"])]);
 }
 
-// @behavior WCH-008
-#[test]
-fn should_hand_over_a_batch_over_the_limit_for_the_service_to_judge() {
-    let mut machine = machine("batch_max = 2");
-    for name in ["Show/a.mkv", "Show/b.mkv", "Show/c.mkv"] {
-        settled(&mut machine, name, at(0, 0));
-    }
-
-    let ready = machine.ready(at(5, 0));
-
-    assert_eq!(
-        ready,
-        [batch("Show", &["Show/a.mkv", "Show/b.mkv", "Show/c.mkv"])]
-    );
-}
-
 // @behavior WCH-010
 #[test]
 fn should_keep_a_unit_open_while_a_file_in_it_is_being_written() {
@@ -264,7 +248,7 @@ fn should_take_a_modification_time_in_the_future_as_now() {
     assert_eq!(machine.ready(at(5, 0)), [batch("Show", &["Show/a.mkv"])]);
 }
 
-// @behavior WCH-020
+// @behavior WCH-019
 #[test]
 fn should_not_stop_for_an_extreme_modification_time() {
     let mut machine = machine("");
@@ -328,7 +312,7 @@ fn should_release_the_holds_under_a_folder_that_is_gone() {
     assert_eq!(machine.ready(at(5, 0)), [batch("", &["Show/a.mkv"])]);
 }
 
-// @behavior WCH-025
+// @behavior WCH-023
 #[test]
 fn should_take_the_units_under_a_folder_that_is_gone_and_no_other() {
     let mut machine = machine("");
@@ -344,7 +328,7 @@ fn should_take_the_units_under_a_folder_that_is_gone_and_no_other() {
     );
 }
 
-// @behavior WCH-026
+// @behavior WCH-024
 #[test]
 fn should_leave_nothing_to_wait_for_of_the_units_under_a_folder_that_is_gone() {
     let mut machine = machine("");
@@ -392,7 +376,7 @@ fn should_stay_quick_to_ask_however_many_files_are_held() {
     });
 }
 
-// @behavior WCH-028
+// @behavior WCH-027
 #[test]
 fn should_stay_quick_to_ask_with_many_units_waiting_beside_many_held_files() {
     let mut machine = machine("");

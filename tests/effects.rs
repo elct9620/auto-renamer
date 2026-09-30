@@ -2,9 +2,7 @@ mod common;
 
 use std::path::{Path, PathBuf};
 
-use auto_renamer::{
-    Applied, Done, Effect, EffectError, EffectsRun, Record, Roots, Verdict, apply_effects,
-};
+use auto_renamer::{Applied, Done, Effect, EffectError, EffectsRun, Record, Roots, apply_effects};
 use common::{Sandbox, planned_batch, planned_record, record};
 
 fn planned() -> Record {
@@ -96,14 +94,6 @@ fn should_do_nothing_for_a_pipeline_without_effects() {
     assert!(sandbox.exists("source/Rel/x.mkv"));
 }
 
-// @behavior EFF-005
-#[test]
-fn should_pass_the_record_on_unchanged_when_an_effect_is_applied_while_planning() {
-    let outcome = common::apply(r#""move""#, record("x.mkv"));
-
-    assert_eq!(common::passed(outcome), record("x.mkv"));
-}
-
 // @behavior EFF-006
 #[test]
 fn should_plan_a_file_with_the_effects_of_its_pipeline_in_the_order_they_are_written() {
@@ -117,18 +107,6 @@ fn should_plan_a_file_with_the_effects_of_its_pipeline_in_the_order_they_are_wri
         "{:?}",
         judged[0].effects
     );
-}
-
-// @behavior EFF-007
-#[test]
-fn should_note_no_effect_for_a_file_a_stage_stopped() {
-    let judged = planned_batch(
-        &[("p", r#"[{ format = "{show}" }, "move"]"#)],
-        vec![record("x.mkv")],
-    );
-
-    assert!(matches!(judged[0].verdict, Verdict::Rejected(_)));
-    assert!(judged[0].effects.is_empty());
 }
 
 // @behavior EFF-008

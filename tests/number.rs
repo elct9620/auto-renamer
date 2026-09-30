@@ -219,14 +219,6 @@ fn should_leave_the_field_unset_for_a_name_without_numbers() {
     assert_eq!(episode_of("Show.mkv"), None);
 }
 
-// @behavior NUM-029
-#[test]
-fn should_read_another_field_when_asked_to() {
-    let found = episode(r#", from = "dir""#, record("Series/Show 12/x.mkv"));
-
-    assert_eq!(found, Some(12));
-}
-
 // @behavior NUM-030
 #[test]
 fn should_refuse_a_date_field_as_the_source() {

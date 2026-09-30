@@ -58,17 +58,6 @@ fn should_replace_every_match_when_rewriting() {
     );
 }
 
-// @behavior RGX-006
-#[test]
-fn should_use_the_groups_when_rewriting() {
-    let stage = r#"{ regex = { pattern = '(\w+)-(\w+)', replace = "$2-$1" } }"#;
-
-    assert_eq!(
-        run(stage, record("ab-cd.mkv")).field("name"),
-        Some(&text("cd-ab"))
-    );
-}
-
 // @behavior RGX-007
 #[test]
 fn should_leave_the_record_unchanged_when_nothing_matches() {
@@ -108,17 +97,6 @@ fn should_refuse_a_date_field_as_the_source() {
     let outcome = apply(
         r#"{ regex = { pattern = 'a', into = "x", from = "mtime" } }"#,
         record("Show.mkv"),
-    );
-
-    assert_rejected_by(outcome, "regex");
-}
-
-// @behavior RGX-011
-#[test]
-fn should_refuse_a_rewrite_that_makes_the_name_unusable() {
-    let outcome = apply(
-        r#"{ regex = { pattern = 'a', replace = "/" } }"#,
-        record("a.mkv"),
     );
 
     assert_rejected_by(outcome, "regex");

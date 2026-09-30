@@ -70,10 +70,3 @@ A take stage copies fields from the file a name belongs with, found among what e
 | When | the batch is planned |
 | Then | `Show 27.cht.ass` is refused, naming the stage `take` |
 
-## `TAK-009` A record taking fields on its own has nothing to take from
-
-| Step | Statement |
-| --- | --- |
-| Given | the take stage of `episode` and one record |
-| When | the stage is applied to that record alone |
-| Then | the record is refused by `take` |

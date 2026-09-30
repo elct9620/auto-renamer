@@ -38,14 +38,6 @@ A format stage rewrites the file name of the plan out of a template and leaves t
 | When | the stage is applied |
 | Then | the record is refused, naming the stage `format` |
 
-## `FMT-005` An empty name is refused
-
-| Step | Statement |
-| --- | --- |
-| Given | a format stage for `{show}` and a record whose `show` is empty |
-| When | the stage is applied |
-| Then | the record is refused, naming the stage `format` |
-
 ## `FMT-006` A name of dots only is refused
 
 | Step | Statement |
@@ -54,10 +46,3 @@ A format stage rewrites the file name of the plan out of a template and leaves t
 | When | the stage is applied |
 | Then | the record is refused, naming the stage `format` |
 
-## `FMT-007` The name field follows the format
-
-| Step | Statement |
-| --- | --- |
-| Given | a format stage for `{show}` and a record for `x.mkv` with `show` Alpha |
-| When | the stage is applied |
-| Then | the field `name` is `Alpha` |

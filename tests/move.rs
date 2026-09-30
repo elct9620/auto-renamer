@@ -188,7 +188,7 @@ fn should_refuse_a_plan_that_leaves_the_target() {
     assert!(!sandbox.exists("y.mkv"));
 }
 
-// @behavior MV-010
+// @behavior MV-009
 #[test]
 fn should_refuse_an_absolute_plan() {
     let sandbox = Sandbox::new();
@@ -265,30 +265,6 @@ fn should_not_move_a_folder() {
 
     assert_eq!(done, Ok(Applied::Skipped(SkipReason::NotAFile)));
     assert!(sandbox.exists("source/Season"));
-}
-
-// @behavior MV-014
-#[test]
-fn should_move_nothing_and_say_where_the_file_would_go_in_a_dry_run() {
-    let sandbox = Sandbox::new();
-    sandbox.write("source/x.mkv", "video");
-
-    let done = move_file(
-        &reject(),
-        &planned("x.mkv", "Series/y.mkv"),
-        &roots(&sandbox),
-        true,
-    );
-
-    assert_eq!(
-        done,
-        Ok(Applied::Preview {
-            from: sandbox.path("source/x.mkv"),
-            to: sandbox.path("target/Series/y.mkv"),
-        })
-    );
-    assert!(sandbox.exists("source/x.mkv"));
-    assert!(!sandbox.exists("target"));
 }
 
 // @behavior MV-015

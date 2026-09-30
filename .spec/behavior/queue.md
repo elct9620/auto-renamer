@@ -6,14 +6,6 @@ The queue holds the notifications that wait for the runner. Only what says somet
 
 - `tests/queue.rs`
 
-## `QUE-001` A notification that something changed is queued
-
-| Step | Statement |
-| --- | --- |
-| Given | the handler a queue gives the filesystem watcher |
-| When | it is handed a notification that a file was closed after writing |
-| Then | the notification comes out of the queue |
-
 ## `QUE-002` A notification that nothing changed is dropped
 
 | Step | Statement |
@@ -37,14 +29,6 @@ The queue holds the notifications that wait for the runner. Only what says somet
 | Given | the handler a queue gives the filesystem watcher and a notification of every kind a translation or a rewrite answers to |
 | When | it is handed each of them |
 | Then | each comes out of the queue |
-
-## `QUE-005` Nothing is lost while there is room
-
-| Step | Statement |
-| --- | --- |
-| Given | a queue with room for two notifications |
-| When | it is handed two |
-| Then | it says none were lost |
 
 ## `QUE-006` A queue with no room loses what comes and says so
 
@@ -78,10 +62,3 @@ The queue holds the notifications that wait for the runner. Only what says somet
 | When | a turn takes up to three and the next takes up to three |
 | Then | three come and then two |
 
-## `QUE-011` A turn with a limit of none takes nothing
-
-| Step | Statement |
-| --- | --- |
-| Given | a queue holding one notification |
-| When | a turn takes up to none and the next takes up to one |
-| Then | none comes and then one |

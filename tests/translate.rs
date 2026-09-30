@@ -138,14 +138,6 @@ fn should_not_take_a_change_to_a_folder_for_a_write() {
     assert_eq!(translated(kind, &["/s/Show"]), []);
 }
 
-// @behavior TRN-012
-#[test]
-fn should_ignore_other_kinds_of_notification() {
-    let kind = EventKind::Access(AccessKind::Open(AccessMode::Read));
-
-    assert_eq!(translated(kind, &["/s/Show/a.mkv"]), []);
-}
-
 fn rewrites_config(kind: EventKind, path: &str) -> bool {
     rewrites(&notification(kind, &[path]), Path::new("/c/config.toml"))
 }

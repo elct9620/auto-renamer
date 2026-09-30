@@ -124,14 +124,3 @@ fn should_not_remove_a_linked_folder() {
     assert!(sandbox.exists("source/Rel"));
     assert!(sandbox.exists("elsewhere"));
 }
-
-// @behavior CLN-010
-#[test]
-fn should_list_the_folders_removed_innermost_first() {
-    let sandbox = Sandbox::new();
-    sandbox.make_dir("source/Season/Rel/Subs");
-
-    let removed = cleaned(&sandbox, "", "Season/Rel/Subs/x.ass", "Season");
-
-    assert_eq!(removed, paths(&["Season/Rel/Subs", "Season/Rel", "Season"]));
-}

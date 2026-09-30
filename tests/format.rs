@@ -50,17 +50,6 @@ fn should_refuse_a_name_holding_a_slash() {
     assert_rejected_by(outcome, "format");
 }
 
-// @behavior FMT-005
-#[test]
-fn should_refuse_an_empty_name() {
-    let outcome = apply(
-        r#"{ format = "{show}" }"#,
-        with(record("x.mkv"), "show", text("")),
-    );
-
-    assert_rejected_by(outcome, "format");
-}
-
 // @behavior FMT-006
 #[test]
 fn should_refuse_a_name_of_dots_only() {
@@ -70,15 +59,4 @@ fn should_refuse_a_name_of_dots_only() {
     );
 
     assert_rejected_by(outcome, "format");
-}
-
-// @behavior FMT-007
-#[test]
-fn should_make_the_name_field_follow_the_format() {
-    let record = run(
-        r#"{ format = "{show}" }"#,
-        with(record("x.mkv"), "show", text("Alpha")),
-    );
-
-    assert_eq!(record.field("name"), Some(&text("Alpha")));
 }

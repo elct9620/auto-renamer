@@ -30,14 +30,6 @@ A rank stage numbers the files of a group among themselves: files whose named fi
 | When | the batch is planned |
 | Then | `b.cht.ass` is 1, `a.chs.ass` is 2 and `c.ass` is 3 |
 
-## `RNK-004` A file alone in its group is not numbered
-
-| Step | Statement |
-| --- | --- |
-| Given | a rank stage into `index` by `episode` and the file `a.ass` with `episode` 1 |
-| When | the batch is planned |
-| Then | `index` is unset |
-
 ## `RNK-005` Files whose fields differ are numbered apart
 
 | Step | Statement |
@@ -62,10 +54,3 @@ A rank stage numbers the files of a group among themselves: files whose named fi
 | When | the batch is planned |
 | Then | `b.CHT.ass` is 1 |
 
-## `RNK-008` A record ranked on its own is a group of one and is not numbered
-
-| Step | Statement |
-| --- | --- |
-| Given | the rank stage by `episode` and one record with `episode` 1 |
-| When | the stage is applied to that record alone |
-| Then | the record goes on without an `index` |

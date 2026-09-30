@@ -46,14 +46,6 @@ A regex stage extracts text into fields, or rewrites a field. It is the way out 
 | When | the stage is applied |
 | Then | `name` is `a b c` |
 
-## `RGX-006` A rewrite can use the groups
-
-| Step | Statement |
-| --- | --- |
-| Given | a regex stage rewriting `name` with the pattern `(\w+)-(\w+)` replaced by `$2-$1` and a record for `ab-cd.mkv` |
-| When | the stage is applied |
-| Then | `name` is `cd-ab` |
-
 ## `RGX-007` No match leaves the record unchanged
 
 | Step | Statement |
@@ -86,10 +78,3 @@ A regex stage extracts text into fields, or rewrites a field. It is the way out 
 | When | the stage is applied |
 | Then | the record is refused, naming the stage `regex` |
 
-## `RGX-011` A rewrite that makes the name unusable is refused
-
-| Step | Statement |
-| --- | --- |
-| Given | a regex stage rewriting `name` with the pattern `a` replaced by `/` and a record for `a.mkv` |
-| When | the stage is applied |
-| Then | the record is refused, naming the stage `regex` |

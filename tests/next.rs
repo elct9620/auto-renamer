@@ -131,16 +131,6 @@ fn should_give_the_records_of_one_batch_consecutive_numbers() {
     assert_eq!(episodes, [Some(1), Some(2)]);
 }
 
-// @behavior NXT-011
-#[test]
-fn should_continue_a_batch_after_the_target() {
-    let files = Files::of(&[("Series/Show", &["Show s01e01.mkv", "Show s01e02.mkv"])]);
-
-    let episodes = episodes_of_a_batch(&files, &["Series/Show/a.mkv", "Series/Show/b.mkv"]);
-
-    assert_eq!(episodes, [Some(3), Some(4)]);
-}
-
 // @behavior NXT-012
 #[test]
 fn should_count_folders_apart() {

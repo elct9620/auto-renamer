@@ -44,18 +44,6 @@ impl Record {
 }
 ```
 
-## `NotUtf8`
-
-Why no record was made of a file: its path is not valid UTF-8.
-
-| Attribute | Value |
-| --- | --- |
-| internal | yes |
-
-```rust
-pub struct NotUtf8 {}
-```
-
 ## `Record::with_vars`
 
 Add variables as fields, never replacing a built-in field.
@@ -254,20 +242,6 @@ impl Pipeline {
 }
 ```
 
-## `Pipeline::from_toml`
-
-Read the `stages` list of a TOML document.
-
-| Attribute | Value |
-| --- | --- |
-| internal | yes |
-
-```rust
-impl Pipeline {
-    pub fn from_toml(source: &str) -> Result<Pipeline, PipelineError> {}
-}
-```
-
 ## `Pipeline::stages`
 
 The declared stages in the order they were written.
@@ -279,20 +253,6 @@ The declared stages in the order they were written.
 ```rust
 impl Pipeline {
     pub fn stages(&self) -> &[Declared] {}
-}
-```
-
-## `Pipeline::has_effect`
-
-Whether the pipeline ends in a stage that touches the filesystem.
-
-| Attribute | Value |
-| --- | --- |
-| internal | yes |
-
-```rust
-impl Pipeline {
-    pub fn has_effect(&self) -> bool {}
 }
 ```
 
@@ -945,32 +905,6 @@ Whether the scan has looked at everything below its folder.
 ```rust
 impl Scan {
     pub fn is_finished(&self) -> bool {}
-}
-```
-
-## `FsTarget`
-
-The target folder as the filesystem holds it.
-
-| Attribute | Value |
-| --- | --- |
-| internal | yes |
-
-```rust
-pub struct FsTarget {}
-```
-
-## `FsTarget::new`
-
-A target over the folder at the root.
-
-| Attribute | Value |
-| --- | --- |
-| internal | yes |
-
-```rust
-impl FsTarget {
-    pub fn new(root: PathBuf) -> FsTarget {}
 }
 ```
 

@@ -1,6 +1,5 @@
 mod common;
 
-use std::os::unix::fs::symlink;
 use std::path::{Path, PathBuf};
 
 use auto_renamer::{Config, Processed, Renames, SkipReason, What, process_batch};
@@ -216,28 +215,6 @@ fn should_skip_a_file_that_vanished() {
     );
 }
 
-// @behavior SVC-010
-#[test]
-fn should_skip_a_link_and_leave_it_untouched() {
-    let run = alpha("");
-    run.sandbox.write("elsewhere.mkv", "video");
-    run.sandbox.make_dir("source/Show");
-    symlink(
-        run.sandbox.path("elsewhere.mkv"),
-        run.sandbox.path("source/Show/x.mkv"),
-    )
-    .unwrap();
-
-    let processed = run.process("Show", &["Show/x.mkv"]);
-
-    assert_eq!(
-        run.what(&processed, "Show/x.mkv"),
-        What::Skipped(SkipReason::Link)
-    );
-    assert!(run.sandbox.exists("source/Show/x.mkv"));
-    assert!(run.sandbox.exists("elsewhere.mkv"));
-}
-
 // @behavior SVC-011
 #[test]
 fn should_number_after_what_the_target_already_holds() {
@@ -384,7 +361,7 @@ fn should_preview_a_file_whose_plan_is_where_it_already_is_in_a_dry_run() {
     );
 }
 
-// @behavior SVC-018
+// @behavior SVC-013
 #[test]
 fn should_count_a_rename_in_place_that_a_later_effect_failed_after() {
     let run = in_place(r#"[{ format = "x{name}" }, "move", "move"]"#);

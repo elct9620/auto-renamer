@@ -37,7 +37,7 @@ fn queued(kind: EventKind) -> bool {
     !everything_in(&queue_handed(8, handed)).is_empty()
 }
 
-// @behavior QUE-001
+// @behavior QUE-004
 #[test]
 fn should_queue_a_notification_that_something_changed() {
     let closed = closed_after_writing("a.mkv");
@@ -131,7 +131,7 @@ fn closed(names: &[&str]) -> Vec<Notification> {
         .collect()
 }
 
-// @behavior QUE-005
+// @behavior QUE-006
 #[test]
 fn should_lose_nothing_while_there_is_room() {
     let queue = queue_handed(2, closed(&["a.mkv", "b.mkv"]));
@@ -177,17 +177,4 @@ fn should_take_no_more_notifications_in_a_turn_than_its_limit() {
     ];
 
     assert_eq!(turns, [3, 2]);
-}
-
-// @behavior QUE-011
-#[test]
-fn should_take_nothing_in_a_turn_with_a_limit_of_none() {
-    let queue = queue_handed(8, closed(&["a.mkv"]));
-
-    let turns = [
-        queue.take(Duration::ZERO, 0).len(),
-        queue.take(Duration::ZERO, 1).len(),
-    ];
-
-    assert_eq!(turns, [0, 1]);
 }

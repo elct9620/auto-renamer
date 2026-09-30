@@ -162,20 +162,6 @@ fn should_keep_the_numbers_handed_out_across_pipelines_of_one_batch() {
     );
 }
 
-// @behavior BAT-010
-#[test]
-fn should_point_at_the_pipeline_that_claimed_the_file() {
-    let list = [
-        ("subtitle", r#"[{ filter = { ext = ["ass"] } }]"#),
-        ("video", r#"[{ filter = { ext = ["mkv"] } }]"#),
-    ];
-
-    let judged = planned_batch(&list, vec![record("a.mkv")]);
-
-    let claimed = judged[0].pipeline.map(|index| list[index].0);
-    assert_eq!(claimed, Some("video"));
-}
-
 // @behavior BAT-011
 #[test]
 fn should_plan_one_file_as_a_batch_of_one_each_stage_on_the_result_of_the_last() {

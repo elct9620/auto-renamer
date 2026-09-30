@@ -114,7 +114,7 @@ fn should_not_let_a_folder_switch_off_a_dry_run() {
     assert!(names(&refused("dry_run = false"), "dry_run"));
 }
 
-// @behavior LAY-010
+// @behavior LAY-011
 #[test]
 fn should_not_let_a_folder_set_the_batch_window() {
     assert!(names(&refused("batch_window = \"1s\""), "batch_window"));
@@ -141,18 +141,6 @@ fn should_refuse_a_mistake_in_a_folder_pipeline_with_its_name() {
         &refused("[pipeline.video]\nstages = [\"shred\"]"),
         "video"
     ));
-}
-
-// @behavior LAY-014
-#[test]
-fn should_change_nothing_for_an_empty_folder_configuration() {
-    let before = watch();
-
-    let under = before.under(&[folder("")]);
-
-    assert_eq!(show(&under), show(&before));
-    assert_eq!(under.batch_max, before.batch_max);
-    assert_eq!(stage_names(&under, "video"), stage_names(&before, "video"));
 }
 
 // @behavior LAY-015

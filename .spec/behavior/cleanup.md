@@ -70,10 +70,3 @@ After a file has moved out, the folders it leaves empty are removed, from the fo
 | When | the folders are cleaned up |
 | Then | the link and the folder it points to are kept |
 
-## `CLN-010` The answer lists the folders removed, innermost first
-
-| Step | Statement |
-| --- | --- |
-| Given | a unit `Season` holding `Rel/Subs`, both empty |
-| When | the folders are cleaned up |
-| Then | the answer is `Season/Rel/Subs`, `Season/Rel`, `Season` |

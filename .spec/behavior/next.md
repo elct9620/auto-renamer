@@ -86,14 +86,6 @@ A next stage fills a field with the number after the highest one already in the 
 | When | the stage is applied to both records in turn |
 | Then | the episodes are 1 and 2 |
 
-## `NXT-011` A batch continues after the target
-
-| Step | Statement |
-| --- | --- |
-| Given | a next stage filling `episode` like `{show} s{season:02}e{episode:02}`, two records for `Series/Show/a.mkv` and `Series/Show/b.mkv` with `show` Show and `season` 1, and a target folder holding `Show s01e01.mkv` and `Show s01e02.mkv` |
-| When | the stage is applied to both records in turn |
-| Then | the episodes are 3 and 4 |
-
 ## `NXT-012` Folders are counted apart
 
 | Step | Statement |

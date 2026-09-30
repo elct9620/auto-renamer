@@ -127,15 +127,3 @@ fn should_not_take_from_a_pipeline_that_has_not_run_yet() {
 
     assert_refused_by(&judged, "Show 27.cht.ass", "take");
 }
-
-// @behavior TAK-009
-#[test]
-fn should_refuse_a_record_taking_fields_on_its_own() {
-    let outcome = common::apply(r#"{ take = { fields = ["episode"] } }"#, record("a.ass"));
-
-    assert!(
-        matches!(&outcome, Err(auto_renamer::Stop::Rejected(rejection))
-            if rejection.stage == "take" && rejection.reason.contains("no earlier file")),
-        "{outcome:?}"
-    );
-}

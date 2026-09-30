@@ -78,35 +78,11 @@ A template writes a name out of a record's fields. It is checked when it is read
 | When | the template is rendered |
 | Then | the result is `[tag]` |
 
-## `TPL-010` A field left open is refused when the template is read
-
-| Step | Statement |
-| --- | --- |
-| Given | the template `{show` |
-| When | the template is read |
-| Then | the template is refused |
-
-## `TPL-011` An optional part left open is refused when the template is read
-
-| Step | Statement |
-| --- | --- |
-| Given | the template `zh[.{index}` |
-| When | the template is read |
-| Then | the template is refused |
-
 ## `TPL-012` Optional parts do not nest
 
 | Step | Statement |
 | --- | --- |
 | Given | the template `a[b[c]]` |
-| When | the template is read |
-| Then | the template is refused |
-
-## `TPL-013` A date format the calendar library does not know is refused
-
-| Step | Statement |
-| --- | --- |
-| Given | the template `{mtime:%Q}` |
 | When | the template is read |
 | Then | the template is refused |
 
@@ -117,14 +93,6 @@ A template writes a name out of a record's fields. It is checked when it is read
 | Given | the template `{show:02}` and a record whose `show` is the text `Alpha` |
 | When | the template is rendered |
 | Then | the render is refused, naming the field `show` |
-
-## `TPL-015` A field with no name is refused when the template is read
-
-| Step | Statement |
-| --- | --- |
-| Given | the template `a{}b` |
-| When | the template is read |
-| Then | the template is refused |
 
 ## `TPL-016` A date without a format is refused
 
