@@ -12,7 +12,7 @@ use crate::record::Record;
 use crate::stages::Effect;
 
 pub use cleanup::cleanup_folders;
-pub use relocate::{COPY_PART, move_file};
+pub use relocate::move_file;
 
 /// The source a file comes from and the target it goes to, which are one folder when files are renamed in place.
 #[derive(Debug, Clone, PartialEq, Eq)]

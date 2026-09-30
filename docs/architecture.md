@@ -44,7 +44,7 @@ auto-renamer 是單一套件：`src/lib.rs` 放全部邏輯，`src/main.rs` 只�
 | `engine` | 認領順序與每個檔案的結論 | 否 |
 | `reader` | 逐鍵讀取 TOML 表格，拒絕剩下的鍵 | 否 |
 | `config` | 設定解析、層疊與驗證 | 否 |
-| `effects` | 執行 `move` 與 `cleanup` | 檔案系統 |
+| `effects` | 執行 `move` 與 `cleanup` | 檔案系統、`mv` |
 | `watcher` | 事件、單元與批次收束的狀態機 | 否 |
 | `watcher` 的翻譯 | notify 事件轉成單元事件 | 否 |
 | `watcher` 的佇列 | 篩選通知、限制數量、記下遺失 | 否 |

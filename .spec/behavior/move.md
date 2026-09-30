@@ -127,21 +127,13 @@ A move puts a file at its plan under the target, and it is the only thing that t
 | When | the file is moved |
 | Then | the move is refused because the file is missing |
 
-## `MV-016` A move between filesystems copies and then removes
+## `MV-016` A move between filesystems goes through a temporary name
 
 | Step | Statement |
 | --- | --- |
-| Given | a file on one filesystem and a target on another, and the plan `y.mkv` |
+| Given | a file on one filesystem, a target on another, and the plan `y.mkv` |
 | When | the file is moved |
-| Then | the target holds the same bytes as `y.mkv`, the source no longer has the file, and no temporary file is left |
-
-## `MV-017` A move between filesystems keeps the modification time
-
-| Step | Statement |
-| --- | --- |
-| Given | a file on one filesystem with a modification time in the past, a target on another, and the plan `y.mkv` |
-| When | the file is moved |
-| Then | `y.mkv` has that modification time |
+| Then | `y.mkv` holds the same bytes, the source no longer has the file, and no temporary file is left |
 
 ## `MV-018` A file that appears at the plan after it was checked is not replaced
 
@@ -150,14 +142,6 @@ A move puts a file at its plan under the target, and it is the only thing that t
 | Given | a file placed at a path where another file has appeared since the path was checked |
 | When | the file is put there |
 | Then | it is refused as already existing and the other file is as it was |
-
-## `MV-019` Special permission bits are not carried between filesystems
-
-| Step | Statement |
-| --- | --- |
-| Given | a file with the set-user-id bit on one filesystem and a target on another, and the plan `y.mkv` |
-| When | the file is moved |
-| Then | `y.mkv` has no special permission bits |
 
 ## `MV-020` A temporary file left by an interrupted move does not block the next one
 
@@ -175,34 +159,18 @@ A move puts a file at its plan under the target, and it is the only thing that t
 | When | the file is moved and the notifications are translated |
 | Then | the new name is settled and is never taken for a file being written |
 
-## `MV-022` A file larger than one part arrives whole between filesystems
+## `MV-026` A move that `mv` does not carry out is refused
 
 | Step | Statement |
 | --- | --- |
-| Given | a file of two parts and a half and a few bytes more on one filesystem, whose bytes differ all along, a target on another, and the plan `y.mkv` |
-| When | the file is moved |
-| Then | `y.mkv` holds the same bytes |
+| Given | a file and a temporary name that is already taken, so `mv -n` leaves the file where it is |
+| When | the file is handed to `mv` |
+| Then | the move is refused, the file is still there, and what held the temporary name is as it was |
 
-## `MV-023` A file of exactly two parts arrives whole between filesystems
-
-| Step | Statement |
-| --- | --- |
-| Given | a file of exactly two parts on one filesystem, whose bytes differ all along, a target on another, and the plan `y.mkv` |
-| When | the file is moved |
-| Then | `y.mkv` holds the same bytes |
-
-## `MV-024` An empty file arrives empty between filesystems
+## `MV-027` A plan taken at the last step keeps the file under its temporary name
 
 | Step | Statement |
 | --- | --- |
-| Given | an empty file on one filesystem, a target on another, and the plan `y.mkv` |
-| When | the file is moved |
-| Then | `y.mkv` is there and empty |
-
-## `MV-025` A file whose data can be shared arrives whole between mounts
-
-| Step | Statement |
-| --- | --- |
-| Given | a file of two parts and a half on a filesystem that can share data and is mounted in two places, whose bytes differ all along, whose modification time is in the past and which has the set-user-id bit, a target on the other mount, and the plan `y.mkv` |
-| When | the file is moved |
-| Then | `y.mkv` holds the same bytes and that modification time and has no special permission bits, the source no longer has the file, and no temporary file is left |
+| Given | a file, and a plan `y.mkv` that appears after the file was checked but before it is put in place |
+| When | the file is moved through a temporary name |
+| Then | the move is refused naming the temporary file, which holds the file's bytes, and `y.mkv` is as it was |

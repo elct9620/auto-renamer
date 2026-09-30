@@ -1,7 +1,7 @@
-use std::fs::{self, File, OpenOptions, Permissions};
-use std::io::{self, Read};
-use std::os::unix::fs::PermissionsExt;
+use std::fs;
+use std::io;
 use std::path::{Component, Path, PathBuf};
+use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::{Applied, EffectError, Roots, SkipReason, exists, io_error};
@@ -105,15 +105,15 @@ fn place(from: &Path, to: &Path) -> Result<(), EffectError> {
     }
     match put(from, to) {
         Ok(()) => Ok(()),
-        Err(error) if error.kind() == io::ErrorKind::CrossesDevices => copy_then_remove(from, to),
+        Err(error) if error.kind() == io::ErrorKind::CrossesDevices => move_across(from, to),
         Err(error) => Err(failed("rename", from, to, &error)),
     }
 }
 
-/// Between filesystems a file is copied under a temporary name beside its destination, so nothing sees
-/// it half written, and only then renamed into place and removed from the source. The name is new each
-/// time, so what an interrupted move left behind never blocks the next one.
-fn copy_then_remove(from: &Path, to: &Path) -> Result<(), EffectError> {
+/// Between filesystems the file is handed to `mv` under a temporary name beside its destination, so a
+/// move cut short never leaves a file that looks complete, and then renamed into place without replacing
+/// anything. The name is new each time, so what an interrupted move left behind never blocks the next one.
+fn move_across(from: &Path, to: &Path) -> Result<(), EffectError> {
     let temporary = to.with_file_name(format!(
         ".{}.{}.part",
         to.file_name()
@@ -123,67 +123,29 @@ fn copy_then_remove(from: &Path, to: &Path) -> Result<(), EffectError> {
             .duration_since(UNIX_EPOCH)
             .map_or(0, |elapsed| elapsed.as_nanos())
     ));
-
-    if let Err(error) = copy_to(from, &temporary).and_then(|()| put(&temporary, to)) {
-        if !temporary_belongs_to_someone_else(&error) {
-            let _ = fs::remove_file(&temporary);
-        }
-        return Err(failed("copy", from, to, &error));
-    }
-    fs::remove_file(from).map_err(|error| io_error("remove the source", from, error.kind()))
+    hand_to_mv(from, &temporary)?;
+    put(&temporary, to)
+        .map_err(|error| io_error("put in place the file kept at", &temporary, error.kind()))
 }
 
-fn copy_to(from: &Path, temporary: &Path) -> io::Result<()> {
-    let source = File::open(from)?;
-    let metadata = source.metadata()?;
-    let copy = OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(temporary)?;
-    if !share(&source, &copy) {
-        write_in_parts(&source, &copy)?;
+/// Runs `mv -n`, which says nothing when it leaves the file where it is, so a file still there afterwards
+/// is a move that did not happen.
+fn hand_to_mv(from: &Path, temporary: &Path) -> Result<(), EffectError> {
+    let status = Command::new("mv")
+        .arg("-n")
+        .arg("--")
+        .arg(from)
+        .arg(temporary)
+        .status()
+        .map_err(|error| io_error("run mv for", from, error.kind()))?;
+    if !status.success() {
+        return Err(io_error("move with mv", from, io::ErrorKind::Other));
     }
-    copy.set_permissions(Permissions::from_mode(
-        metadata.permissions().mode() & KEPT_PERMISSIONS,
-    ))?;
-    copy.set_modified(metadata.modified()?)?;
-    copy.sync_all()
-}
-
-/// Has the copy share the data of the source, so that nothing is written again, and says whether it does.
-///
-/// Only some filesystems can, and only within one of them. Whatever stands in the way means the file is
-/// written a part at a time instead, where an error that matters shows again.
-fn share(source: &File, copy: &File) -> bool {
-    #[cfg(target_os = "linux")]
-    {
-        rustix::fs::ioctl_ficlone(copy, source).is_ok()
-    }
-    #[cfg(not(target_os = "linux"))]
-    {
-        let _ = (source, copy);
-        false
-    }
-}
-
-/// How much of a file copied between filesystems is written before it is flushed to the disk.
-pub const COPY_PART: u64 = 16 * 1024 * 1024;
-
-/// Copies a file a part at a time, each flushed before the next is written.
-///
-/// What waits to be written counts against the memory a container is allowed, and a file written whole
-/// and flushed at the end can wait in more than that, for which the kernel ends the program. Written a
-/// part at a time, no more than a part ever waits, however large the file.
-fn write_in_parts(source: &File, mut copy: &File) -> io::Result<()> {
-    while io::copy(&mut source.take(COPY_PART), &mut copy)? > 0 {
-        copy.sync_data()?;
+    if fs::symlink_metadata(from).is_ok() {
+        return Err(io_error("move with mv", from, io::ErrorKind::AlreadyExists));
     }
     Ok(())
 }
-
-/// Only the read and write bits of a downloaded file are kept: a data file needs no execute bit, and a
-/// set-user-id or set-group-id bit from untrusted content must not reach the library.
-const KEPT_PERMISSIONS: u32 = 0o666;
 
 /// Puts a file where it is wanted without ever replacing one that is there.
 ///
@@ -210,11 +172,6 @@ pub(crate) fn put(from: &Path, to: &Path) -> io::Result<()> {
     }
 }
 
-/// A temporary name that already exists was not made by this move, so it is not this move's to remove.
-fn temporary_belongs_to_someone_else(error: &io::Error) -> bool {
-    error.kind() == io::ErrorKind::AlreadyExists
-}
-
 /// A move that failed: a conflict when something is already at the destination, otherwise the error of the action.
 fn failed(action: &'static str, from: &Path, to: &Path, error: &io::Error) -> EffectError {
     match error.kind() {
@@ -227,7 +184,7 @@ fn failed(action: &'static str, from: &Path, to: &Path, error: &io::Error) -> Ef
 mod tests {
     use std::fs;
 
-    use super::put;
+    use super::{hand_to_mv, move_across, put};
 
     fn scratch(name: &str) -> std::path::PathBuf {
         let folder =
@@ -249,6 +206,52 @@ mod tests {
         assert_eq!(put.unwrap_err().kind(), std::io::ErrorKind::AlreadyExists);
         assert_eq!(fs::read_to_string(folder.join("to")).unwrap(), "other");
         assert_eq!(fs::read_to_string(folder.join("from")).unwrap(), "new");
+        let _ = fs::remove_dir_all(folder);
+    }
+
+    // @behavior MV-026
+    #[test]
+    fn should_refuse_a_move_that_mv_does_not_carry_out() {
+        let folder = scratch("mv-skipped");
+        fs::write(folder.join("from"), "new").unwrap();
+        fs::write(folder.join(".to.part"), "someone else's").unwrap();
+
+        let handed = hand_to_mv(&folder.join("from"), &folder.join(".to.part"));
+
+        assert!(handed.is_err());
+        assert_eq!(fs::read_to_string(folder.join("from")).unwrap(), "new");
+        assert_eq!(
+            fs::read_to_string(folder.join(".to.part")).unwrap(),
+            "someone else's"
+        );
+        let _ = fs::remove_dir_all(folder);
+    }
+
+    // @behavior MV-027
+    #[test]
+    fn should_keep_the_file_under_its_temporary_name_when_the_plan_is_taken_at_the_last_step() {
+        let folder = scratch("taken-last");
+        fs::write(folder.join("from"), "new").unwrap();
+        fs::write(folder.join("to"), "other").unwrap();
+
+        let moved = move_across(&folder.join("from"), &folder.join("to"));
+
+        let kept: Vec<_> = fs::read_dir(&folder)
+            .unwrap()
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| path.to_string_lossy().contains("/.to."))
+            .collect();
+        assert_eq!(kept.len(), 1);
+        assert!(
+            moved
+                .unwrap_err()
+                .to_string()
+                .contains(&*kept[0].to_string_lossy())
+        );
+        assert_eq!(fs::read_to_string(&kept[0]).unwrap(), "new");
+        assert_eq!(fs::read_to_string(folder.join("to")).unwrap(), "other");
+        assert!(!folder.join("from").exists());
         let _ = fs::remove_dir_all(folder);
     }
 }

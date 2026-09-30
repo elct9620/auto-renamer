@@ -56,9 +56,8 @@ Some tests depend on things outside their own file.
 |---|---|
 | `tests/examples.rs` | the `toml` pipelines in `docs/design.md` |
 | kernel overflow in `tests/queue.rs` | a handed-in overflow notice |
-| MV-025 in `tests/move.rs` | a second mount at `/scratch-again` |
 
-Editing a design example can break a test, and the image build leaves out `docs/`, so `tests/examples.rs` runs only on the host or in the mounted container. OrbStack queues 1,048,576 kernel events, so an overflow cannot be caused by volume there. MV-025 skips wherever the second mount is missing, CI included.
+Editing a design example can break a test, and the image build leaves out `docs/`, so `tests/examples.rs` runs only on the host or in the mounted container. OrbStack queues 1,048,576 kernel events, so an overflow cannot be caused by volume there.
 
 ## Index
 

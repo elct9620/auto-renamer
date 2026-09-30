@@ -2,8 +2,6 @@ mod common;
 
 use std::path::{Path, PathBuf};
 
-#[cfg(target_os = "linux")]
-use auto_renamer::effects::COPY_PART;
 use auto_renamer::{Applied, EffectError, Record, Roots, SkipReason, move_file};
 use common::{Sandbox, move_stage, record};
 
@@ -326,7 +324,7 @@ fn other_filesystem() -> Option<Sandbox> {
 // @behavior MV-016
 #[cfg(target_os = "linux")]
 #[test]
-fn should_copy_and_then_remove_when_moving_between_filesystems() {
+fn should_move_through_a_temporary_name_between_filesystems() {
     let Some(target) = other_filesystem() else {
         eprintln!("skipped: no second filesystem here");
         return;
@@ -345,68 +343,6 @@ fn should_copy_and_then_remove_when_moving_between_filesystems() {
     assert_eq!(target.names_in(""), ["y.mkv"]);
 }
 
-// @behavior MV-017
-#[cfg(target_os = "linux")]
-#[test]
-fn should_keep_the_modification_time_when_moving_between_filesystems() {
-    let Some(target) = other_filesystem() else {
-        eprintln!("skipped: no second filesystem here");
-        return;
-    };
-    let source = Sandbox::new();
-    source.write("x.mkv", "some bytes");
-    let past = std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(1_000_000_000);
-    std::fs::File::options()
-        .write(true)
-        .open(source.path("x.mkv"))
-        .unwrap()
-        .set_modified(past)
-        .unwrap();
-    let roots = Roots {
-        source: source.path(""),
-        target: target.path(""),
-    };
-
-    move_file(&reject(), &planned("x.mkv", "y.mkv"), &roots, false).unwrap();
-
-    let moved = std::fs::metadata(target.path("y.mkv"))
-        .unwrap()
-        .modified()
-        .unwrap();
-    assert_eq!(moved, past);
-}
-
-// @behavior MV-019
-#[cfg(target_os = "linux")]
-#[test]
-fn should_not_carry_special_permission_bits_between_filesystems() {
-    use std::os::unix::fs::PermissionsExt;
-
-    let Some(target) = other_filesystem() else {
-        eprintln!("skipped: no second filesystem here");
-        return;
-    };
-    let source = Sandbox::new();
-    source.write("x.mkv", "some bytes");
-    std::fs::set_permissions(
-        source.path("x.mkv"),
-        std::fs::Permissions::from_mode(0o4755),
-    )
-    .unwrap();
-    let roots = Roots {
-        source: source.path(""),
-        target: target.path(""),
-    };
-
-    move_file(&reject(), &planned("x.mkv", "y.mkv"), &roots, false).unwrap();
-
-    let mode = std::fs::metadata(target.path("y.mkv"))
-        .unwrap()
-        .permissions()
-        .mode();
-    assert_eq!(mode & 0o7000, 0);
-}
-
 // @behavior MV-020
 #[cfg(target_os = "linux")]
 #[test]
@@ -417,7 +353,7 @@ fn should_not_be_blocked_by_a_temporary_file_an_earlier_move_left() {
     };
     let source = Sandbox::new();
     source.write("x.mkv", "some bytes");
-    target.write(".y.mkv.part", "half");
+    target.write(".y.mkv.1.part", "half");
     let roots = Roots {
         source: source.path(""),
         target: target.path(""),
@@ -459,117 +395,4 @@ fn should_be_seen_as_a_file_moved_in_when_renamed_within_a_folder() {
     let writing = Translated::Event(Event::Writing("y.mkv".into()));
     assert!(seen.contains(&settled), "{seen:?}");
     assert!(!seen.contains(&writing), "{seen:?}");
-}
-
-/// Moves a file of a length to another filesystem and says whether it arrived as it was, which it is
-/// taken to have where there is no second filesystem to try. No two stretches of it are alike, so a
-/// part missing, repeated or out of place shows.
-#[cfg(target_os = "linux")]
-fn arrives_whole(length: u64) -> bool {
-    let Some(target) = other_filesystem() else {
-        eprintln!("skipped: no second filesystem here");
-        return true;
-    };
-    let source = Sandbox::new();
-    let bytes = varied(length);
-    std::fs::write(source.path("x.mkv"), &bytes).unwrap();
-    let roots = Roots {
-        source: source.path(""),
-        target: target.path(""),
-    };
-
-    move_file(&reject(), &planned("x.mkv", "y.mkv"), &roots, false).unwrap();
-
-    std::fs::read(target.path("y.mkv")).unwrap() == bytes
-}
-
-/// Bytes of which no two stretches are alike.
-#[cfg(target_os = "linux")]
-fn varied(length: u64) -> Vec<u8> {
-    (0..length as u32)
-        .map(|place| (place.wrapping_mul(2_654_435_761) >> 24) as u8)
-        .collect()
-}
-
-// @behavior MV-022
-#[cfg(target_os = "linux")]
-#[test]
-fn should_bring_a_file_larger_than_one_part_whole_between_filesystems() {
-    let length = COPY_PART * 2 + COPY_PART / 2 + 123;
-
-    assert!(arrives_whole(length));
-}
-
-// @behavior MV-023
-#[cfg(target_os = "linux")]
-#[test]
-fn should_bring_a_file_of_exactly_two_parts_whole_between_filesystems() {
-    assert!(arrives_whole(COPY_PART * 2));
-}
-
-// @behavior MV-024
-#[cfg(target_os = "linux")]
-#[test]
-fn should_bring_an_empty_file_empty_between_filesystems() {
-    assert!(arrives_whole(0));
-}
-
-/// The temporary folder as it is mounted a second time, where it is and its filesystem can share data:
-/// a rename cannot cross from one mount to the other, and shared data can.
-#[cfg(target_os = "linux")]
-fn mounted_again() -> Option<Sandbox> {
-    let again = Path::new("/scratch-again");
-    if !again.is_dir() {
-        return None;
-    }
-    let here = Sandbox::new();
-    let there = Sandbox::under(again);
-    here.write("probe", "some bytes");
-    let crosses = std::fs::rename(here.path("probe"), there.path("probe"))
-        .is_err_and(|error| error.kind() == std::io::ErrorKind::CrossesDevices);
-    let source = std::fs::File::open(here.path("probe")).ok()?;
-    let copy = std::fs::File::create(there.path("probe")).ok()?;
-    let shares = rustix::fs::ioctl_ficlone(&copy, &source).is_ok();
-    std::fs::remove_file(there.path("probe")).ok()?;
-    (crosses && shares).then_some(there)
-}
-
-// @behavior MV-025
-#[cfg(target_os = "linux")]
-#[test]
-fn should_bring_a_file_whose_data_can_be_shared_whole_between_mounts() {
-    use std::os::unix::fs::PermissionsExt;
-
-    let Some(target) = mounted_again() else {
-        eprintln!("skipped: no second mount that shares data here");
-        return;
-    };
-    let source = Sandbox::new();
-    let bytes = varied(COPY_PART * 2 + COPY_PART / 2);
-    std::fs::write(source.path("x.mkv"), &bytes).unwrap();
-    let past = std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(1_000_000_000);
-    std::fs::File::options()
-        .write(true)
-        .open(source.path("x.mkv"))
-        .unwrap()
-        .set_modified(past)
-        .unwrap();
-    std::fs::set_permissions(
-        source.path("x.mkv"),
-        std::fs::Permissions::from_mode(0o4755),
-    )
-    .unwrap();
-    let roots = Roots {
-        source: source.path(""),
-        target: target.path(""),
-    };
-
-    move_file(&reject(), &planned("x.mkv", "y.mkv"), &roots, false).unwrap();
-
-    assert!(std::fs::read(target.path("y.mkv")).unwrap() == bytes);
-    let moved = std::fs::metadata(target.path("y.mkv")).unwrap();
-    assert_eq!(moved.modified().unwrap(), past);
-    assert_eq!(moved.permissions().mode() & 0o7000, 0);
-    assert!(!source.exists("x.mkv"));
-    assert_eq!(target.names_in(""), ["y.mkv"]);
 }

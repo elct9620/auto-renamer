@@ -2,6 +2,9 @@
 # Keep in sync with rust-toolchain.toml
 ARG RUST_VERSION=1.98.0
 
+# The static busybox gives the image the `mv` a move between filesystems is handed to.
+FROM busybox:1.38.0-musl AS busybox
+
 FROM rust:${RUST_VERSION}-alpine AS builder
 RUN apk add --no-cache musl-dev
 WORKDIR /app
@@ -18,10 +21,12 @@ RUN cargo build --release --locked
 # Linux to run the tests on: real inotify, and a second filesystem for cross-device moves.
 # The source is mounted rather than copied, see docker-compose.yml.
 FROM rust:${RUST_VERSION} AS test
+COPY --from=busybox /bin/busybox /usr/local/bin/mv
 WORKDIR /app
 CMD ["cargo", "test", "--locked"]
 
-# Statically linked (musl) binary needs no runtime OS.
 FROM scratch
+COPY --from=busybox /bin/busybox /bin/mv
 COPY --from=builder /app/target/release/auto-renamer /auto-renamer
+ENV PATH=/bin
 ENTRYPOINT ["/auto-renamer"]
