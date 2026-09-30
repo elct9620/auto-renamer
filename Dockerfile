@@ -3,7 +3,7 @@
 ARG RUST_VERSION=1.98.0
 
 # The static busybox gives the image the `mv` a move between filesystems is handed to.
-FROM busybox:1.38.0-musl AS busybox
+FROM busybox:1.37.0-musl AS busybox
 
 FROM rust:${RUST_VERSION}-alpine AS builder
 RUN apk add --no-cache musl-dev
