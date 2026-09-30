@@ -1,11 +1,9 @@
 use std::path::{Path, PathBuf};
-use std::sync::mpsc;
 
-use auto_renamer::{Event, Translated, pass_changes, rewrites, translate};
+use auto_renamer::{Event, Translated, rewrites, translate};
 use notify::EventKind;
 use notify::event::{
-    AccessKind, AccessMode, CreateKind, DataChange, MetadataKind, ModifyKind, RemoveKind,
-    RenameMode,
+    AccessKind, AccessMode, CreateKind, DataChange, ModifyKind, RemoveKind, RenameMode,
 };
 
 fn notification(kind: EventKind, paths: &[&str]) -> notify::Event {
@@ -186,107 +184,4 @@ fn should_not_take_a_notification_about_another_file_as_rewriting_it() {
     let kind = EventKind::Access(AccessKind::Close(AccessMode::Write));
 
     assert!(!rewrites_config(kind, "/c/other.toml"));
-}
-
-/// What reaches the runner of the notifications handed to the handler of the filesystem watcher.
-fn passed_on(handed: Vec<notify::Result<notify::Event>>) -> Vec<notify::Result<notify::Event>> {
-    let (sender, receiver) = mpsc::channel();
-    let mut handler = pass_changes(sender);
-    handed.into_iter().for_each(&mut handler);
-    drop(handler);
-    receiver.into_iter().collect()
-}
-
-fn passes(kind: EventKind) -> bool {
-    !passed_on(vec![Ok(notification(kind, &["/s/Show/a.mkv"]))]).is_empty()
-}
-
-// @behavior TRN-017
-#[test]
-fn should_pass_on_a_notification_that_something_changed() {
-    let closed = notification(
-        EventKind::Access(AccessKind::Close(AccessMode::Write)),
-        &["/s/Show/a.mkv"],
-    );
-
-    let passed: Vec<notify::Event> = passed_on(vec![Ok(closed.clone())])
-        .into_iter()
-        .flatten()
-        .collect();
-
-    assert_eq!(passed, [closed]);
-}
-
-// @behavior TRN-018
-#[test]
-fn should_drop_a_notification_that_nothing_changed() {
-    let nothing_changed = [
-        EventKind::Access(AccessKind::Open(AccessMode::Any)),
-        EventKind::Access(AccessKind::Close(AccessMode::Read)),
-        EventKind::Modify(ModifyKind::Metadata(MetadataKind::Any)),
-    ];
-
-    let passed: Vec<EventKind> = nothing_changed
-        .into_iter()
-        .filter(|kind| passes(*kind))
-        .collect();
-
-    assert_eq!(passed, []);
-}
-
-// @behavior TRN-019
-#[test]
-fn should_pass_on_an_error() {
-    let passed = passed_on(vec![Err(notify::Error::generic("the watcher failed"))]);
-
-    assert!(matches!(passed.as_slice(), [Err(_)]), "{passed:?}");
-}
-
-// @behavior TRN-020
-#[test]
-fn should_pass_on_whatever_is_translated_or_rewrites_the_configuration() {
-    let kinds = [
-        EventKind::Any,
-        EventKind::Other,
-        EventKind::Access(AccessKind::Any),
-        EventKind::Access(AccessKind::Read),
-        EventKind::Access(AccessKind::Open(AccessMode::Any)),
-        EventKind::Access(AccessKind::Close(AccessMode::Read)),
-        EventKind::Access(AccessKind::Close(AccessMode::Write)),
-        EventKind::Create(CreateKind::Any),
-        EventKind::Create(CreateKind::File),
-        EventKind::Create(CreateKind::Folder),
-        EventKind::Create(CreateKind::Other),
-        EventKind::Modify(ModifyKind::Any),
-        EventKind::Modify(ModifyKind::Other),
-        EventKind::Modify(ModifyKind::Data(DataChange::Any)),
-        EventKind::Modify(ModifyKind::Data(DataChange::Size)),
-        EventKind::Modify(ModifyKind::Data(DataChange::Content)),
-        EventKind::Modify(ModifyKind::Data(DataChange::Other)),
-        EventKind::Modify(ModifyKind::Metadata(MetadataKind::Any)),
-        EventKind::Modify(ModifyKind::Name(RenameMode::Any)),
-        EventKind::Modify(ModifyKind::Name(RenameMode::To)),
-        EventKind::Modify(ModifyKind::Name(RenameMode::From)),
-        EventKind::Modify(ModifyKind::Name(RenameMode::Both)),
-        EventKind::Modify(ModifyKind::Name(RenameMode::Other)),
-        EventKind::Remove(RemoveKind::Any),
-        EventKind::Remove(RemoveKind::File),
-        EventKind::Remove(RemoveKind::Folder),
-        EventKind::Remove(RemoveKind::Other),
-    ];
-    let answered = |kind: EventKind| {
-        let of_a_file = notification(kind, &["/s/Show/a.mkv", "/s/Show/b.mkv"]);
-        let of_a_folder = notification(kind, &["/s/Show", "/s/Show"]);
-        let is_folder = |path: &Path| path == Path::new("/s/Show");
-        !translate(&of_a_file, Path::new("/s"), is_folder).is_empty()
-            || !translate(&of_a_folder, Path::new("/s"), is_folder).is_empty()
-            || rewrites(&of_a_file, Path::new("/s/Show/a.mkv"))
-    };
-
-    let dropped: Vec<EventKind> = kinds
-        .into_iter()
-        .filter(|kind| answered(*kind) && !passes(*kind))
-        .collect();
-
-    assert_eq!(dropped, []);
 }

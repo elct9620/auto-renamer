@@ -5,7 +5,6 @@ use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::time::{Duration, SystemTime};
 
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
@@ -14,7 +13,7 @@ use crate::cli::Options;
 use crate::config::Config;
 use crate::scan::Scan;
 use crate::service::{Renames, process_batch};
-use crate::watcher::{Machine, Ready, Translated, pass_changes, rewrites, translate};
+use crate::watcher::{Machine, Queue, Ready, Translated, rewrites, translate};
 
 /// How long a change to the configuration file is awaited for more changes before it is read.
 const RELOAD_DELAY: Duration = Duration::from_secs(1);
@@ -27,6 +26,11 @@ const POLL: Duration = Duration::from_secs(1);
 /// scan or a long run of notifications is still going on.
 const NOTIFICATIONS_PER_TURN: usize = 256;
 const SCANNED_PER_TURN: usize = 256;
+
+/// How many notifications may wait for the runner. A batch is processed in one turn, and every file
+/// it moves out of the source is reported, so a batch of more files than this loses notifications and
+/// is followed by a scan.
+const QUEUE_CAPACITY: usize = 8192;
 
 /// Why the watcher could not start or stopped.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -46,8 +50,6 @@ impl fmt::Display for RunError {
 
 impl std::error::Error for RunError {}
 
-type Notification = notify::Result<notify::Event>;
-
 /// A configuration in force: its watches with their machines, the watcher that feeds them, and the work
 /// still to be done a turn at a time. A scan and a batch are kept with the place of their watch.
 struct Session {
@@ -62,11 +64,7 @@ struct Session {
 }
 
 impl Session {
-    fn start(
-        config: Config,
-        config_path: &Path,
-        sender: &Sender<Notification>,
-    ) -> Result<Session, RunError> {
+    fn start(config: Config, config_path: &Path, queue: &Queue) -> Result<Session, RunError> {
         config
             .check_paths(config_path, real_path)
             .map_err(|error| RunError::Config(error.to_string()))?;
@@ -74,7 +72,7 @@ impl Session {
             eprintln!("[warn] {warning}");
         }
         let mut watcher = RecommendedWatcher::new(
-            pass_changes(sender.clone()),
+            queue.handler(),
             notify::Config::default().with_follow_symlinks(false),
         )
         .map_err(|error| RunError::Watch(error.to_string()))?;
@@ -175,6 +173,26 @@ impl Session {
         }
     }
 
+    /// Starts the session over with the configuration it has: what it waited for is dropped, and the
+    /// sources are watched and scanned again. It is how lost notifications are made up for, since the
+    /// scan finds whatever they would have told.
+    ///
+    /// The watches are given up first, so that the ones asked for again do not count against the
+    /// limit of watches a second time. The renames in place stay counted, so that starting over does
+    /// not let a pipeline that names its own result again go on for ever.
+    fn start_over(self, config_path: &Path, queue: &Queue) -> Result<Session, RunError> {
+        let Session {
+            config,
+            watcher,
+            renames,
+            ..
+        } = self;
+        drop(watcher);
+        let mut session = Session::start(config, config_path, queue)?;
+        session.renames = renames;
+        Ok(session)
+    }
+
     fn has_work(&self) -> bool {
         !self.scans.is_empty() || !self.ready.is_empty()
     }
@@ -196,13 +214,13 @@ impl Session {
 pub fn run(options: &Options, stop: &AtomicBool, reload: &AtomicBool) -> Result<(), RunError> {
     let config_path = std::path::absolute(&options.config)
         .map_err(|error| RunError::Config(format!("{}: {error}", options.config.display())))?;
-    let (sender, receiver) = mpsc::channel();
-    let mut session = Session::start(load(&config_path)?, &config_path, &sender)?;
+    let queue = Queue::new(QUEUE_CAPACITY);
+    let mut session = Session::start(load(&config_path)?, &config_path, &queue)?;
     let mut reload_at: Option<SystemTime> = None;
 
     while !stop.load(Ordering::SeqCst) {
         let timeout = wait(&session, reload_at, SystemTime::now());
-        for notification in receive(&receiver, timeout)? {
+        for notification in queue.take(timeout, NOTIFICATIONS_PER_TURN) {
             match notification {
                 Ok(notification) => {
                     if rewrites(&notification, &config_path) {
@@ -214,6 +232,11 @@ pub fn run(options: &Options, stop: &AtomicBool, reload: &AtomicBool) -> Result<
             }
         }
 
+        if queue.lost() {
+            eprintln!("[warn] notifications were lost, so every source is scanned again");
+            session = session.start_over(&config_path, &queue)?;
+        }
+
         let now = SystemTime::now();
         if reload.swap(false, Ordering::SeqCst) {
             reload_at = Some(now);
@@ -222,7 +245,7 @@ pub fn run(options: &Options, stop: &AtomicBool, reload: &AtomicBool) -> Result<
         session.process_one(now);
         if reload_at.is_some_and(|due| due <= now) {
             reload_at = None;
-            session = read_again(session, &config_path, &sender);
+            session = read_again(session, &config_path, &queue);
         }
     }
     Ok(())
@@ -247,8 +270,8 @@ fn load(path: &Path) -> Result<Config, RunError> {
 }
 
 /// The configuration read again, or the one running when the new one cannot be used.
-fn read_again(session: Session, config_path: &Path, sender: &Sender<Notification>) -> Session {
-    let started = load(config_path).and_then(|config| Session::start(config, config_path, sender));
+fn read_again(session: Session, config_path: &Path, queue: &Queue) -> Session {
+    let started = load(config_path).and_then(|config| Session::start(config, config_path, queue));
     match started {
         Ok(fresh) => {
             eprintln!("[info] the configuration was read again");
@@ -273,21 +296,4 @@ fn wait(session: &Session, reload_at: Option<SystemTime>, now: SystemTime) -> Du
         .min()
         .map(|due| due.duration_since(now).unwrap_or(Duration::ZERO))
         .map_or(POLL, |until| until.min(POLL))
-}
-
-/// The notifications of one turn: the first is waited for, and those already there follow it.
-fn receive(
-    receiver: &Receiver<Notification>,
-    timeout: Duration,
-) -> Result<Vec<Notification>, RunError> {
-    match receiver.recv_timeout(timeout) {
-        Ok(first) => Ok(std::iter::once(first)
-            .chain(receiver.try_iter())
-            .take(NOTIFICATIONS_PER_TURN)
-            .collect()),
-        Err(RecvTimeoutError::Timeout) => Ok(Vec::new()),
-        Err(RecvTimeoutError::Disconnected) => {
-            Err(RunError::Watch("the watcher stopped".to_string()))
-        }
-    }
 }

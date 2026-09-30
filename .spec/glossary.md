@@ -112,3 +112,12 @@ What an effect stage asks to be done to a planned file: a move or a cleanup. Pla
 #### Rejected
 
 - `Action` - Effect is what the design calls it.
+
+### Queue
+
+The notifications that say something changed, waiting for the runner. It holds a bounded number; when it has no room, or the kernel lost notifications of its own, notifications are lost and the watcher starts over from a scan.
+
+#### Rejected
+
+- `Inbox` - Queue is what the design calls it.
+- `Backlog` - Queue is what the design calls it.

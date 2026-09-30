@@ -1096,16 +1096,72 @@ Whether a filesystem notification says a file was written, created or replaced, 
 pub fn rewrites(notification: &notify::Event, file: &Path) -> bool {}
 ```
 
-## `pass_changes`
+## `Queue`
 
-The handler to give the filesystem watcher: it passes on what says something changed and every error, and drops what only says a file was opened, read or had its attributes changed.
+The notifications that say something changed, waiting for the runner, of which it holds a bounded number.
 
 | Attribute | Value |
 | --- | --- |
 | internal | yes |
 
 ```rust
-pub fn pass_changes(sender: Sender<notify::Result<notify::Event>>) -> impl FnMut(notify::Result<notify::Event>) + Send + 'static {}
+pub struct Queue {}
+```
+
+## `Queue::new`
+
+Start a queue with room for a number of notifications.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Queue {
+    pub fn new(capacity: usize) -> Queue {}
+}
+```
+
+## `Queue::handler`
+
+The handler to give the filesystem watcher: it queues what says something changed and every error, drops what only says a file was opened, read or had its attributes changed, and notes a loss when there is no room or the kernel lost notifications.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Queue {
+    pub fn handler(&self) -> impl FnMut(notify::Result<notify::Event>) + Send + 'static {}
+}
+```
+
+## `Queue::take`
+
+The notifications of one turn: the first is waited for, and those already there follow it, up to a limit.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Queue {
+    pub fn take(&self, timeout: Duration, limit: usize) -> Vec<notify::Result<notify::Event>> {}
+}
+```
+
+## `Queue::lost`
+
+Whether notifications were lost since this was last asked. What still waits is dropped with a yes, since whoever asks starts over.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Queue {
+    pub fn lost(&self) -> bool {}
+}
 ```
 
 ## `Renames`

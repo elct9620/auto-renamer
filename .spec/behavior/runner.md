@@ -207,3 +207,11 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | Given | a source holding a folder the program is not permitted to read |
 | When | the program is started |
 | Then | it stops with an error naming the folder |
+
+## `RUN-026` Lost notifications are made up for by scanning again
+
+| Step | Statement |
+| --- | --- |
+| Given | the program moving a batch of 50000 files, which leaves no room in its queue |
+| When | files are written into the source while it does |
+| Then | its error output says notifications were lost, and the files appear in the target |

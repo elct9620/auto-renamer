@@ -3,7 +3,7 @@
 mod common;
 
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use common::{Program, Sandbox, eventually, eventually_within};
 
@@ -200,4 +200,47 @@ fn should_stop_for_a_folder_that_cannot_be_watched_at_start() {
     std::fs::set_permissions(sandbox.path("source/Locked"), open).unwrap();
     assert!(failed, "{}", program.log());
     assert!(program.log().contains("Locked"), "{}", program.log());
+}
+
+// @behavior RUN-026
+#[test]
+fn should_make_up_for_lost_notifications_by_scanning_again() {
+    let sandbox = Sandbox::new();
+    for number in 0..50_000 {
+        sandbox.write(&format!("source/old/{number:05}.mkv"), "video");
+    }
+    thread::sleep(Duration::from_millis(1200));
+    let program = Program::start_without_waiting(&sandbox, r#"["move"]"#, "batch_max = 60000");
+
+    // Every file moved out of the source is reported, so by now more wait than the queue has room for,
+    // and the batch is far from done.
+    let until = Instant::now() + Duration::from_secs(60);
+    while sandbox.names_in("target/old").len() < 9_000 && Instant::now() < until {
+        thread::sleep(Duration::from_millis(5));
+    }
+    for number in 0..50 {
+        sandbox.write(&format!("source/new/{number:02}.mkv"), "video");
+    }
+    let moved_by_then = sandbox.names_in("target/old").len();
+    assert!(
+        (9_000..50_000).contains(&moved_by_then),
+        "{moved_by_then} files were moved when the new ones were written"
+    );
+
+    let arrived = || sandbox.names_in("target/new").len() == 50;
+    assert!(
+        eventually_within(60, arrived),
+        "{}",
+        last_lines(&program.log())
+    );
+    assert!(
+        program.log().contains("notifications were lost"),
+        "{}",
+        last_lines(&program.log())
+    );
+}
+
+fn last_lines(log: &str) -> String {
+    let lines: Vec<&str> = log.lines().rev().take(20).collect();
+    lines.into_iter().rev().collect::<Vec<_>>().join("\n")
 }

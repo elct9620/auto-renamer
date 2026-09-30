@@ -11,8 +11,10 @@ use std::time::{Duration, SystemTime};
 use crate::config::{FOLDER_CONFIG, MAX_BATCH_FILES, Unit, Watch};
 
 mod notification;
+mod queue;
 
-pub use notification::{Translated, pass_changes, rewrites, translate};
+pub use notification::{Translated, rewrites, translate};
+pub use queue::Queue;
 
 /// What happened to a file of the source, as far as the machine needs to know. Paths are relative to the source.
 #[derive(Debug, Clone, PartialEq, Eq)]

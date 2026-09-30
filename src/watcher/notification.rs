@@ -1,5 +1,4 @@
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::Sender;
 
 use notify::EventKind;
 use notify::event::{
@@ -96,23 +95,9 @@ pub fn rewrites(notification: &notify::Event, file: &Path) -> bool {
     changed && notification.paths.iter().any(|path| path == file)
 }
 
-/// The handler to give the filesystem watcher: it passes on what says something changed and every error.
-///
-/// A file or folder that is only opened, read or has its attributes changed is reported too, by every
-/// program that looks into the source, and none of it concerns the watcher. Dropping it here keeps it
-/// from taking the time and memory of what does.
-pub fn pass_changes(
-    sender: Sender<notify::Result<notify::Event>>,
-) -> impl FnMut(notify::Result<notify::Event>) + Send + 'static {
-    move |notification| {
-        if notification.as_ref().map_or(true, changes) {
-            // The runner may already be gone, and then nobody is left to tell.
-            let _ = sender.send(notification);
-        }
-    }
-}
-
-fn changes(notification: &notify::Event) -> bool {
+/// Whether a notification says that something changed, rather than that a file or folder was only
+/// opened, read or had its attributes changed.
+pub(super) fn changes(notification: &notify::Event) -> bool {
     matches!(
         notification.kind,
         EventKind::Access(AccessKind::Close(AccessMode::Write))

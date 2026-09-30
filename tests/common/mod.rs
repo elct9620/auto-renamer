@@ -261,6 +261,11 @@ pub struct Program {
 impl Program {
     /// Starts the program with a pipeline of `stages`, and `extra` lines in the watch.
     pub fn start(sandbox: &Sandbox, stages: &str, extra: &str) -> Program {
+        Program::start_without_waiting(sandbox, stages, extra).watching()
+    }
+
+    /// Starts the program and comes back at once, for a test that looks at what it does from the start.
+    pub fn start_without_waiting(sandbox: &Sandbox, stages: &str, extra: &str) -> Program {
         Program::launch(
             sandbox,
             stages,
@@ -273,7 +278,7 @@ impl Program {
 
     /// Starts the program without a target, so that files are renamed where they are, with a long maximum wait.
     pub fn start_in_place(sandbox: &Sandbox, stages: &str) -> Program {
-        Program::launch(sandbox, stages, "", "60s", "", User::Same)
+        Program::launch(sandbox, stages, "", "60s", "", User::Same).watching()
     }
 
     /// Starts the program as a user that a folder can be closed to, which the user of the tests is not
@@ -287,6 +292,7 @@ impl Program {
             "",
             User::Unprivileged,
         )
+        .watching()
     }
 
     fn launch(
@@ -316,8 +322,13 @@ impl Program {
             command.uid(NOBODY).gid(NOBODY);
         }
         let child = command.spawn().expect("the program should start");
-        std::thread::sleep(std::time::Duration::from_millis(1500));
         Program { child, log }
+    }
+
+    /// The program once it has had time to be watching.
+    fn watching(self) -> Program {
+        std::thread::sleep(std::time::Duration::from_millis(1500));
+        self
     }
 
     pub fn signal(&self, name: &str) {

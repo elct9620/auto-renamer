@@ -46,7 +46,8 @@ auto-renamer 是單一套件：`src/lib.rs` 放全部邏輯，`src/main.rs` 只�
 | `config` | 設定解析、層疊與驗證 | 否 |
 | `effects` | 執行 `move` 與 `cleanup` | 檔案系統 |
 | `watcher` | 事件、單元與批次收束的狀態機 | 否 |
-| `watcher` 的翻譯 | 篩掉無關通知，其餘轉成單元事件 | 否 |
+| `watcher` 的翻譯 | notify 事件轉成單元事件 | 否 |
+| `watcher` 的佇列 | 篩選通知、限制數量、記下遺失 | 否 |
 | `scan` | 分次列出資料夾內的一般檔案 | 檔案系統 |
 | `service` | 批次處理、目錄設定、改名次數 | 檔案系統 |
 | `cli` | 命令列參數 | 否 |
