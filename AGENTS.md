@@ -31,6 +31,7 @@ The Linux-only tests (watch loop, signals, cross-filesystem moves) skip on other
 - **notify reports only `Close(Write)` on Linux for finished writes**: `translate` treats a create or data change as still writing, so a file settles only on close-write or move-in; `runner` is `cfg(target_os = "linux")` and its tests run in a Linux container.
 - **A same-filesystem move on Linux is `renameat2(RENAME_NOREPLACE)`** (through `rustix`), not a hard link: a hard link reaches a watcher as a create with no close, so in-place renaming held its folder until the maximum wait. `tests/move.rs` MV-021 watches this.
 - **A lost notification cannot be provoked on OrbStack by volume**: it sets `fs.inotify.max_queued_events` to 1,048,576 where a stock kernel has 16,384, so the kernel's own overflow is only witnessed by handing the queue the notification for it (`tests/queue.rs`).
+- **A move that shares data is tested only where the temporary folder is mounted twice on a filesystem that can share**: `docker-compose.yml` mounts it again at `/scratch-again`, and OrbStack's volumes are btrfs. On the CI runner's ext4 `tests/move.rs` MV-025 skips, so only the container run witnesses it.
 - **Image runtime is `scratch`** with a static musl binary: no CA certificates, timezone data or shell. Adding HTTPS or similar needs a different final stage.
 
 ## Index
@@ -39,7 +40,7 @@ The Linux-only tests (watch loop, signals, cross-filesystem moves) skip on other
 |------|---------------|
 | `src/` | Application source (Rust binary crate `auto-renamer`); modules are mapped in `docs/architecture.md` |
 | `Dockerfile`, `.dockerignore` | Multi-stage image build with a `test` stage; `.dockerignore` is an allow-list |
-| `docker-compose.yml` | `test` service: mounts the repo, two filesystems for cross-device tests |
+| `docker-compose.yml` | `test` service: mounts the repo, two filesystems for cross-device tests, one of them mounted twice |
 | `.github/workflows/ci.yml` | PR / main checks and an image build without push |
 | `.github/workflows/release.yml` | release-please, Linux musl binaries, multi-arch ghcr.io image |
 | `release-please-config.json`, `.release-please-manifest.json` | Versioning config (`release-type: rust`) |

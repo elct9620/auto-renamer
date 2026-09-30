@@ -140,12 +140,30 @@ fn copy_to(from: &Path, temporary: &Path) -> io::Result<()> {
         .write(true)
         .create_new(true)
         .open(temporary)?;
-    write_in_parts(&source, &copy)?;
+    if !share(&source, &copy) {
+        write_in_parts(&source, &copy)?;
+    }
     copy.set_permissions(Permissions::from_mode(
         metadata.permissions().mode() & KEPT_PERMISSIONS,
     ))?;
     copy.set_modified(metadata.modified()?)?;
     copy.sync_all()
+}
+
+/// Has the copy share the data of the source, so that nothing is written again, and says whether it does.
+///
+/// Only some filesystems can, and only within one of them. Whatever stands in the way means the file is
+/// written a part at a time instead, where an error that matters shows again.
+fn share(source: &File, copy: &File) -> bool {
+    #[cfg(target_os = "linux")]
+    {
+        rustix::fs::ioctl_ficlone(copy, source).is_ok()
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = (source, copy);
+        false
+    }
 }
 
 /// How much of a file copied between filesystems is written before it is flushed to the disk.

@@ -198,3 +198,11 @@ A move puts a file at its plan under the target, and it is the only thing that t
 | Given | an empty file on one filesystem, a target on another, and the plan `y.mkv` |
 | When | the file is moved |
 | Then | `y.mkv` is there and empty |
+
+## `MV-025` A file whose data can be shared arrives whole between mounts
+
+| Step | Statement |
+| --- | --- |
+| Given | a file of two parts and a half on a filesystem that can share data and is mounted in two places, whose bytes differ all along and whose modification time is in the past, a target on the other mount, and the plan `y.mkv` |
+| When | the file is moved |
+| Then | `y.mkv` holds the same bytes and that modification time, the source no longer has the file, and no temporary file is left |

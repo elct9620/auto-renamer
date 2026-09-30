@@ -121,3 +121,11 @@ The notifications that say something changed, waiting for the runner. It holds a
 
 - `Inbox` - Queue is what the design calls it.
 - `Backlog` - Queue is what the design calls it.
+
+### Share
+
+A copy shares the data of its source when the filesystem keeps one set of data for both, so nothing is written again. A move between mounts shares where the filesystem can and copies a part at a time where it cannot.
+
+#### Rejected
+
+- `Reflink` - Share is what the design calls it.

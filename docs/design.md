@@ -372,10 +372,10 @@ dry_run = true      # log each plan, run no effect stage
 
 ```
   same mount         rename ─► done
-  anything else      copy to temp name, a part at a time ─► rename ─► delete source
+  anything else      temp name ─► share the data, or copy a part at a time ─► rename ─► delete source
 ```
 
-`rename` 跨不過掛載點，同一顆硬碟掛成兩處也要複製。先寫成 `.` 開頭的暫存名再改名，媒體伺服器不會掃到寫到一半的檔案；修改時間保留，只留讀寫權限。暫存名每次不同，中斷留下的不擋下次搬移。一次寫一段並落盤，待寫入的量不隨檔案變大（見 4.6）。
+`rename` 跨不過掛載點，同一顆硬碟掛成兩處也要複製。先寫成 `.` 開頭的暫存名再改名，寫到一半的檔案不會被掃到；修改時間保留，只留讀寫權限。暫存名每次不同，中斷留下的不擋下次搬移。檔案系統能共用資料就不重寫，否則一次寫一段並落盤（見 4.6）。
 
 ### 4.3 撞名
 
@@ -421,8 +421,9 @@ dry_run = true      # log each plan, run no effect stage
 | `next` | 一批對一個 target 資料夾只列一次 | 測試 |
 | 記憶體 | 隨等待數與批次成長，過後回落 | 量測 |
 | 跨檔案系統搬移 | 待寫入的資料以一段為限 | 量測 |
+| 可共用資料的搬移 | 不重寫，只落盤一次 | 量測 |
 
-在這個範圍內，每個事件與每次到期檢查的成本不隨等待中的檔案數成長，超過 10 萬個不保證。量測用 `scripts/measure.sh`，數字隨機器而異；搬移那一列只在 btrfs 上量過。
+在這個範圍內，每個事件與每次到期檢查的成本不隨等待中的檔案數成長，超過 10 萬個不保證。量測用 `scripts/measure.sh`，數字隨機器而異；跨檔案系統那一列只在 btrfs 上量過。共用資料那一列量自 Synology 的 btrfs，腳本不涵蓋。
 
 ## 5 內建階段
 

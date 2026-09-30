@@ -471,9 +471,7 @@ fn arrives_whole(length: u64) -> bool {
         return true;
     };
     let source = Sandbox::new();
-    let bytes: Vec<u8> = (0..length as u32)
-        .map(|place| (place.wrapping_mul(2_654_435_761) >> 24) as u8)
-        .collect();
+    let bytes = varied(length);
     std::fs::write(source.path("x.mkv"), &bytes).unwrap();
     let roots = Roots {
         source: source.path(""),
@@ -483,6 +481,14 @@ fn arrives_whole(length: u64) -> bool {
     move_file(&reject(), &planned("x.mkv", "y.mkv"), &roots, false).unwrap();
 
     std::fs::read(target.path("y.mkv")).unwrap() == bytes
+}
+
+/// Bytes of which no two stretches are alike.
+#[cfg(target_os = "linux")]
+fn varied(length: u64) -> Vec<u8> {
+    (0..length as u32)
+        .map(|place| (place.wrapping_mul(2_654_435_761) >> 24) as u8)
+        .collect()
 }
 
 // @behavior MV-022
@@ -506,4 +512,59 @@ fn should_bring_a_file_of_exactly_two_parts_whole_between_filesystems() {
 #[test]
 fn should_bring_an_empty_file_empty_between_filesystems() {
     assert!(arrives_whole(0));
+}
+
+/// The temporary folder as it is mounted a second time, where it is and its filesystem can share data:
+/// a rename cannot cross from one mount to the other, and shared data can.
+#[cfg(target_os = "linux")]
+fn mounted_again() -> Option<Sandbox> {
+    let again = Path::new("/scratch-again");
+    if !again.is_dir() {
+        return None;
+    }
+    let here = Sandbox::new();
+    let there = Sandbox::under(again);
+    here.write("probe", "some bytes");
+    let crosses = std::fs::rename(here.path("probe"), there.path("probe"))
+        .is_err_and(|error| error.kind() == std::io::ErrorKind::CrossesDevices);
+    let source = std::fs::File::open(here.path("probe")).ok()?;
+    let copy = std::fs::File::create(there.path("probe")).ok()?;
+    let shares = rustix::fs::ioctl_ficlone(&copy, &source).is_ok();
+    std::fs::remove_file(there.path("probe")).ok()?;
+    (crosses && shares).then_some(there)
+}
+
+// @behavior MV-025
+#[cfg(target_os = "linux")]
+#[test]
+fn should_bring_a_file_whose_data_can_be_shared_whole_between_mounts() {
+    let Some(target) = mounted_again() else {
+        eprintln!("skipped: no second mount that shares data here");
+        return;
+    };
+    let source = Sandbox::new();
+    let bytes = varied(COPY_PART * 2 + COPY_PART / 2);
+    std::fs::write(source.path("x.mkv"), &bytes).unwrap();
+    let past = std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(1_000_000_000);
+    std::fs::File::options()
+        .write(true)
+        .open(source.path("x.mkv"))
+        .unwrap()
+        .set_modified(past)
+        .unwrap();
+    let roots = Roots {
+        source: source.path(""),
+        target: target.path(""),
+    };
+
+    move_file(&reject(), &planned("x.mkv", "y.mkv"), &roots, false).unwrap();
+
+    assert!(std::fs::read(target.path("y.mkv")).unwrap() == bytes);
+    let moved = std::fs::metadata(target.path("y.mkv"))
+        .unwrap()
+        .modified()
+        .unwrap();
+    assert_eq!(moved, past);
+    assert!(!source.exists("x.mkv"));
+    assert_eq!(target.names_in(""), ["y.mkv"]);
 }
