@@ -89,7 +89,7 @@ fn should_do_nothing_for_a_pipeline_without_effects() {
     let sandbox = Sandbox::new();
     sandbox.write("source/Rel/x.mkv", "video");
 
-    let run = carry_out(r#"[{ format = "z" }]"#, &sandbox, false);
+    let run = carry_out(r#"[{ set = { show = "Alpha" } }]"#, &sandbox, false);
 
     assert!(run.done.is_empty());
     assert_eq!(run.error, None);

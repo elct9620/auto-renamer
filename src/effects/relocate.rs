@@ -79,11 +79,10 @@ fn settle_conflict(stage: &Move, taken: &Path) -> Result<PathBuf, EffectError> {
     match stage.on_conflict {
         OnConflict::Reject => Err(EffectError::Conflict(taken.to_path_buf())),
         OnConflict::Suffix => {
-            let file_name = taken
-                .file_name()
-                .map(|name| name.to_string_lossy())
-                .unwrap_or_default();
-            let (name, ext) = split_extension(&file_name);
+            let Some(file_name) = taken.file_name().and_then(|name| name.to_str()) else {
+                return Err(EffectError::Conflict(taken.to_path_buf()));
+            };
+            let (name, ext) = split_extension(file_name);
             let suffixed = if ext.is_empty() {
                 format!("{name}{}", stage.suffix)
             } else {
