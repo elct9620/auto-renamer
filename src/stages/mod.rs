@@ -12,7 +12,6 @@ mod rank;
 mod take;
 mod text;
 
-use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 use globset::GlobMatcher;
@@ -70,13 +69,31 @@ fn write_field(stage: &str, record: &mut Record, field: &str, value: Value) -> R
     Ok(())
 }
 
-/// The text of a field, numbers written out; a date or a missing field says why it has none.
-fn field_text<'a>(record: &'a Record, name: &str) -> Result<Cow<'a, str>, String> {
+/// The refusal of a stage that could not go on, for the reason it met.
+fn refused_by<E: ToString>(stage: &str) -> impl Fn(E) -> Stop + '_ {
+    move |reason| Stop::rejected(stage, reason.to_string())
+}
+
+/// The refusal of a stage whose field does not hold what the stage reads.
+fn unfit(stage: &str, field: &str, problem: &str) -> Stop {
+    Stop::rejected(stage, format!("the field `{field}` {problem}"))
+}
+
+/// What a field holds as it is written into a name, for a stage that reads text or a number.
+fn written_field(stage: &str, record: &Record, name: &str) -> Result<String, Stop> {
+    match record.field(name).map(Value::written) {
+        Some(Some(written)) => Ok(written),
+        Some(None) => Err(unfit(stage, name, "is a date")),
+        None => Err(unfit(stage, name, "does not exist")),
+    }
+}
+
+/// The text a field holds, for a stage that rewrites text.
+fn text_field<'a>(stage: &str, record: &'a Record, name: &str) -> Result<&'a str, Stop> {
     match record.field(name) {
-        Some(Value::Text(text)) => Ok(Cow::Borrowed(text)),
-        Some(Value::Number(number)) => Ok(Cow::Owned(number.to_string())),
-        Some(Value::Date(_)) => Err(format!("the field `{name}` is a date")),
-        None => Err(format!("the field `{name}` does not exist")),
+        Some(Value::Text(text)) => Ok(text),
+        Some(_) => Err(unfit(stage, name, "is not text")),
+        None => Err(unfit(stage, name, "does not exist")),
     }
 }
 

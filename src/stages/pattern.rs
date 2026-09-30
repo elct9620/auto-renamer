@@ -1,10 +1,8 @@
-use super::{Flow, Pattern, Stop, field_text, write_field};
+use super::{Flow, Pattern, Stop, write_field, written_field};
 use crate::record::{Record, Value};
 
 pub(super) fn apply(pattern: &Pattern, mut record: Record) -> Flow {
-    let text = field_text(&record, &pattern.from)
-        .map_err(|reason| Stop::rejected("regex", reason))?
-        .into_owned();
+    let text = written_field("regex", &record, &pattern.from)?;
 
     match (&pattern.replace, &pattern.into) {
         (Some(replacement), _) => rewrite(pattern, replacement, &text, &mut record),

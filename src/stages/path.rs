@@ -1,6 +1,6 @@
 use std::path::{Component, Path, PathBuf};
 
-use super::{Flow, Lift, Stop};
+use super::{Flow, Lift, Stop, refused_by};
 use crate::record::{Record, is_usable_file_name};
 use crate::template::Template;
 
@@ -40,9 +40,7 @@ pub(super) fn lift(lift: &Lift, mut record: Record) -> Flow {
 }
 
 pub(super) fn folder(template: &Template, mut record: Record) -> Flow {
-    let rendered = template
-        .render(&record)
-        .map_err(|error| Stop::rejected("folder", error.to_string()))?;
+    let rendered = template.render(&record).map_err(refused_by("folder"))?;
     let segments: Vec<&str> = rendered.split('/').collect();
     if let Some(unusable) = segments
         .iter()

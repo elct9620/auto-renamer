@@ -1,14 +1,14 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use super::{Flow, Rank, Stop, write_field};
+use super::{Flow, Rank, Stop, unfit, write_field};
 use crate::record::{Record, Value};
 
 impl Rank {
     /// Numbers the records among those whose `by` fields agree, in an order the preference can bend;
     /// a record alone in its group is left without a number. The answers come in the order of the records.
     pub(crate) fn run(&self, records: Vec<Record>) -> Vec<Flow> {
-        let keys: Vec<Result<Vec<String>, String>> = records
+        let keys: Vec<Result<Vec<String>, Stop>> = records
             .iter()
             .map(|record| group_key(record, &self.by))
             .collect();
@@ -38,7 +38,7 @@ impl Rank {
             .zip(keys)
             .zip(numbers)
             .map(|((mut record, key), number)| {
-                key.map_err(|reason| Stop::rejected("rank", reason))?;
+                key?;
                 if let Some(number) = number {
                     write_field("rank", &mut record, &self.into, Value::Number(number))?;
                 }
@@ -48,13 +48,13 @@ impl Rank {
     }
 }
 
-fn group_key(record: &Record, by: &[String]) -> Result<Vec<String>, String> {
+fn group_key(record: &Record, by: &[String]) -> Result<Vec<String>, Stop> {
     by.iter()
         .map(|field| {
             record
                 .field(field)
                 .and_then(Value::written)
-                .ok_or_else(|| format!("the field `{field}` has no value"))
+                .ok_or_else(|| unfit("rank", field, "has no value"))
         })
         .collect()
 }

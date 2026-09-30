@@ -2,7 +2,7 @@ use std::path::Path;
 
 use regex::Regex;
 
-use super::{Flow, Next, Stop, write_field};
+use super::{Flow, Next, Stop, refused_by, write_field};
 use crate::context::Context;
 use crate::record::{Record, Value, split_extension};
 
@@ -13,7 +13,7 @@ pub(super) fn apply(next: &Next, mut record: Record, context: &mut Context) -> F
     let matcher = next
         .like
         .matcher(&record, &next.into)
-        .map_err(|error| Stop::rejected("next", error.to_string()))?;
+        .map_err(refused_by("next"))?;
 
     let folder = record
         .plan()

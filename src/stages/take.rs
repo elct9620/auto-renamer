@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use super::{Flow, Stop, Take, write_field};
+use super::{Flow, Stop, Take, refused_by, write_field};
 use crate::record::{Record, split_extension};
 
 /// What an earlier pipeline made of one file, as far as a take stage needs to know.
@@ -66,7 +66,7 @@ impl Take {
                 .ok_or("the file it takes from was not planned"),
             _ => Err("more than one earlier file could be taken from"),
         }
-        .map_err(|reason| Stop::rejected("take", reason))?;
+        .map_err(refused_by("take"))?;
 
         for field in &self.fields {
             let value = sibling.field(field).ok_or_else(|| {

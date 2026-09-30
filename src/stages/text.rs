@@ -1,4 +1,4 @@
-use super::{Case, CaseKind, Fields, Flow, Replace, Stop, Strip, write_field};
+use super::{Case, CaseKind, Fields, Flow, Replace, Strip, text_field, write_field};
 use crate::record::{Record, Value};
 
 pub(super) fn set(fields: &Fields, record: Record) -> Flow {
@@ -58,12 +58,7 @@ fn rewrite(
     mut record: Record,
     change: impl FnOnce(&str) -> String,
 ) -> Flow {
-    let rewritten = match record.field(field) {
-        Some(Value::Text(text)) => Ok(change(text)),
-        Some(_) => Err(format!("the field `{field}` is not text")),
-        None => Err(format!("the field `{field}` does not exist")),
-    }
-    .map_err(|reason| Stop::rejected(stage, reason))?;
+    let rewritten = change(text_field(stage, &record, field)?);
     write_field(stage, &mut record, field, Value::Text(rewritten))?;
     Ok(record)
 }
