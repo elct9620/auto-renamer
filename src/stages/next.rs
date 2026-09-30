@@ -30,14 +30,12 @@ fn apply(next: &Next, mut record: Record, context: &mut Context) -> Flow {
         .parent()
         .unwrap_or(Path::new(""))
         .to_path_buf();
-    let latest = highest_in_target(context, &folder, &matcher);
-
     let key = (folder, matcher.as_str().to_string());
-    let Some(number) = latest
-        .max(context.last_handed_out(&key))
-        .unwrap_or(0)
-        .checked_add(1)
-    else {
+    // A number handed out in this batch is already past whatever the target holds.
+    let last = context
+        .last_handed_out(&key)
+        .or_else(|| highest_in_target(context, &key.0, &matcher));
+    let Some(number) = last.unwrap_or(0).checked_add(1) else {
         return Err(Stop::rejected(
             "next",
             "there is no number left after the highest one",
@@ -50,9 +48,8 @@ fn apply(next: &Next, mut record: Record, context: &mut Context) -> Flow {
 }
 
 /// The highest number among the files of a target folder that are written the way the matcher expects.
-fn highest_in_target(context: &Context, folder: &Path, matcher: &Regex) -> Option<u64> {
+fn highest_in_target(context: &mut Context, folder: &Path, matcher: &Regex) -> Option<u64> {
     context
-        .target()
         .files_in(folder)
         .iter()
         .filter_map(|file| {

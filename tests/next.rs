@@ -1,6 +1,10 @@
 mod common;
 
-use auto_renamer::{Context, Record, Value};
+use std::cell::Cell;
+use std::path::Path;
+use std::time::{Duration, Instant};
+
+use auto_renamer::{Context, Record, Target, Value};
 use common::{Files, apply, assert_rejected_by, passed, record, stage, with};
 
 const LIKE: &str = r#"{ next = { into = "episode", like = "{show} s{season:02}e{episode:02}" } }"#;
@@ -169,4 +173,61 @@ fn should_leave_an_optional_part_out_when_its_field_is_missing() {
 #[test]
 fn should_require_an_optional_part_when_its_field_is_present() {
     assert_eq!(episode_with_optional_tag(Some("a")), Some(10));
+}
+
+/// A target that counts how often it is asked for the files of a folder.
+struct Asked<'a> {
+    files: &'a Files,
+    times: Cell<usize>,
+}
+
+impl Target for Asked<'_> {
+    fn files_in(&self, folder: &Path) -> Vec<String> {
+        self.times.set(self.times.get() + 1);
+        self.files.files_in(folder)
+    }
+}
+
+// @behavior NXT-015
+#[test]
+fn should_ask_the_target_for_a_folder_once_in_a_batch() {
+    let files = Files::of(&[("Shows", &["Alpha s01e04.mkv", "Beta s01e07.mkv"])]);
+    let target = Asked {
+        files: &files,
+        times: Cell::new(0),
+    };
+    let stage = stage(LIKE);
+    let mut context = Context::new(&target);
+
+    for (show, name) in [("Alpha", "a"), ("Beta", "b"), ("Alpha", "c"), ("Beta", "d")] {
+        let record = with(
+            known(&format!("Shows/{name}.mkv")),
+            "show",
+            common::text(show),
+        );
+        passed(stage.apply(record, &mut context));
+    }
+
+    assert_eq!(target.times.get(), 1);
+}
+
+// @behavior NXT-016
+#[test]
+fn should_stay_quick_to_number_against_a_folder_of_many_files() {
+    let names: Vec<String> = (1..=100_000)
+        .map(|number| format!("Show s01e{number:02}.mkv"))
+        .collect();
+    let names: Vec<&str> = names.iter().map(String::as_str).collect();
+    let files = Files::of(&[("Show", &names)]);
+    let stage = stage(LIKE);
+    let mut context = Context::new(&files);
+
+    let started = Instant::now();
+    for number in 0..1000 {
+        passed(stage.apply(known(&format!("Show/{number}.mkv")), &mut context));
+        assert!(
+            started.elapsed() < Duration::from_secs(5),
+            "too slow by file {number}"
+        );
+    }
 }

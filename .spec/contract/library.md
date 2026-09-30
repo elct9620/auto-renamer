@@ -426,7 +426,7 @@ pub trait Target {
 
 ## `Context`
 
-What a run of stages shares: the target and the numbers already handed out in the batch.
+What a run of stages shares: the target, what it was already asked, and the numbers already handed out in the batch.
 
 | Attribute | Value |
 | --- | --- |

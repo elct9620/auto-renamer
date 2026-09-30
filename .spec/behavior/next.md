@@ -118,3 +118,19 @@ A next stage fills a field with the number after the highest one already in the 
 | Given | a next stage filling `episode` like `{show}[ {tag}] {episode}`, a record for `Series/Show/x.mkv` with `show` Show and `tag` a, and a target folder holding `Show 5.mkv` and `Show a 9.mkv` |
 | When | the stage is applied |
 | Then | `episode` is 10 |
+
+## `NXT-015` A batch asks the target for a folder once
+
+| Step | Statement |
+| --- | --- |
+| Given | a batch of files of two shows, all numbered into one folder of the target |
+| When | the batch is numbered |
+| Then | the target is asked for the files of that folder once |
+
+## `NXT-016` Numbering stays quick against a folder of many files
+
+| Step | Statement |
+| --- | --- |
+| Given | a target folder of 100000 files written the way the template writes them |
+| When | a batch of 1000 files is numbered into it |
+| Then | the batch is numbered within five seconds |

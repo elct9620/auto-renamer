@@ -7,9 +7,11 @@ pub trait Target {
     fn files_in(&self, folder: &Path) -> Vec<String>;
 }
 
-/// What a run of stages shares: the target, and the numbers already handed out in the batch.
+/// What a run of stages shares: the target, what it was already asked, and the numbers already handed
+/// out in the batch. Planning changes nothing in the target, so a folder is asked for once.
 pub struct Context<'a> {
     target: &'a dyn Target,
+    listed: BTreeMap<PathBuf, Vec<String>>,
     handed_out: BTreeMap<(PathBuf, String), u64>,
 }
 
@@ -18,12 +20,16 @@ impl<'a> Context<'a> {
     pub fn new(target: &'a dyn Target) -> Context<'a> {
         Context {
             target,
+            listed: BTreeMap::new(),
             handed_out: BTreeMap::new(),
         }
     }
 
-    pub(crate) fn target(&self) -> &dyn Target {
-        self.target
+    pub(crate) fn files_in(&mut self, folder: &Path) -> &[String] {
+        let target = self.target;
+        self.listed
+            .entry(folder.to_path_buf())
+            .or_insert_with(|| target.files_in(folder))
     }
 
     pub(crate) fn last_handed_out(&self, key: &(PathBuf, String)) -> Option<u64> {
