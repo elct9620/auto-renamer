@@ -372,3 +372,33 @@ fn should_be_seen_as_a_file_moved_in_when_renamed_within_a_folder() {
     assert!(seen.contains(&settled), "{seen:?}");
     assert!(!seen.contains(&writing), "{seen:?}");
 }
+
+/// A folder on a filesystem of 1 MiB, where the test container has one.
+#[cfg(target_os = "linux")]
+fn small_filesystem() -> Option<Sandbox> {
+    Path::new("/small")
+        .is_dir()
+        .then(|| Sandbox::under(Path::new("/small")))
+}
+
+// @behavior MV-028
+#[cfg(target_os = "linux")]
+#[test]
+fn should_leave_the_file_in_the_source_when_mv_cannot_finish() {
+    let Some(target) = small_filesystem() else {
+        eprintln!("skipped: no small filesystem here");
+        return;
+    };
+    let source = Sandbox::new();
+    std::fs::write(source.path("x.mkv"), vec![7u8; 2 * 1024 * 1024]).unwrap();
+    let roots = Roots {
+        source: source.path(""),
+        target: target.path(""),
+    };
+
+    let moved = move_file(&reject(), &planned("x.mkv", "y.mkv"), &roots, false);
+
+    assert!(moved.is_err());
+    assert!(source.exists("x.mkv"));
+    assert!(target.names_in("").is_empty());
+}

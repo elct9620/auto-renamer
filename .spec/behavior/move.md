@@ -143,12 +143,12 @@ A move puts a file at its plan under the target, and it is the only thing that t
 | When | the file is moved and the notifications are translated |
 | Then | the new name is settled and is never taken for a file being written |
 
-## `MV-026` A move that `mv` does not carry out is refused
+## `MV-026` A temporary name already taken is not handed to `mv`
 
 | Step | Statement |
 | --- | --- |
-| Given | a file and a temporary name that is already taken, so `mv -n` leaves the file where it is |
-| When | the file is handed to `mv` |
+| Given | a file and a temporary name that something else already holds |
+| When | the file is handed to `mv` under that name |
 | Then | the move is refused, the file is still there, and what held the temporary name is as it was |
 
 ## `MV-027` A plan taken at the last step keeps the file under its temporary name
@@ -158,3 +158,11 @@ A move puts a file at its plan under the target, and it is the only thing that t
 | Given | a file, and a plan `y.mkv` that appears after the file was checked but before it is put in place |
 | When | the file is moved through a temporary name |
 | Then | the move is refused naming the temporary file, which holds the file's bytes, and `y.mkv` is as it was |
+
+## `MV-028` A move `mv` cannot finish leaves the file in the source and no temporary file
+
+| Step | Statement |
+| --- | --- |
+| Given | a file larger than the room left on the filesystem of the target, and the plan `y.mkv` |
+| When | the file is moved |
+| Then | the move is refused, the file is still in the source, and the target holds nothing |

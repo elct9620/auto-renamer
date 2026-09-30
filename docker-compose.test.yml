@@ -1,5 +1,6 @@
 # Runs the tests on Linux: `docker compose -f docker-compose.test.yml run --rm sut`
 # `sut` is the system under test, the service Docker's automated tests run.
+# /small is a filesystem too small for some files, so a move there can fail midway.
 services:
   sut:
     build:
@@ -9,6 +10,10 @@ services:
       - .:/app
       - target:/app/target
       - cargo:/usr/local/cargo/registry
+      - type: tmpfs
+        target: /small
+        tmpfs:
+          size: 1048576
 
 volumes:
   target:

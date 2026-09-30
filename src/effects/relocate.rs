@@ -128,9 +128,13 @@ fn move_across(from: &Path, to: &Path) -> Result<(), EffectError> {
         .map_err(|error| io_error("put in place the file kept at", &temporary, error.kind()))
 }
 
-/// Runs `mv -n`, which says nothing when it leaves the file where it is, so a file still there afterwards
-/// is a move that did not happen.
+/// Runs `mv -n` onto a temporary name nothing holds, so whatever lies there afterwards is this move's.
+/// When `mv` fails with the file still in the source, what it left there is removed, as `mv` removes a
+/// copy it could not finish; a `mv` that reports success without the file arriving did not move it.
 fn hand_to_mv(from: &Path, temporary: &Path) -> Result<(), EffectError> {
+    if fs::symlink_metadata(temporary).is_ok() {
+        return Err(io_error("move to", temporary, io::ErrorKind::AlreadyExists));
+    }
     let status = Command::new("mv")
         .arg("-n")
         .arg("--")
@@ -139,10 +143,18 @@ fn hand_to_mv(from: &Path, temporary: &Path) -> Result<(), EffectError> {
         .status()
         .map_err(|error| io_error("run mv for", from, error.kind()))?;
     if !status.success() {
-        return Err(io_error("move with mv", from, io::ErrorKind::Other));
+        if fs::symlink_metadata(from).is_ok() {
+            let _ = fs::remove_file(temporary);
+            return Err(io_error("move with mv", from, io::ErrorKind::Other));
+        }
+        return Err(io_error(
+            "finish the move, kept at",
+            temporary,
+            io::ErrorKind::Other,
+        ));
     }
-    if fs::symlink_metadata(from).is_ok() {
-        return Err(io_error("move with mv", from, io::ErrorKind::AlreadyExists));
+    if fs::symlink_metadata(temporary).is_err() {
+        return Err(io_error("move with mv", from, io::ErrorKind::NotFound));
     }
     Ok(())
 }
@@ -211,7 +223,7 @@ mod tests {
 
     // @behavior MV-026
     #[test]
-    fn should_refuse_a_move_that_mv_does_not_carry_out() {
+    fn should_not_hand_a_taken_temporary_name_to_mv() {
         let folder = scratch("mv-skipped");
         fs::write(folder.join("from"), "new").unwrap();
         fs::write(folder.join(".to.part"), "someone else's").unwrap();
