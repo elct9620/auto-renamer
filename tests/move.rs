@@ -538,6 +538,8 @@ fn mounted_again() -> Option<Sandbox> {
 #[cfg(target_os = "linux")]
 #[test]
 fn should_bring_a_file_whose_data_can_be_shared_whole_between_mounts() {
+    use std::os::unix::fs::PermissionsExt;
+
     let Some(target) = mounted_again() else {
         eprintln!("skipped: no second mount that shares data here");
         return;
@@ -552,6 +554,11 @@ fn should_bring_a_file_whose_data_can_be_shared_whole_between_mounts() {
         .unwrap()
         .set_modified(past)
         .unwrap();
+    std::fs::set_permissions(
+        source.path("x.mkv"),
+        std::fs::Permissions::from_mode(0o4755),
+    )
+    .unwrap();
     let roots = Roots {
         source: source.path(""),
         target: target.path(""),
@@ -560,11 +567,9 @@ fn should_bring_a_file_whose_data_can_be_shared_whole_between_mounts() {
     move_file(&reject(), &planned("x.mkv", "y.mkv"), &roots, false).unwrap();
 
     assert!(std::fs::read(target.path("y.mkv")).unwrap() == bytes);
-    let moved = std::fs::metadata(target.path("y.mkv"))
-        .unwrap()
-        .modified()
-        .unwrap();
-    assert_eq!(moved, past);
+    let moved = std::fs::metadata(target.path("y.mkv")).unwrap();
+    assert_eq!(moved.modified().unwrap(), past);
+    assert_eq!(moved.permissions().mode() & 0o7000, 0);
     assert!(!source.exists("x.mkv"));
     assert_eq!(target.names_in(""), ["y.mkv"]);
 }

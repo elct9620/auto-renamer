@@ -203,6 +203,6 @@ A move puts a file at its plan under the target, and it is the only thing that t
 
 | Step | Statement |
 | --- | --- |
-| Given | a file of two parts and a half on a filesystem that can share data and is mounted in two places, whose bytes differ all along and whose modification time is in the past, a target on the other mount, and the plan `y.mkv` |
+| Given | a file of two parts and a half on a filesystem that can share data and is mounted in two places, whose bytes differ all along, whose modification time is in the past and which has the set-user-id bit, a target on the other mount, and the plan `y.mkv` |
 | When | the file is moved |
-| Then | `y.mkv` holds the same bytes and that modification time, the source no longer has the file, and no temporary file is left |
+| Then | `y.mkv` holds the same bytes and that modification time and has no special permission bits, the source no longer has the file, and no temporary file is left |
