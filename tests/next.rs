@@ -1,6 +1,6 @@
 mod common;
 
-use auto_renamer::{Context, Outcome, Record, Value};
+use auto_renamer::{Context, Record, Value};
 use common::{Files, apply, assert_rejected_by, passed, record, stage, with};
 
 const LIKE: &str = r#"{ next = { into = "episode", like = "{show} s{season:02}e{episode:02}" } }"#;
@@ -50,7 +50,7 @@ fn should_leave_a_field_that_is_already_set() {
         input.clone(),
     );
 
-    assert_eq!(outcome, Outcome::Continue(input));
+    assert_eq!(outcome, Ok(input));
 }
 
 // @behavior NXT-002

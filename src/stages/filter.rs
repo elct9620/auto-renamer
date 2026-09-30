@@ -1,7 +1,7 @@
-use super::{Filter, Outcome};
+use super::{Filter, Flow, Stop};
 use crate::record::{Record, Value};
 
-pub(super) fn apply(filter: &Filter, record: Record) -> Outcome {
+pub(super) fn apply(filter: &Filter, record: Record) -> Flow {
     let name = text(&record, "name");
     let ext = text(&record, "ext");
     let file_name = if ext.is_empty() {
@@ -17,9 +17,9 @@ pub(super) fn apply(filter: &Filter, record: Record) -> Outcome {
         .is_none_or(|glob| glob.is_match(&file_name));
 
     if (ext_matches && glob_matches) != filter.invert {
-        Outcome::Continue(record)
+        Ok(record)
     } else {
-        Outcome::Excluded
+        Err(Stop::Excluded)
     }
 }
 

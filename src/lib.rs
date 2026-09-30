@@ -30,6 +30,6 @@ pub use record::{NotUtf8, Record, Value};
 pub use runner::{RunError, run};
 pub use scan::scan_folder;
 pub use service::{FsTarget, Processed, Renames, What, process_batch};
-pub use stages::{DeclareError, Outcome, Rejection, Stage};
+pub use stages::{DeclareError, Flow, Rejection, Stage, Stop};
 pub use template::{RenderError, Template, TemplateError};
 pub use watcher::{Event, Machine, Ready, Translated, rewrites, translate};

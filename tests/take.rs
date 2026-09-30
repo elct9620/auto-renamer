@@ -134,7 +134,7 @@ fn should_refuse_a_record_taking_fields_on_its_own() {
     let outcome = common::apply(r#"{ take = { fields = ["episode"] } }"#, record("a.ass"));
 
     assert!(
-        matches!(&outcome, auto_renamer::Outcome::Rejected(rejection)
+        matches!(&outcome, Err(auto_renamer::Stop::Rejected(rejection))
             if rejection.stage == "take" && rejection.reason.contains("no earlier file")),
         "{outcome:?}"
     );

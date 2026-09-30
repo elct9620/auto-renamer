@@ -1,13 +1,13 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use super::{Outcome, Rank, write_field};
+use super::{Flow, Rank, Stop, write_field};
 use crate::record::{Record, Value};
 
 impl Rank {
     /// Numbers the records among those whose `by` fields agree, in an order the preference can bend;
     /// a record alone in its group is left without a number. The answers come in the order of the records.
-    pub(crate) fn run(&self, records: Vec<Record>) -> Vec<Outcome> {
+    pub(crate) fn run(&self, records: Vec<Record>) -> Vec<Flow> {
         let keys: Vec<Result<Vec<String>, String>> = records
             .iter()
             .map(|record| group_key(record, &self.by))
@@ -37,15 +37,12 @@ impl Rank {
             .into_iter()
             .zip(keys)
             .zip(numbers)
-            .map(|((mut record, key), number)| match (key, number) {
-                (Err(reason), _) => Outcome::rejected("rank", reason),
-                (Ok(_), None) => Outcome::Continue(record),
-                (Ok(_), Some(number)) => {
-                    match write_field("rank", &mut record, &self.into, Value::Number(number)) {
-                        Ok(()) => Outcome::Continue(record),
-                        Err(refused) => refused,
-                    }
+            .map(|((mut record, key), number)| {
+                key.map_err(|reason| Stop::rejected("rank", reason))?;
+                if let Some(number) = number {
+                    write_field("rank", &mut record, &self.into, Value::Number(number))?;
                 }
+                Ok(record)
             })
             .collect()
     }

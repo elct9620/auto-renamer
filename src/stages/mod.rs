@@ -23,10 +23,12 @@ use crate::template::Template;
 pub use declare::DeclareError;
 pub(crate) use take::{Earlier, EarlierFiles};
 
-/// What a stage does with one record: pass it on, exclude it, or refuse it.
+/// What a stage answers for one record: the record to go on with, or what stops it.
+pub type Flow = Result<Record, Stop>;
+
+/// What ends the way of a record through its pipeline: a filter excluded it, or a stage refused it.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Outcome {
-    Continue(Record),
+pub enum Stop {
     Excluded,
     Rejected(Rejection),
 }
@@ -38,9 +40,9 @@ pub struct Rejection {
     pub reason: String,
 }
 
-impl Outcome {
-    fn rejected(stage: &str, reason: impl Into<String>) -> Outcome {
-        Outcome::Rejected(Rejection {
+impl Stop {
+    fn rejected(stage: &str, reason: impl Into<String>) -> Stop {
+        Stop::Rejected(Rejection {
             stage: stage.to_string(),
             reason: reason.into(),
         })
@@ -48,7 +50,7 @@ impl Outcome {
 }
 
 /// Writes a field of the record; a `name` or `ext` that would not make a usable file name is refused.
-fn write_field(stage: &str, record: &mut Record, field: &str, value: Value) -> Result<(), Outcome> {
+fn write_field(stage: &str, record: &mut Record, field: &str, value: Value) -> Result<(), Stop> {
     let written = value.written();
     let usable = match (field, written.as_deref()) {
         ("name", Some(name)) => is_usable_file_name(name),
@@ -57,7 +59,7 @@ fn write_field(stage: &str, record: &mut Record, field: &str, value: Value) -> R
     };
     if !usable {
         let shown = written.unwrap_or_default();
-        return Err(Outcome::rejected(
+        return Err(Stop::rejected(
             stage,
             format!("`{shown}` is not usable as the {field}"),
         ));
@@ -124,7 +126,7 @@ impl Stage {
     }
 
     /// Runs the stage on one record, with what the batch and the target let it know.
-    pub fn apply(&self, record: Record, context: &mut Context) -> Outcome {
+    pub fn apply(&self, record: Record, context: &mut Context) -> Flow {
         match self {
             Stage::Filter(filter) => filter::apply(filter, record),
             Stage::Number(number) => number::apply(number, record),
@@ -145,7 +147,7 @@ impl Stage {
                 .expect("a rank answers once for each record"),
             Stage::Take(take) => take.run(record, &EarlierFiles::new(Vec::new())),
             // An effect does not rewrite the plan, so planning passes the record on.
-            Stage::Move(_) | Stage::Cleanup(_) => Outcome::Continue(record),
+            Stage::Move(_) | Stage::Cleanup(_) => Ok(record),
         }
     }
 

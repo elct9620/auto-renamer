@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::context::Context;
 use crate::pipeline::Pipeline;
 use crate::record::Record;
-use crate::stages::{Earlier, EarlierFiles, Outcome, Rank, Rejection, Stage, Take};
+use crate::stages::{Earlier, EarlierFiles, Flow, Rank, Rejection, Stage, Stop, Take};
 
 /// What a batch made of one file.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -55,14 +55,14 @@ impl Slot {
         }
     }
 
-    fn settle(pipeline: usize, outcome: Outcome) -> Slot {
-        match outcome {
-            Outcome::Continue(record) => Slot::Live { pipeline, record },
-            Outcome::Excluded => Slot::Done {
+    fn settle(pipeline: usize, flow: Flow) -> Slot {
+        match flow {
+            Ok(record) => Slot::Live { pipeline, record },
+            Err(Stop::Excluded) => Slot::Done {
                 pipeline: Some(pipeline),
                 verdict: Verdict::Excluded,
             },
-            Outcome::Rejected(rejection) => Slot::Done {
+            Err(Stop::Rejected(rejection)) => Slot::Done {
                 pipeline: Some(pipeline),
                 verdict: Verdict::Rejected(rejection),
             },
@@ -128,7 +128,7 @@ fn claim(pipeline: &Pipeline, index: usize, slots: &mut [Slot], context: &mut Co
         };
         let claimed = filters
             .iter()
-            .all(|filter| matches!(filter.apply(record.clone(), context), Outcome::Continue(_)));
+            .all(|filter| filter.apply(record.clone(), context).is_ok());
         if claimed {
             *slot = Slot::Live {
                 pipeline: index,
@@ -162,7 +162,7 @@ fn run_stages(
 }
 
 /// Runs a change over every record the pipeline still holds live, settling each on what the change answers.
-fn map_live(slots: &mut [Slot], index: usize, mut change: impl FnMut(Record) -> Outcome) {
+fn map_live(slots: &mut [Slot], index: usize, mut change: impl FnMut(Record) -> Flow) {
     for slot in slots {
         if let Some(record) = slot.take_live(index) {
             *slot = Slot::settle(index, change(record));
@@ -178,9 +178,9 @@ fn run_rank(rank: &Rank, index: usize, slots: &mut [Slot]) {
         .iter()
         .filter_map(|&position| slots[position].take_live(index))
         .collect();
-    let outcomes = rank.run(records);
-    for (position, outcome) in live.into_iter().zip(outcomes) {
-        slots[position] = Slot::settle(index, outcome);
+    let flows = rank.run(records);
+    for (position, flow) in live.into_iter().zip(flows) {
+        slots[position] = Slot::settle(index, flow);
     }
 }
 

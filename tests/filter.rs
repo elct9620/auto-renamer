@@ -1,6 +1,6 @@
 mod common;
 
-use auto_renamer::Outcome;
+use auto_renamer::Stop;
 use common::{apply, record};
 
 // @behavior FLT-001
@@ -8,7 +8,7 @@ use common::{apply, record};
 fn should_let_a_listed_extension_pass() {
     let outcome = apply(r#"{ filter = { ext = ["mkv"] } }"#, record("Alpha.mkv"));
 
-    assert_eq!(outcome, Outcome::Continue(record("Alpha.mkv")));
+    assert_eq!(outcome, Ok(record("Alpha.mkv")));
 }
 
 // @behavior FLT-002
@@ -16,7 +16,7 @@ fn should_let_a_listed_extension_pass() {
 fn should_exclude_an_unlisted_extension() {
     let outcome = apply(r#"{ filter = { ext = ["mkv"] } }"#, record("Alpha.nfo"));
 
-    assert_eq!(outcome, Outcome::Excluded);
+    assert_eq!(outcome, Err(Stop::Excluded));
 }
 
 // @behavior FLT-003
@@ -24,7 +24,7 @@ fn should_exclude_an_unlisted_extension() {
 fn should_compare_extensions_without_regard_to_case() {
     let outcome = apply(r#"{ filter = { ext = ["mkv"] } }"#, record("Alpha.MKV"));
 
-    assert_eq!(outcome, Outcome::Continue(record("Alpha.MKV")));
+    assert_eq!(outcome, Ok(record("Alpha.MKV")));
 }
 
 // @behavior FLT-004
@@ -35,7 +35,7 @@ fn should_match_a_name_pattern_against_the_whole_file_name() {
         record("Alpha 12.mkv"),
     );
 
-    assert_eq!(outcome, Outcome::Continue(record("Alpha 12.mkv")));
+    assert_eq!(outcome, Ok(record("Alpha 12.mkv")));
 }
 
 // @behavior FLT-005
@@ -46,7 +46,7 @@ fn should_turn_a_match_into_an_exclusion_when_inverted() {
         record("Alpha.nfo"),
     );
 
-    assert_eq!(outcome, Outcome::Excluded);
+    assert_eq!(outcome, Err(Stop::Excluded));
 }
 
 // @behavior FLT-006
@@ -57,7 +57,7 @@ fn should_let_everything_else_through_when_inverted() {
         record("Alpha.mkv"),
     );
 
-    assert_eq!(outcome, Outcome::Continue(record("Alpha.mkv")));
+    assert_eq!(outcome, Ok(record("Alpha.mkv")));
 }
 
 // @behavior FLT-007
@@ -68,5 +68,5 @@ fn should_need_both_the_extension_and_the_pattern_to_match() {
         record("Alpha.mkv"),
     );
 
-    assert_eq!(outcome, Outcome::Excluded);
+    assert_eq!(outcome, Err(Stop::Excluded));
 }

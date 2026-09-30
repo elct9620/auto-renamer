@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use auto_renamer::{
-    ConfigError, Context, Judged, Outcome, Pipeline, Record, Stage, Target, Value, Verdict,
+    ConfigError, Context, Flow, Judged, Pipeline, Record, Stage, Stop, Target, Value, Verdict,
     plan_batch,
 };
 use chrono::{TimeZone, Utc};
@@ -78,17 +78,14 @@ impl Target for Files {
     }
 }
 
-pub fn apply(declaration: &str, record: Record) -> Outcome {
+pub fn apply(declaration: &str, record: Record) -> Flow {
     let files = Files::none();
     stage(declaration).apply(record, &mut Context::new(&files))
 }
 
 /// The record a stage passed on.
-pub fn passed(outcome: Outcome) -> Record {
-    match outcome {
-        Outcome::Continue(record) => record,
-        other => panic!("expected the record to go on, got {other:?}"),
-    }
+pub fn passed(flow: Flow) -> Record {
+    flow.unwrap_or_else(|stop| panic!("expected the record to go on, got {stop:?}"))
 }
 
 /// The record a stage passed on after running on `record`.
@@ -96,9 +93,9 @@ pub fn run(declaration: &str, record: Record) -> Record {
     passed(apply(declaration, record))
 }
 
-pub fn assert_rejected_by(outcome: Outcome, stage: &str) {
-    match outcome {
-        Outcome::Rejected(rejection) => assert_eq!(rejection.stage, stage),
+pub fn assert_rejected_by(flow: Flow, stage: &str) {
+    match flow {
+        Err(Stop::Rejected(rejection)) => assert_eq!(rejection.stage, stage),
         other => panic!("expected a refusal by `{stage}`, got {other:?}"),
     }
 }

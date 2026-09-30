@@ -97,3 +97,10 @@ What a batch made of one file: planned, excluded, unclaimed or refused.
 
 - `Disposition` - Verdict is what the design calls it.
 
+### Flow
+
+What a stage answers for one record: the record to go on with, or the stop that ends its way through the pipeline. A stop is an exclusion by a filter or a refusal with its reason.
+
+#### Rejected
+
+- `Outcome` - Flow is a result, so a stage passes a stop on instead of matching on it.

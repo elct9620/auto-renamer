@@ -3,7 +3,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use super::{Number, Outcome, Prefix, field_text, write_field};
+use super::{Flow, Number, Prefix, Stop, field_text, write_field};
 use crate::record::{Record, Value};
 
 /// Markers that say outright which number is the episode, in the order they are tried.
@@ -57,11 +57,10 @@ static DIGITS: LazyLock<Regex> =
 
 const RESOLUTIONS: [&str; 7] = ["480", "720", "1080", "2160", "4320", "360", "540"];
 
-pub(super) fn apply(number: &Number, mut record: Record) -> Outcome {
-    let text = match field_text(&record, &number.from) {
-        Ok(text) => text.into_owned(),
-        Err(reason) => return Outcome::rejected("number", reason),
-    };
+pub(super) fn apply(number: &Number, mut record: Record) -> Flow {
+    let text = field_text(&record, &number.from)
+        .map_err(|reason| Stop::rejected("number", reason))?
+        .into_owned();
     let excluded = excluded_values(&record, &number.exclude);
 
     let found = match (&number.prefix, number.nth) {
@@ -70,12 +69,10 @@ pub(super) fn apply(number: &Number, mut record: Record) -> Outcome {
         (None, nth) => pick(scan(&text, &excluded), nth),
     };
 
-    if let Some(found) = found
-        && let Err(refused) = write_field("number", &mut record, &number.into, Value::Number(found))
-    {
-        return refused;
+    if let Some(found) = found {
+        write_field("number", &mut record, &number.into, Value::Number(found))?;
     }
-    Outcome::Continue(record)
+    Ok(record)
 }
 
 fn excluded_values(record: &Record, fields: &[String]) -> Vec<u64> {

@@ -2,18 +2,18 @@ use std::path::Path;
 
 use regex::Regex;
 
-use super::{Next, Outcome, write_field};
+use super::{Flow, Next, Stop, write_field};
 use crate::context::Context;
 use crate::record::{Record, Value, split_extension};
 
-pub(super) fn apply(next: &Next, mut record: Record, context: &mut Context) -> Outcome {
+pub(super) fn apply(next: &Next, mut record: Record, context: &mut Context) -> Flow {
     if record.field(&next.into).is_some() {
-        return Outcome::Continue(record);
+        return Ok(record);
     }
-    let matcher = match next.like.matcher(&record, &next.into) {
-        Ok(matcher) => matcher,
-        Err(error) => return Outcome::rejected("next", error.to_string()),
-    };
+    let matcher = next
+        .like
+        .matcher(&record, &next.into)
+        .map_err(|error| Stop::rejected("next", error.to_string()))?;
 
     let folder = record
         .plan()
@@ -28,14 +28,15 @@ pub(super) fn apply(next: &Next, mut record: Record, context: &mut Context) -> O
         .unwrap_or(0)
         .checked_add(1)
     else {
-        return Outcome::rejected("next", "there is no number left after the highest one");
+        return Err(Stop::rejected(
+            "next",
+            "there is no number left after the highest one",
+        ));
     };
     context.hand_out(key, number);
 
-    match write_field("next", &mut record, &next.into, Value::Number(number)) {
-        Ok(()) => Outcome::Continue(record),
-        Err(refused) => refused,
-    }
+    write_field("next", &mut record, &next.into, Value::Number(number))?;
+    Ok(record)
 }
 
 /// The highest number among the files of a target folder that are written the way the matcher expects.

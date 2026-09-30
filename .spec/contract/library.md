@@ -308,16 +308,16 @@ Why a pipeline was refused.
 pub enum PipelineError {}
 ```
 
-## `Outcome`
+## `Stop`
 
-What a stage does with one record: pass it on, exclude it, or refuse it.
+What ends the way of a record through its pipeline: a filter excluded it, or a stage refused it. A stage answers with the record to go on with, or with a stop.
 
 | Attribute | Value |
 | --- | --- |
 | internal | yes |
 
 ```rust
-pub enum Outcome {}
+pub enum Stop {}
 ```
 
 ## `Rejection`
@@ -342,7 +342,7 @@ Run the stage on one record, with what the batch and the target let it know.
 
 ```rust
 impl Stage {
-    pub fn apply(&self, record: Record, context: &mut Context) -> Outcome {}
+    pub fn apply(&self, record: Record, context: &mut Context) -> Flow {}
 }
 ```
 

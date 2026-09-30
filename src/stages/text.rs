@@ -1,11 +1,11 @@
-use super::{Case, CaseKind, Fields, Outcome, Replace, Strip, write_field};
+use super::{Case, CaseKind, Fields, Flow, Replace, Stop, Strip, write_field};
 use crate::record::{Record, Value};
 
-pub(super) fn set(fields: &Fields, record: Record) -> Outcome {
+pub(super) fn set(fields: &Fields, record: Record) -> Flow {
     write_all("set", fields, record, |_, _| true)
 }
 
-pub(super) fn default(fields: &Fields, record: Record) -> Outcome {
+pub(super) fn default(fields: &Fields, record: Record) -> Flow {
     write_all("default", fields, record, |record, name| {
         record.field(name).is_none()
     })
@@ -16,24 +16,22 @@ fn write_all(
     fields: &Fields,
     mut record: Record,
     wanted: impl Fn(&Record, &str) -> bool,
-) -> Outcome {
+) -> Flow {
     for (name, value) in fields {
-        if wanted(&record, name)
-            && let Err(refused) = write_field(stage, &mut record, name, value.clone())
-        {
-            return refused;
+        if wanted(&record, name) {
+            write_field(stage, &mut record, name, value.clone())?;
         }
     }
-    Outcome::Continue(record)
+    Ok(record)
 }
 
-pub(super) fn replace(replace: &Replace, record: Record) -> Outcome {
+pub(super) fn replace(replace: &Replace, record: Record) -> Flow {
     rewrite("replace", &replace.field, record, |text| {
         text.replace(&replace.find, &replace.with)
     })
 }
 
-pub(super) fn case(case: &Case, record: Record) -> Outcome {
+pub(super) fn case(case: &Case, record: Record) -> Flow {
     rewrite("case", &case.field, record, |text| match case.to {
         CaseKind::Lower => text.to_lowercase(),
         CaseKind::Upper => text.to_uppercase(),
@@ -41,7 +39,7 @@ pub(super) fn case(case: &Case, record: Record) -> Outcome {
     })
 }
 
-pub(super) fn strip(strip: &Strip, record: Record) -> Outcome {
+pub(super) fn strip(strip: &Strip, record: Record) -> Flow {
     rewrite("strip", &strip.field, record, |text| {
         let stripped = strip
             .groups
@@ -59,16 +57,15 @@ fn rewrite(
     field: &str,
     mut record: Record,
     change: impl FnOnce(&str) -> String,
-) -> Outcome {
+) -> Flow {
     let rewritten = match record.field(field) {
-        Some(Value::Text(text)) => change(text),
-        Some(_) => return Outcome::rejected(stage, format!("the field `{field}` is not text")),
-        None => return Outcome::rejected(stage, format!("the field `{field}` does not exist")),
-    };
-    match write_field(stage, &mut record, field, Value::Text(rewritten)) {
-        Ok(()) => Outcome::Continue(record),
-        Err(refused) => refused,
+        Some(Value::Text(text)) => Ok(change(text)),
+        Some(_) => Err(format!("the field `{field}` is not text")),
+        None => Err(format!("the field `{field}` does not exist")),
     }
+    .map_err(|reason| Stop::rejected(stage, reason))?;
+    write_field(stage, &mut record, field, Value::Text(rewritten))?;
+    Ok(record)
 }
 
 fn title_case(text: &str) -> String {

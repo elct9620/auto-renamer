@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use super::{Outcome, Take, write_field};
+use super::{Flow, Stop, Take, write_field};
 use crate::record::{Record, split_extension};
 
 /// What an earlier pipeline made of one file, as far as a take stage needs to know.
@@ -54,38 +54,27 @@ impl EarlierFiles {
 impl Take {
     /// Copies fields from what earlier pipelines planned for the file whose name is the longest
     /// beginning of this record's name.
-    pub(crate) fn run(&self, mut record: Record, earlier: &EarlierFiles) -> Outcome {
+    pub(crate) fn run(&self, mut record: Record, earlier: &EarlierFiles) -> Flow {
         let own = main_name(record.origin());
         let best = earlier.longest_beginning(own, self.from.as_ref());
 
         let sibling = match best.as_slice() {
-            [] => {
-                return Outcome::rejected(
-                    "take",
-                    "there is no earlier file whose name begins this one",
-                );
-            }
-            [only] => match &only.planned {
-                Some(sibling) => sibling,
-                None => return Outcome::rejected("take", "the file it takes from was not planned"),
-            },
-            _ => {
-                return Outcome::rejected("take", "more than one earlier file could be taken from");
-            }
-        };
+            [] => Err("there is no earlier file whose name begins this one"),
+            [only] => only
+                .planned
+                .as_ref()
+                .ok_or("the file it takes from was not planned"),
+            _ => Err("more than one earlier file could be taken from"),
+        }
+        .map_err(|reason| Stop::rejected("take", reason))?;
 
         for field in &self.fields {
-            let Some(value) = sibling.field(field) else {
-                return Outcome::rejected(
-                    "take",
-                    format!("the file it takes from has no `{field}`"),
-                );
-            };
-            if let Err(refused) = write_field("take", &mut record, field, value.clone()) {
-                return refused;
-            }
+            let value = sibling.field(field).ok_or_else(|| {
+                Stop::rejected("take", format!("the file it takes from has no `{field}`"))
+            })?;
+            write_field("take", &mut record, field, value.clone())?;
         }
-        Outcome::Continue(record)
+        Ok(record)
     }
 }
 

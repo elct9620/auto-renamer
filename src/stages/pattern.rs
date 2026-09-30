@@ -1,21 +1,17 @@
-use super::{Outcome, Pattern, field_text, write_field};
+use super::{Flow, Pattern, Stop, field_text, write_field};
 use crate::record::{Record, Value};
 
-pub(super) fn apply(pattern: &Pattern, mut record: Record) -> Outcome {
-    let text = match field_text(&record, &pattern.from) {
-        Ok(text) => text.into_owned(),
-        Err(reason) => return Outcome::rejected("regex", reason),
-    };
+pub(super) fn apply(pattern: &Pattern, mut record: Record) -> Flow {
+    let text = field_text(&record, &pattern.from)
+        .map_err(|reason| Stop::rejected("regex", reason))?
+        .into_owned();
 
-    let written = match (&pattern.replace, &pattern.into) {
+    match (&pattern.replace, &pattern.into) {
         (Some(replacement), _) => rewrite(pattern, replacement, &text, &mut record),
         (None, Some(into)) => extract_into(pattern, into, &text, &mut record),
         (None, None) => extract_named(pattern, &text, &mut record),
-    };
-    match written {
-        Ok(()) => Outcome::Continue(record),
-        Err(refused) => refused,
-    }
+    }?;
+    Ok(record)
 }
 
 fn rewrite(
@@ -23,7 +19,7 @@ fn rewrite(
     replacement: &str,
     text: &str,
     record: &mut Record,
-) -> Result<(), Outcome> {
+) -> Result<(), Stop> {
     let rewritten = pattern.pattern.replace_all(text, replacement).into_owned();
     write_field("regex", record, &pattern.from, Value::Text(rewritten))
 }
@@ -34,7 +30,7 @@ fn extract_into(
     into: &str,
     text: &str,
     record: &mut Record,
-) -> Result<(), Outcome> {
+) -> Result<(), Stop> {
     let Some(captures) = pattern.pattern.captures(text) else {
         return Ok(());
     };
@@ -44,7 +40,7 @@ fn extract_into(
     }
 }
 
-fn extract_named(pattern: &Pattern, text: &str, record: &mut Record) -> Result<(), Outcome> {
+fn extract_named(pattern: &Pattern, text: &str, record: &mut Record) -> Result<(), Stop> {
     let Some(captures) = pattern.pattern.captures(text) else {
         return Ok(());
     };

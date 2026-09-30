@@ -1,6 +1,6 @@
 mod common;
 
-use auto_renamer::{Outcome, Value};
+use auto_renamer::Value;
 use common::{apply, assert_rejected_by, record, run, text};
 
 // @behavior RGX-001
@@ -77,7 +77,7 @@ fn should_leave_the_record_unchanged_when_nothing_matches() {
         record("Show.mkv"),
     );
 
-    assert_eq!(outcome, Outcome::Continue(record("Show.mkv")));
+    assert_eq!(outcome, Ok(record("Show.mkv")));
 }
 
 // @behavior RGX-008
