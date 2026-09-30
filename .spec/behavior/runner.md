@@ -165,7 +165,7 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | Step | Statement |
 | --- | --- |
 | Given | the program running and a folder it is not permitted to read |
-| When | the folder is moved into the source |
+| When | the folder is made in the source |
 | Then | its error output says the folder is not watched |
 
 ## `RUN-021` A folder renamed inside the source is processed under its new name
@@ -188,7 +188,7 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 
 | Step | Statement |
 | --- | --- |
-| Given | a watcher with 3000 batches ready at once |
+| Given | a watcher with 10000 batches ready at once |
 | When | it is told to stop as the first file reaches the target |
 | Then | it stops with files still in the source |
 
@@ -212,7 +212,7 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 
 | Step | Statement |
 | --- | --- |
-| Given | the program moving a batch of 50000 files, which leaves no room in its queue |
+| Given | the program moving a batch of 80000 files, which leaves no room in its queue |
 | When | files are written into the source while it does |
 | Then | its error output says notifications were lost, and the files appear in the target |
 
@@ -223,3 +223,27 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | Given | the program running after it moved a file, with nothing left waiting |
 | When | three seconds pass |
 | Then | it has used less than a tenth of a second of CPU in them |
+
+## `RUN-028` A folder that cannot be watched does not stop a watcher that reads its configuration again
+
+| Step | Statement |
+| --- | --- |
+| Given | the program running with a folder in its source it is not permitted to read |
+| When | it is sent a hangup signal |
+| Then | it reads the configuration again and goes on running |
+
+## `RUN-029` A start that a folder stops moves nothing
+
+| Step | Statement |
+| --- | --- |
+| Given | two watches, the first holding a file to move and the second a folder the program is not permitted to read |
+| When | the program is started |
+| Then | it stops, and the file is still in the source of the first |
+
+## `RUN-030` A change to the configuration made while notifications are lost takes effect
+
+| Step | Statement |
+| --- | --- |
+| Given | the program moving a batch of 80000 files, which leaves no room in its queue, and its configuration changed meanwhile to rename files |
+| When | a file is written into the source after the batch |
+| Then | the file appears in the target under the name the changed configuration gives it |

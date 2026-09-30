@@ -455,3 +455,29 @@ fn should_not_hold_back_a_settled_file_that_a_scan_then_finds() {
 
     assert_eq!(machine.ready(at(5, 0)), [batch("Show", &["Show/a.mkv"])]);
 }
+
+// @behavior WCH-032
+#[test]
+fn should_stay_quick_to_be_told_of_files_however_many_it_holds() {
+    let mut machine = machine("");
+
+    stays_quick(2_000, |folder| {
+        for number in 0..10 {
+            found(
+                &mut machine,
+                &format!("F{folder:05}/{number:02}.mkv"),
+                at(0, 0),
+                at(1, 0),
+            );
+            machine.observe(
+                Event::Writing(path(&format!("W{folder:05}/{number:02}.mkv"))),
+                at(1, 0),
+            );
+            settled(
+                &mut machine,
+                &format!("S{folder:05}/{number:02}.mkv"),
+                at(1, 0),
+            );
+        }
+    });
+}

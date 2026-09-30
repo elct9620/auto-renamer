@@ -283,13 +283,13 @@ impl Program {
 
     /// Starts the program as a user that a folder can be closed to, which the user of the tests is not
     /// when they run as root.
-    pub fn start_unprivileged(sandbox: &Sandbox, stages: &str) -> Program {
+    pub fn start_unprivileged(sandbox: &Sandbox, stages: &str, extra: &str) -> Program {
         Program::launch(
             sandbox,
             stages,
             &target_of(sandbox),
             "3s",
-            "",
+            extra,
             User::Unprivileged,
         )
         .watching()
@@ -348,6 +348,14 @@ impl Program {
     /// Whether the program exited with a failure within five seconds.
     pub fn exits_with_a_failure(&mut self) -> bool {
         self.exit_status().is_some_and(|status| !status.success())
+    }
+
+    /// Whether the program has not ended.
+    pub fn is_running(&mut self) -> bool {
+        self.child
+            .try_wait()
+            .expect("the program should be waited on")
+            .is_none()
     }
 
     /// How the program ended, when it did within five seconds.

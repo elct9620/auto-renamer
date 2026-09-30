@@ -50,6 +50,9 @@ impl Queue {
     /// The notifications of one turn: the first is waited for, and those already there follow it, up to
     /// a limit.
     pub fn take(&self, timeout: Duration, limit: usize) -> Vec<Notification> {
+        if limit == 0 {
+            return Vec::new();
+        }
         match self.receiver.recv_timeout(timeout) {
             Ok(first) => std::iter::once(first)
                 .chain(self.receiver.try_iter())

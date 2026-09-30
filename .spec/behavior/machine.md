@@ -247,3 +247,11 @@ The machine decides when the settled files of a unit are handed over as a batch.
 | Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `Show/a.mkv` settled at 0 minutes, and then found by a scan at 1 minute, last changed at 1 minute |
 | When | the machine is asked at 5 minutes |
 | Then | the batch holds `Show/a.mkv` |
+
+## `WCH-032` Telling the machine of files stays quick however many it holds
+
+| Step | Statement |
+| --- | --- |
+| Given | a machine with nothing waiting |
+| When | it is told of 20000 files found, 20000 written to and 20000 settled |
+| Then | it has taken them in within five seconds |

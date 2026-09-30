@@ -110,7 +110,7 @@ fn should_let_a_scan_stop_and_go_on() {
 
 // @behavior SCN-006
 #[test]
-fn should_count_a_folder_a_scan_opens_as_an_entry_looked_at() {
+fn should_count_a_folder_holding_nothing_as_looked_at() {
     let sandbox = Sandbox::new();
     for number in 0..100 {
         sandbox.make_dir(&format!("Empty/{number}"));

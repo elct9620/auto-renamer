@@ -46,7 +46,7 @@ A scan lists the regular files below a folder with the time each was last change
 | When | a scan of it looks at three entries at a time until it is finished |
 | Then | every file is found once |
 
-## `SCN-006` A folder a scan opens counts as an entry looked at
+## `SCN-006` A folder holding nothing still counts as looked at
 
 | Step | Statement |
 | --- | --- |

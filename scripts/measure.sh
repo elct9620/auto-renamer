@@ -4,6 +4,7 @@
 #   scripts/measure.sh idle            resting memory, and CPU over a minute
 #   scripts/measure.sh start N         a source of N folders of 10 files, changed lately: what a start costs and holds
 #   scripts/measure.sh batch N         N folders of 10 files, moved as N batches
+#   scripts/measure.sh single N        N folders of 10 files, moved as one batch
 #   scripts/measure.sh rounds N        N folders of 10 files arriving while it runs, five times over
 #   scripts/measure.sh copy GIB        one file of GIB gibibytes moved across filesystems
 #   scripts/measure.sh all             the scenarios the promises of docs/design.md 4.6 were measured with
@@ -35,8 +36,9 @@ stages = [
 ]
 '
 
+# The comment this file opens with is what it says of itself.
 usage() {
-  sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+  awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"
   exit 2
 }
 
@@ -48,6 +50,7 @@ clean() {
 # The probe shares the process table of the host, so it can read /proc of the watcher, whose own image
 # holds nothing to read it with.
 prepare() {
+  trap clean EXIT
   clean
   if [ -z "${AUTO_RENAMER_IMAGE:-}" ]; then
     docker build -q -t "$IMAGE" . > /dev/null
@@ -98,11 +101,15 @@ moved() {
   docker logs "$RUN" 2>&1 | grep -c '^\[info\] .* -> ' || true
 }
 
-# Waits until a number of files were moved, or two minutes passed.
+# Waits until a number of files were moved, and ends the measurement when two minutes were not enough.
 until_moved() {
   local waited=0
-  while [ "$(moved)" -lt "$1" ] && [ $waited -lt 120 ]; do
+  while [ "$(moved)" -lt "$1" ]; do
     still_running
+    if [ $waited -ge 120 ]; then
+      echo "only $(moved) of $1 files were moved in two minutes" >&2
+      exit 1
+    fi
     sleep 1
     waited=$((waited + 1))
   done
@@ -202,6 +209,29 @@ CONFIG
   report "batch folders=$1 moved=$(moved) cpu_ms=$(cpu_ms)"
 }
 
+# More files leave the source in one turn than the queue of notifications has room for, so this is
+# also what starting over after lost notifications costs.
+single() {
+  prepare
+  docker volume create "$PREFIX-data" > /dev/null
+  folders "$PREFIX-data" source "$1"
+  sleep 3
+  configure << CONFIG
+source = "/data/source"
+target = "/data/target"
+pipelines = ["video"]
+unit = "source"
+vars = { show = "Alpha" }
+batch_window = "2s"
+batch_max_wait = "2s"
+batch_max = $(($1 * FILES_PER_FOLDER))
+CONFIG
+  start -v "$PREFIX-data:/data"
+  until_moved $(($1 * FILES_PER_FOLDER))
+  sleep 5
+  report "single files=$(($1 * FILES_PER_FOLDER)) moved=$(moved) cpu_ms=$(cpu_ms) started_over=$(docker logs "$RUN" 2>&1 | grep -c 'notifications were lost' || true)"
+}
+
 rounds() {
   prepare
   docker volume create "$PREFIX-data" > /dev/null
@@ -256,18 +286,18 @@ CONFIG
   report "copy gib=$1 moved=$(moved) write_cpu_ms=$written copy_cpu_ms=$(($(cpu_ms) - written))"
 }
 
-trap clean EXIT
-
 case "${1:-}" in
   idle) idle ;;
   start) start_with "${2:?how many folders}" ;;
   batch) batch "${2:?how many folders}" ;;
+  single) single "${2:?how many folders}" ;;
   rounds) rounds "${2:?how many folders}" ;;
   copy) copy "${2:?how many gibibytes}" ;;
   all)
     idle
     for size in 100 1000 10000; do start_with $size; done
     batch 10000
+    single 1000
     rounds 1000
     copy 2
     ;;

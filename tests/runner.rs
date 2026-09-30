@@ -196,8 +196,8 @@ fn should_not_hand_a_batch_over_before_the_scan_that_finds_its_files_is_finished
 #[test]
 fn should_answer_a_stop_between_batches() {
     let sandbox = Sandbox::new();
-    for number in 0..3000 {
-        sandbox.write(&format!("source/T{number:04}/a.mkv"), "video");
+    for number in 0..10_000 {
+        sandbox.write(&format!("source/T{number:05}/a.mkv"), "video");
     }
     sandbox.make_dir("target");
     let each_folder_a_unit =
@@ -213,8 +213,8 @@ fn should_answer_a_stop_between_batches() {
     drop(running);
     assert!(!sandbox.names_in("target").is_empty());
 
-    let left = (0..3000)
-        .filter(|number| sandbox.exists(&format!("source/T{number:04}/a.mkv")))
+    let left = (0..10_000)
+        .filter(|number| sandbox.exists(&format!("source/T{number:05}/a.mkv")))
         .count();
     assert!(
         left > 0,

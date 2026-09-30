@@ -168,7 +168,7 @@ fn should_stop_a_pipeline_that_names_its_own_result_again() {
 fn should_name_a_folder_that_cannot_be_watched() {
     use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
     let sandbox = Sandbox::new();
-    let program = Program::start_unprivileged(&sandbox, r#"["move"]"#);
+    let program = Program::start_unprivileged(&sandbox, r#"["move"]"#, "");
 
     std::fs::DirBuilder::new()
         .mode(0o000)
@@ -193,7 +193,7 @@ fn should_stop_for_a_folder_that_cannot_be_watched_at_start() {
         .create(sandbox.path("source/Locked"))
         .unwrap();
 
-    let mut program = Program::start_unprivileged(&sandbox, r#"["move"]"#);
+    let mut program = Program::start_unprivileged(&sandbox, r#"["move"]"#, "");
 
     let failed = program.exits_with_a_failure();
     let open = std::fs::Permissions::from_mode(0o755);
@@ -202,28 +202,33 @@ fn should_stop_for_a_folder_that_cannot_be_watched_at_start() {
     assert!(program.log().contains("Locked"), "{}", program.log());
 }
 
-// @behavior RUN-026
+// @behavior RUN-026 RUN-030
 #[test]
 fn should_make_up_for_lost_notifications_by_scanning_again() {
     let sandbox = Sandbox::new();
-    for number in 0..50_000 {
-        sandbox.write(&format!("source/old/{number:05}.mkv"), "video");
+    for number in 0..80_000 {
+        sandbox.write(&format!("source/old/{number:06}.mkv"), "video");
     }
     thread::sleep(Duration::from_millis(1200));
-    let program = Program::start_without_waiting(&sandbox, r#"["move"]"#, "batch_max = 60000");
+    let program = Program::start_without_waiting(&sandbox, r#"["move"]"#, "batch_max = 100000");
 
     // Every file moved out of the source is reported, so by now more wait than the queue has room for,
     // and the batch is far from done.
     let until = Instant::now() + Duration::from_secs(60);
-    while sandbox.names_in("target/old").len() < 9_000 && Instant::now() < until {
+    while sandbox.names_in("target/old").len() < 8_500 && Instant::now() < until {
         thread::sleep(Duration::from_millis(5));
     }
     for number in 0..50 {
         sandbox.write(&format!("source/new/{number:02}.mkv"), "video");
     }
+    let renaming = sandbox
+        .read("config.toml")
+        .unwrap()
+        .replace(r#"["move"]"#, r#"[{ format = "renamed-{name}" }, "move"]"#);
+    sandbox.write("config.toml", &renaming);
     let moved_by_then = sandbox.names_in("target/old").len();
     assert!(
-        (9_000..50_000).contains(&moved_by_then),
+        (8_500..80_000).contains(&moved_by_then),
         "{moved_by_then} files were moved when the new ones were written"
     );
 
@@ -238,6 +243,78 @@ fn should_make_up_for_lost_notifications_by_scanning_again() {
         "{}",
         last_lines(&program.log())
     );
+
+    let read_again = || program.log().contains("the configuration was read again");
+    assert!(
+        eventually_within(30, read_again),
+        "{}",
+        last_lines(&program.log())
+    );
+    sandbox.write("source/late/z.mkv", "video");
+    assert!(
+        eventually_within(30, || sandbox.exists("target/late/renamed-z.mkv")),
+        "{}",
+        last_lines(&program.log())
+    );
+}
+
+// @behavior RUN-028
+#[test]
+fn should_go_on_running_past_a_folder_that_cannot_be_watched_when_reading_the_configuration_again()
+{
+    use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
+    let sandbox = Sandbox::new();
+    let mut program = Program::start_unprivileged(&sandbox, r#"["move"]"#, "");
+    std::fs::DirBuilder::new()
+        .mode(0o000)
+        .create(sandbox.path("source/Locked"))
+        .unwrap();
+    assert!(
+        eventually(|| program.log().contains("not watched")),
+        "{}",
+        program.log()
+    );
+
+    program.signal("HUP");
+
+    let read_again = eventually(|| program.log().contains("the configuration was read again"));
+    thread::sleep(Duration::from_secs(2));
+    let running = program.is_running();
+    let open = std::fs::Permissions::from_mode(0o755);
+    std::fs::set_permissions(sandbox.path("source/Locked"), open).unwrap();
+    assert!(read_again && running, "{}", program.log());
+}
+
+// @behavior RUN-029
+#[test]
+fn should_move_nothing_in_a_start_that_a_folder_stops() {
+    use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
+    let sandbox = Sandbox::new();
+    sandbox.write("source/a.mkv", "video");
+    sandbox.make_dir("target");
+    sandbox.make_dir("second");
+    let open = std::fs::Permissions::from_mode(0o777);
+    for folder in ["source", "target", "second"] {
+        std::fs::set_permissions(sandbox.path(folder), open.clone()).unwrap();
+    }
+    std::fs::DirBuilder::new()
+        .mode(0o000)
+        .create(sandbox.path("second/Locked"))
+        .unwrap();
+    thread::sleep(Duration::from_millis(1200));
+    // Watches are taken in the order of their names, so this one is scanned after the first.
+    let second = format!(
+        "\n[watch.z]\nsource = \"{}\"\ntarget = \"{}\"\npipelines = [\"p\"]\n",
+        sandbox.path("second").display(),
+        sandbox.path("second-target").display(),
+    );
+
+    let mut program = Program::start_unprivileged(&sandbox, r#"["move"]"#, &second);
+
+    let failed = program.exits_with_a_failure();
+    std::fs::set_permissions(sandbox.path("second/Locked"), open).unwrap();
+    assert!(failed, "{}", program.log());
+    assert!(sandbox.exists("source/a.mkv"), "{}", program.log());
 }
 
 // @behavior RUN-027

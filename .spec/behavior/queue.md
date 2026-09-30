@@ -85,3 +85,11 @@ The queue holds the notifications that wait for the runner. Only what says somet
 | Given | a queue holding five notifications |
 | When | a turn takes up to three and the next takes up to three |
 | Then | three come and then two |
+
+## `QUE-011` A turn with a limit of none takes nothing
+
+| Step | Statement |
+| --- | --- |
+| Given | a queue holding one notification |
+| When | a turn takes up to none and the next takes up to one |
+| Then | none comes and then one |
