@@ -175,3 +175,19 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | Given | a running watcher and a folder made in the source while it runs, holding a file |
 | When | the folder is renamed inside the source before its batch is handed over |
 | Then | the file appears in the target under the new name of the folder |
+
+## `RUN-022` A batch is not handed over before the scan that finds its files is finished
+
+| Step | Statement |
+| --- | --- |
+| Given | a source holding 600 files of one unit, last changed before the batch window, and a pipeline that numbers the files of a batch |
+| When | the watcher starts |
+| Then | all 600 files appear in the target, numbered as one batch |
+
+## `RUN-023` A stop is answered between batches
+
+| Step | Statement |
+| --- | --- |
+| Given | a watcher with 3000 batches ready at once |
+| When | it is told to stop as the first file reaches the target |
+| Then | it stops with files still in the source |

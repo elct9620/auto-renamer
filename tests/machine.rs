@@ -425,3 +425,33 @@ fn should_stay_quick_to_forget_files_however_many_are_waiting() {
         machine.observe(Event::Gone(file(turn, 0)), at(1, 0));
     });
 }
+
+fn found(machine: &mut Machine, name: &str, modified: SystemTime, now: SystemTime) {
+    let found = Event::Found {
+        path: path(name),
+        modified,
+    };
+    machine.observe(found, now);
+}
+
+// @behavior WCH-030
+#[test]
+fn should_make_a_file_being_written_that_a_scan_then_finds_wait_for_its_close() {
+    let mut machine = machine("");
+    machine.observe(Event::Writing(path("Show/a.mkv")), at(0, 0));
+
+    found(&mut machine, "Show/a.mkv", at(1, 0), at(1, 0));
+
+    assert_eq!(machine.ready(at(20, 0)), []);
+}
+
+// @behavior WCH-031
+#[test]
+fn should_not_hold_back_a_settled_file_that_a_scan_then_finds() {
+    let mut machine = machine("");
+    settled(&mut machine, "Show/a.mkv", at(0, 0));
+
+    found(&mut machine, "Show/a.mkv", at(1, 0), at(1, 0));
+
+    assert_eq!(machine.ready(at(5, 0)), [batch("Show", &["Show/a.mkv"])]);
+}

@@ -5,7 +5,7 @@ mod common;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::{self, JoinHandle};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use auto_renamer::{Options, RunError, run};
 use common::{Sandbox, eventually, eventually_within};
@@ -32,14 +32,20 @@ impl Running {
         Running::spawn(sandbox)
     }
 
+    /// Starts the watcher and gives it time to be watching.
     fn spawn(sandbox: &Sandbox) -> Running {
+        let running = Running::spawn_without_waiting(sandbox);
+        thread::sleep(Duration::from_millis(300));
+        running
+    }
+
+    fn spawn_without_waiting(sandbox: &Sandbox) -> Running {
         let stop = Arc::new(AtomicBool::new(false));
         let options = Options {
             config: sandbox.path("config.toml"),
         };
         let flag = stop.clone();
         let thread = thread::spawn(move || run(&options, &flag, &AtomicBool::new(false)));
-        thread::sleep(Duration::from_millis(300));
         Running {
             stop,
             thread: Some(thread),
@@ -164,6 +170,56 @@ fn should_process_a_folder_renamed_inside_the_source_under_its_new_name() {
 
     assert!(eventually(|| sandbox.exists("target/New/a.mkv")));
     assert!(!sandbox.exists("target/Old"));
+}
+
+// @behavior RUN-022
+#[test]
+fn should_not_hand_a_batch_over_before_the_scan_that_finds_its_files_is_finished() {
+    let sandbox = Sandbox::new();
+    for number in 0..600 {
+        sandbox.write(&format!("source/Show/f{number:03}.mkv"), "video");
+    }
+    thread::sleep(Duration::from_millis(1200));
+
+    let numbered =
+        r#"[{ rank = { into = "index", by = ["ext"] } }, { format = "{index:03}" }, "move"]"#;
+    let _running = Running::start(&sandbox, numbered);
+
+    assert!(
+        eventually(|| sandbox.names_in("target/Show").len() == 600),
+        "{} in the target",
+        sandbox.names_in("target/Show").len()
+    );
+}
+
+// @behavior RUN-023
+#[test]
+fn should_answer_a_stop_between_batches() {
+    let sandbox = Sandbox::new();
+    for number in 0..3000 {
+        sandbox.write(&format!("source/T{number:04}/a.mkv"), "video");
+    }
+    sandbox.make_dir("target");
+    let each_folder_a_unit =
+        config_of(&sandbox, r#"["move"]"#).replace(r#"unit = "source""#, r#"unit = "directory""#);
+    sandbox.write("config.toml", &each_folder_a_unit);
+    thread::sleep(Duration::from_millis(1200));
+    let running = Running::spawn_without_waiting(&sandbox);
+
+    let until = Instant::now() + Duration::from_secs(10);
+    while sandbox.names_in("target").is_empty() && Instant::now() < until {
+        thread::sleep(Duration::from_millis(1));
+    }
+    drop(running);
+    assert!(!sandbox.names_in("target").is_empty());
+
+    let left = (0..3000)
+        .filter(|number| sandbox.exists(&format!("source/T{number:04}/a.mkv")))
+        .count();
+    assert!(
+        left > 0,
+        "every batch was processed before the stop was answered"
+    );
 }
 
 // @behavior RUN-009

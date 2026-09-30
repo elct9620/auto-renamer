@@ -231,3 +231,19 @@ The machine decides when the settled files of a unit are handed over as a batch.
 | Given | a machine with 100000 files settled in 10000 folders |
 | When | 10000 of the files are gone |
 | Then | they are forgotten within five seconds |
+
+## `WCH-030` A file being written that a scan then finds still waits for its close
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `Show/a.mkv` written to at 0 minutes, and then found by a scan at 1 minute, last changed at 1 minute |
+| When | the machine is asked at 20 minutes |
+| Then | nothing is ready |
+
+## `WCH-031` A settled file that a scan then finds is not held back
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `Show/a.mkv` settled at 0 minutes, and then found by a scan at 1 minute, last changed at 1 minute |
+| When | the machine is asked at 5 minutes |
+| Then | the batch holds `Show/a.mkv` |

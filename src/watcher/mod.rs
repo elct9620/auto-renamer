@@ -184,8 +184,14 @@ impl Machine {
         }
     }
 
+    /// A file a scan found. One the machine already knows is left as it is, since a notification says
+    /// more than a scan does: that the file is being written, or that its writing finished.
+    ///
     /// A modification time comes from the file and cannot be trusted: one in the future counts as now.
     fn found(&mut self, path: PathBuf, modified: SystemTime, now: SystemTime) {
+        if self.knows(&path) {
+            return;
+        }
         let modified = modified.min(now);
         let quiet_at = modified + self.window;
         if now >= quiet_at {
@@ -197,6 +203,11 @@ impl Machine {
                 machine.touch(&unit, modified);
             });
         }
+    }
+
+    fn knows(&self, file: &Path) -> bool {
+        let settled = |pending: &Pending| pending.files.contains(file);
+        self.holds.contains_key(file) || self.pending.get(&self.unit.of(file)).is_some_and(settled)
     }
 
     /// A file found at start settles once its window has passed with no writes; a hold that has not

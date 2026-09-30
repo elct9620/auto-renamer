@@ -37,3 +37,19 @@ A scan lists the regular files below a folder with the time each was last change
 | Given | a folder that does not exist |
 | When | the folder is scanned |
 | Then | nothing is found |
+
+## `SCN-005` A scan can stop and go on
+
+| Step | Statement |
+| --- | --- |
+| Given | a folder holding five files in folders below it |
+| When | a scan of it looks at three entries at a time until it is finished |
+| Then | every file is found once |
+
+## `SCN-006` A folder a scan opens counts as an entry looked at
+
+| Step | Statement |
+| --- | --- |
+| Given | a folder holding 100 empty folders |
+| When | a scan of it looks at 110 entries |
+| Then | the scan is not finished |

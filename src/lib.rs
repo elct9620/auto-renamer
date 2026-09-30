@@ -28,7 +28,7 @@ pub use pipeline::{Pipeline, PipelineError};
 pub use record::{NotUtf8, Record, Value};
 #[cfg(target_os = "linux")]
 pub use runner::{RunError, run};
-pub use scan::scan_folder;
+pub use scan::Scan;
 pub use service::{FsTarget, Processed, Renames, What, process_batch};
 pub use stages::{DeclareError, Declared, Effect, Flow, Rejection, Stop};
 pub use template::{RenderError, Template, TemplateError};

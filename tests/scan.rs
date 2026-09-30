@@ -1,10 +1,23 @@
 mod common;
 
 use std::os::unix::fs::symlink;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-use auto_renamer::{Event, scan_folder};
+use auto_renamer::{Event, Scan};
 use common::Sandbox;
+
+fn scan_folder(source: &Path, folder: &Path) -> Vec<Event> {
+    found_by(Scan::new(source, folder), usize::MAX)
+}
+
+/// What a scan finds when it looks at a number of entries at a time until it is finished.
+fn found_by(mut scan: Scan, entries: usize) -> Vec<Event> {
+    let mut found = Vec::new();
+    while !scan.is_finished() {
+        found.extend(scan.look_at(entries));
+    }
+    found
+}
 
 fn found_paths(events: &[Event]) -> Vec<PathBuf> {
     let mut paths: Vec<PathBuf> = events
@@ -77,4 +90,34 @@ fn should_find_nothing_in_a_folder_that_is_not_there() {
     let sandbox = Sandbox::new();
 
     assert_eq!(scan_folder(&sandbox.path(""), &sandbox.path("Missing")), []);
+}
+
+// @behavior SCN-005
+#[test]
+fn should_let_a_scan_stop_and_go_on() {
+    let sandbox = Sandbox::new();
+    let files = ["A/1.mkv", "A/2.mkv", "A/Subs/3.ass", "B/4.mkv", "B/C/5.mkv"];
+    for file in files {
+        sandbox.write(file, "x");
+    }
+
+    let found = found_by(Scan::new(&sandbox.path(""), &sandbox.path("")), 3);
+
+    let mut expected: Vec<PathBuf> = files.iter().map(PathBuf::from).collect();
+    expected.sort();
+    assert_eq!(found_paths(&found), expected);
+}
+
+// @behavior SCN-006
+#[test]
+fn should_count_a_folder_a_scan_opens_as_an_entry_looked_at() {
+    let sandbox = Sandbox::new();
+    for number in 0..100 {
+        sandbox.make_dir(&format!("Empty/{number}"));
+    }
+    let mut scan = Scan::new(&sandbox.path(""), &sandbox.path("Empty"));
+
+    scan.look_at(110);
+
+    assert!(!scan.is_finished());
 }

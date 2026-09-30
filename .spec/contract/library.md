@@ -894,16 +894,58 @@ Translate a filesystem notification into what happened to files of the source.
 pub fn translate(notification: &notify::Event, source: &Path, is_dir: impl Fn(&Path) -> bool) -> Vec<Translated> {}
 ```
 
-## `scan_folder`
+## `Scan`
 
-List the regular files below a folder as found-at-start events, without following links.
+A walk over the regular files below a folder, as found-at-start events, that is taken a number of entries at a time. It follows no link.
 
 | Attribute | Value |
 | --- | --- |
 | internal | yes |
 
 ```rust
-pub fn scan_folder(source: &Path, folder: &Path) -> Vec<Event> {}
+pub struct Scan {}
+```
+
+## `Scan::new`
+
+Start a scan of a folder, whose files are named relative to the source.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Scan {
+    pub fn new(source: &Path, folder: &Path) -> Scan {}
+}
+```
+
+## `Scan::look_at`
+
+Look at up to a number of entries, folders counted as well as files, and answer the files found among them.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Scan {
+    pub fn look_at(&mut self, entries: usize) -> Vec<Event> {}
+}
+```
+
+## `Scan::is_finished`
+
+Whether the scan has looked at everything below its folder.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Scan {
+    pub fn is_finished(&self) -> bool {}
+}
 ```
 
 ## `FsTarget`
