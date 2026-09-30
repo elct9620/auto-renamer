@@ -172,8 +172,8 @@ impl Stage {
         self.run(&mut batch, context);
         batch
             .into_files()
-            .find_map(|file| file.claimed)
-            .map(|(_, flow)| flow)
+            .pop()
+            .map(|file| file.flow)
             .expect("a batch of one holds its file")
     }
 

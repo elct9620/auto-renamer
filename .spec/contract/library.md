@@ -382,7 +382,7 @@ Run the stage over the files the running pipeline still holds, with what the bat
 
 ```rust
 pub trait Run {
-    fn run(&self, batch: &mut Batch, context: &mut Context);
+    fn run<'p>(&'p self, batch: &mut Batch<'p>, context: &mut Context);
 }
 ```
 
@@ -395,7 +395,7 @@ The files of a batch in the order of their paths, each waiting for a pipeline, h
 | internal | yes |
 
 ```rust
-pub struct Batch {}
+pub struct Batch<'p> {}
 ```
 
 ## `Target`
@@ -485,7 +485,7 @@ One file of a batch with the verdict on it, the place in the list of the pipelin
 | internal | yes |
 
 ```rust
-pub struct Judged {}
+pub struct Judged<'p> {}
 ```
 
 ## `plan_batch`
@@ -497,7 +497,7 @@ Plan a whole batch through the pipelines of a watch, in the order they are liste
 | internal | yes |
 
 ```rust
-pub fn plan_batch(pipelines: &[(String, Pipeline)], records: Vec<Record>, context: &mut Context) -> Vec<Judged> {}
+pub fn plan_batch<'p>(pipelines: &'p [(String, Pipeline)], records: Vec<Record>, context: &mut Context) -> Vec<Judged<'p>> {}
 ```
 
 ## `Config`
@@ -751,7 +751,7 @@ What an effect stage asks to be done to a planned file: a move or a cleanup, as 
 | internal | yes |
 
 ```rust
-pub enum Effect {}
+pub enum Effect<'p> {}
 ```
 
 ## `EffectsRun`

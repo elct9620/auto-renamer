@@ -75,7 +75,8 @@ fn group_key(record: &Record, by: &[String]) -> Result<Vec<String>, Stop> {
 fn preference(rank: &Rank, origin: &Path) -> usize {
     let name = origin
         .file_name()
-        .map(|name| name.to_string_lossy().to_lowercase())
+        .and_then(|name| name.to_str())
+        .map(str::to_lowercase)
         .unwrap_or_default();
     rank.prefer
         .iter()

@@ -60,17 +60,15 @@ pub fn plan_batch<'p>(
 
     batch
         .into_files()
-        .map(|file| {
-            let (pipeline, verdict) = match file.claimed {
-                None => (None, Verdict::Unclaimed),
-                Some((pipeline, flow)) => (Some(pipeline), Verdict::of(flow)),
-            };
-            Judged {
-                origin: file.origin,
-                pipeline,
-                verdict,
-                effects: file.effects,
-            }
+        .into_iter()
+        .map(|file| Judged {
+            origin: file.origin,
+            pipeline: file.pipeline,
+            verdict: match file.pipeline {
+                None => Verdict::Unclaimed,
+                Some(_) => Verdict::of(file.flow),
+            },
+            effects: file.effects,
         })
         .collect()
 }
