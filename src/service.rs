@@ -134,9 +134,9 @@ pub fn process_batch(
     for origin in files {
         match read_record(&effective, origin) {
             Ok(record) => records.push(record),
-            Err(reason) => processed.push(Processed {
+            Err(what) => processed.push(Processed {
                 origin: origin.clone(),
-                what: What::Skipped(reason),
+                what,
             }),
         }
     }
@@ -198,19 +198,22 @@ fn apply_planned(
     what
 }
 
-fn read_record(watch: &Watch, origin: &Path) -> Result<Record, SkipReason> {
-    let metadata =
-        fs::symlink_metadata(watch.source.join(origin)).map_err(|_| SkipReason::Missing)?;
+/// The record of a file that can be handled: a regular file with a modification time and a path that is text.
+fn read_record(watch: &Watch, origin: &Path) -> Result<Record, What> {
+    let metadata = fs::symlink_metadata(watch.source.join(origin))
+        .map_err(|_| What::Skipped(SkipReason::Missing))?;
     if metadata.file_type().is_symlink() {
-        return Err(SkipReason::Link);
+        return Err(What::Skipped(SkipReason::Link));
     }
     if !metadata.is_file() {
-        return Err(SkipReason::NotAFile);
+        return Err(What::Skipped(SkipReason::NotAFile));
     }
     let modified = metadata
         .modified()
-        .map_err(|_| SkipReason::NoModificationTime)?;
-    Ok(Record::new(origin, DateTime::<Utc>::from(modified)).with_vars(watch.vars.clone()))
+        .map_err(|_| What::Skipped(SkipReason::NoModificationTime))?;
+    let record = Record::new(origin, DateTime::<Utc>::from(modified))
+        .map_err(|error| What::Refused(format!("name: {error}")))?;
+    Ok(record.with_vars(watch.vars.clone()))
 }
 
 fn effects_of(

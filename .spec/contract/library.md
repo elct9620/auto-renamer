@@ -32,7 +32,7 @@ pub struct Record {}
 
 ## `Record::new`
 
-Create the record of a file from its path relative to the source and its modification time.
+Create the record of a file from its path relative to the source and its modification time, refusing a path that is not valid UTF-8.
 
 | Attribute | Value |
 | --- | --- |
@@ -40,8 +40,20 @@ Create the record of a file from its path relative to the source and its modific
 
 ```rust
 impl Record {
-    pub fn new(path: &Path, mtime: DateTime<Utc>) -> Record {}
+    pub fn new(path: &Path, mtime: DateTime<Utc>) -> Result<Record, NotUtf8> {}
 }
+```
+
+## `NotUtf8`
+
+Why no record was made of a file: its path is not valid UTF-8.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct NotUtf8 {}
 ```
 
 ## `Record::with_vars`
@@ -397,20 +409,6 @@ The path the record was made from, which no stage rewrites.
 ```rust
 impl Record {
     pub fn origin(&self) -> &Path {}
-}
-```
-
-## `Record::is_readable`
-
-Whether the whole path is valid UTF-8, so that the name fields could be made from it.
-
-| Attribute | Value |
-| --- | --- |
-| internal | yes |
-
-```rust
-impl Record {
-    pub fn is_readable(&self) -> bool {}
 }
 ```
 

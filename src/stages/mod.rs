@@ -47,11 +47,6 @@ impl Outcome {
     }
 }
 
-/// The refusal of a file whose name is not valid UTF-8 by a stage that reads its name.
-fn refuse_unreadable(stage: &str, record: &Record) -> Option<Outcome> {
-    (!record.is_readable()).then(|| Outcome::rejected(stage, "the file name is not valid UTF-8"))
-}
-
 /// Writes a field of the record; a `name` or `ext` that would not make a usable file name is refused.
 fn write_field(stage: &str, record: &mut Record, field: &str, value: Value) -> Result<(), Outcome> {
     let written = value.written();
@@ -130,9 +125,6 @@ impl Stage {
 
     /// Runs the stage on one record, with what the batch and the target let it know.
     pub fn apply(&self, record: Record, context: &mut Context) -> Outcome {
-        if let Some(refused) = self.refuse_unreadable(&record) {
-            return refused;
-        }
         match self {
             Stage::Filter(filter) => filter::apply(filter, record),
             Stage::Number(number) => number::apply(number, record),
@@ -154,17 +146,6 @@ impl Stage {
             Stage::Take(take) => take.run(record, &EarlierFiles::new(Vec::new())),
             // An effect does not rewrite the plan, so planning passes the record on.
             Stage::Move(_) | Stage::Cleanup(_) => Outcome::Continue(record),
-        }
-    }
-
-    /// The refusal of a file whose name is not valid UTF-8, by every stage that would read its name.
-    /// Only the stages that carry the bytes of the path as they are take such a file.
-    fn refuse_unreadable(&self, record: &Record) -> Option<Outcome> {
-        let carries_bytes = matches!(self, Stage::Folder(_) | Stage::Move(_) | Stage::Cleanup(_));
-        if carries_bytes {
-            None
-        } else {
-            refuse_unreadable(self.name(), record)
         }
     }
 

@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
+use std::fmt;
 use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Utc};
@@ -23,49 +24,54 @@ impl Value {
     }
 }
 
+/// Why no record was made of a file: its path is not valid UTF-8.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NotUtf8;
+
+impl fmt::Display for NotUtf8 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("the file name is not valid UTF-8")
+    }
+}
+
+impl std::error::Error for NotUtf8 {}
+
 /// One file as it moves through a pipeline: a plan path and its named fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Record {
     origin: PathBuf,
     plan: PathBuf,
-    readable: bool,
     fields: BTreeMap<String, Value>,
 }
 
 impl Record {
     /// Creates the record of a file from its path relative to the source and its modification time.
     ///
-    /// A path that is not valid UTF-8 has no `name`, `ext`, `dir` or `path`, since text made from it would
-    /// stand for a different file.
-    pub fn new(path: &Path, mtime: DateTime<Utc>) -> Record {
-        let readable = path.to_str().is_some();
-        let mut fields = BTreeMap::from([("mtime".to_string(), Value::Date(mtime))]);
-        if readable {
-            let file_name = lossy(path.file_name());
-            let (name, ext) = split_extension(&file_name);
-            let folder = path.parent().unwrap_or(Path::new(""));
-            fields.extend([
-                ("name".to_string(), Value::Text(name.to_string())),
-                ("ext".to_string(), Value::Text(ext.to_string())),
-                ("dir".to_string(), Value::Text(lossy(folder.file_name()))),
-                (
-                    "path".to_string(),
-                    Value::Text(folder.to_string_lossy().into_owned()),
-                ),
-            ]);
+    /// A path that is not valid UTF-8 makes no record, since text made from it would stand for a
+    /// different file.
+    pub fn new(path: &Path, mtime: DateTime<Utc>) -> Result<Record, NotUtf8> {
+        if path.to_str().is_none() {
+            return Err(NotUtf8);
         }
+        let file_name = text(path.file_name());
+        let (name, ext) = split_extension(&file_name);
+        let folder = path.parent().unwrap_or(Path::new(""));
+        let fields = BTreeMap::from([
+            ("name".to_string(), Value::Text(name.to_string())),
+            ("ext".to_string(), Value::Text(ext.to_string())),
+            ("dir".to_string(), Value::Text(text(folder.file_name()))),
+            (
+                "path".to_string(),
+                Value::Text(text(Some(folder.as_os_str()))),
+            ),
+            ("mtime".to_string(), Value::Date(mtime)),
+        ]);
 
-        Record {
+        Ok(Record {
             origin: path.to_path_buf(),
             plan: path.to_path_buf(),
-            readable,
             fields,
-        }
-    }
-
-    /// Whether the whole path is valid UTF-8, so that the name fields could be made from it.
-    pub fn is_readable(&self) -> bool {
-        self.readable
+        })
     }
 
     /// Adds variables as fields; a built-in field is never replaced.
@@ -145,7 +151,7 @@ pub(crate) fn split_extension(file_name: &str) -> (&str, &str) {
     }
 }
 
-fn lossy(name: Option<&OsStr>) -> String {
-    name.map(|name| name.to_string_lossy().into_owned())
-        .unwrap_or_default()
+/// The text of a part of a path that is valid UTF-8 as a whole.
+fn text(part: Option<&OsStr>) -> String {
+    part.and_then(OsStr::to_str).unwrap_or_default().to_string()
 }

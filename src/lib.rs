@@ -25,7 +25,7 @@ pub use effects::{
 };
 pub use engine::{Judged, Verdict, plan_batch};
 pub use pipeline::{Pipeline, PipelineError};
-pub use record::{Record, Value};
+pub use record::{NotUtf8, Record, Value};
 #[cfg(target_os = "linux")]
 pub use runner::{RunError, run};
 pub use scan::scan_folder;

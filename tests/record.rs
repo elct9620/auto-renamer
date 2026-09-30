@@ -9,7 +9,7 @@ fn mtime() -> DateTime<Utc> {
 }
 
 fn record(path: &str) -> Record {
-    Record::new(Path::new(path), mtime())
+    Record::new(Path::new(path), mtime()).expect("the path should be text")
 }
 
 fn text(value: &str) -> Value {

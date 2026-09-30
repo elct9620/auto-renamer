@@ -16,6 +16,7 @@ pub fn record(path: &str) -> Record {
         Path::new(path),
         Utc.with_ymd_and_hms(2026, 9, 27, 12, 0, 0).unwrap(),
     )
+    .expect("the path should be text")
 }
 
 /// The record of a file modified at noon UTC on the given day.
@@ -24,6 +25,7 @@ pub fn record_on(path: &str, year: i32, month: u32, day: u32) -> Record {
         Path::new(path),
         Utc.with_ymd_and_hms(year, month, day, 12, 0, 0).unwrap(),
     )
+    .expect("the path should be text")
 }
 
 pub fn with(mut record: Record, field: &str, value: Value) -> Record {

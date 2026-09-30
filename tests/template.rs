@@ -5,7 +5,7 @@ use chrono::{TimeZone, Utc};
 
 fn record() -> Record {
     let mtime = Utc.with_ymd_and_hms(2026, 9, 27, 12, 0, 0).unwrap();
-    Record::new(Path::new("Alpha - 12.mkv"), mtime)
+    Record::new(Path::new("Alpha - 12.mkv"), mtime).expect("the path should be text")
 }
 
 fn with(name: &str, value: Value) -> Record {
