@@ -215,3 +215,11 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | Given | the program moving a batch of 50000 files, which leaves no room in its queue |
 | When | files are written into the source while it does |
 | Then | its error output says notifications were lost, and the files appear in the target |
+
+## `RUN-027` A watcher with nothing to do uses next to no CPU
+
+| Step | Statement |
+| --- | --- |
+| Given | the program running after it moved a file, with nothing left waiting |
+| When | three seconds pass |
+| Then | it has used less than a tenth of a second of CPU in them |

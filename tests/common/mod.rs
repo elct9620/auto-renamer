@@ -366,6 +366,16 @@ impl Program {
         None
     }
 
+    /// The CPU time the program has used so far, in the hundredths of a second Linux counts it in.
+    pub fn cpu_ticks(&self) -> u64 {
+        let stat = std::fs::read_to_string(format!("/proc/{}/stat", self.child.id()))
+            .expect("the process should be there to read");
+        let fields: Vec<&str> = stat.rsplit(')').next().unwrap_or("").split(' ').collect();
+        // After the name come the state and ten numbers, then the user and the system time.
+        let ticks = |place: usize| fields[place].parse::<u64>().expect("a number of ticks");
+        ticks(12) + ticks(13)
+    }
+
     /// What the program has written to its error output so far.
     pub fn log(&self) -> String {
         std::fs::read_to_string(&self.log).unwrap_or_default()

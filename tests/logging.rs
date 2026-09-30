@@ -240,6 +240,25 @@ fn should_make_up_for_lost_notifications_by_scanning_again() {
     );
 }
 
+// @behavior RUN-027
+#[test]
+fn should_use_next_to_no_cpu_with_nothing_to_do() {
+    let sandbox = Sandbox::new();
+    let program = Program::start(&sandbox, r#"["move"]"#, "");
+    sandbox.write("source/a.mkv", "video");
+    assert!(eventually(|| sandbox.exists("target/a.mkv")));
+    thread::sleep(Duration::from_secs(1));
+
+    let before = program.cpu_ticks();
+    thread::sleep(Duration::from_secs(3));
+    let used = program.cpu_ticks() - before;
+
+    assert!(
+        used < 10,
+        "{used} hundredths of a second of CPU in three seconds"
+    );
+}
+
 fn last_lines(log: &str) -> String {
     let lines: Vec<&str> = log.lines().rev().take(20).collect();
     lines.into_iter().rev().collect::<Vec<_>>().join("\n")
