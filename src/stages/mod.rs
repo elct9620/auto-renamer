@@ -105,7 +105,7 @@ pub trait Run {
 
     /// Runs the stage over the files the running pipeline still holds, with what the batch and the
     /// target let it know.
-    fn run<'p>(&'p self, batch: &mut Batch<'p>, context: &mut Context);
+    fn run(&self, batch: &mut Batch, context: &mut Context);
 }
 
 /// Fixed values written into records by `set` and `default`.
@@ -161,7 +161,7 @@ impl Stage {
     }
 
     /// Runs the stage over the files the running pipeline still holds.
-    pub(crate) fn run<'p>(&'p self, batch: &mut Batch<'p>, context: &mut Context) {
+    pub(crate) fn run(&self, batch: &mut Batch, context: &mut Context) {
         self.as_run().run(batch, context);
     }
 

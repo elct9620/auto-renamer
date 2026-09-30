@@ -8,24 +8,24 @@ use crate::record::Record;
 
 /// One file of a batch: waiting while no pipeline has claimed it, going on while its flow holds a
 /// record, and stopped once a stage of its pipeline ended its way.
-pub(crate) struct File<'p> {
+pub(crate) struct File {
     pub origin: PathBuf,
     /// Where the pipeline that claimed the file stands among those that have claimed.
     pub pipeline: Option<usize>,
     pub flow: Flow,
     /// What is to be done to the file once it is planned.
-    pub effects: Vec<Effect<'p>>,
+    pub effects: Vec<Effect>,
 }
 
 /// The files of a batch in the order of their paths, as the pipelines of a watch take them in turn.
-pub struct Batch<'p> {
-    files: Vec<File<'p>>,
+pub struct Batch {
+    files: Vec<File>,
     /// The names of the pipelines that have claimed so far; the last one is running.
     pipelines: Vec<String>,
 }
 
-impl<'p> Batch<'p> {
-    pub(crate) fn new(mut records: Vec<Record>) -> Batch<'p> {
+impl Batch {
+    pub(crate) fn new(mut records: Vec<Record>) -> Batch {
         records.sort_by(|a, b| a.origin().cmp(b.origin()));
         let files = records
             .into_iter()
@@ -63,9 +63,9 @@ impl<'p> Batch<'p> {
     }
 
     /// Notes an effect to be done to every file the running pipeline still holds.
-    pub(crate) fn schedule(&mut self, effect: Effect<'p>) {
+    pub(crate) fn schedule(&mut self, effect: Effect) {
         for file in self.running_mut().filter(|file| file.flow.is_ok()) {
-            file.effects.push(effect);
+            file.effects.push(effect.clone());
         }
     }
 
@@ -95,7 +95,7 @@ impl<'p> Batch<'p> {
     }
 
     /// The files as they ended, in the order of their paths.
-    pub(crate) fn into_files(self) -> Vec<File<'p>> {
+    pub(crate) fn into_files(self) -> Vec<File> {
         self.files
     }
 
@@ -103,7 +103,7 @@ impl<'p> Batch<'p> {
         self.pipelines.len().checked_sub(1)
     }
 
-    fn running_mut(&mut self) -> impl Iterator<Item = &mut File<'p>> {
+    fn running_mut(&mut self) -> impl Iterator<Item = &mut File> {
         let running = self.running();
         self.files
             .iter_mut()

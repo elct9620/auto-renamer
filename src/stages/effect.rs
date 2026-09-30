@@ -3,11 +3,11 @@
 use super::{Batch, Cleanup, Move, Run};
 use crate::context::Context;
 
-/// What an effect stage asks to be done to a planned file, as the stage was declared.
-#[derive(Debug, Clone, Copy)]
-pub enum Effect<'p> {
-    Move(&'p Move),
-    Cleanup(&'p Cleanup),
+/// What an effect stage asks to be done to a planned file, with the settings the stage was declared with.
+#[derive(Debug, Clone)]
+pub enum Effect {
+    Move(Move),
+    Cleanup(Cleanup),
 }
 
 impl Run for Move {
@@ -15,8 +15,8 @@ impl Run for Move {
         "move"
     }
 
-    fn run<'p>(&'p self, batch: &mut Batch<'p>, _: &mut Context) {
-        batch.schedule(Effect::Move(self));
+    fn run(&self, batch: &mut Batch, _: &mut Context) {
+        batch.schedule(Effect::Move(self.clone()));
     }
 }
 
@@ -25,7 +25,7 @@ impl Run for Cleanup {
         "cleanup"
     }
 
-    fn run<'p>(&'p self, batch: &mut Batch<'p>, _: &mut Context) {
-        batch.schedule(Effect::Cleanup(self));
+    fn run(&self, batch: &mut Batch, _: &mut Context) {
+        batch.schedule(Effect::Cleanup(self.clone()));
     }
 }
