@@ -14,7 +14,7 @@ export function StageForm({ stage, declaration, onChange }: {
 }) {
   const { t } = useTranslation()
   const about = <Hint>{t(`stages.${declaration.name}.about`)}</Hint>
-  const hint = (parameter: string) => t(`stages.${declaration.name}.parameters.${parameter}`)
+  const hint = (parameter: string) => t(`stages.${declaration.name}.parameters.${parameter}.about`)
   if (declaration.values) {
     return <div className="grid gap-3">{about}<ValueRows values={parametersOf(stage)} onChange={(values) =>
       onChange(Object.keys(values).length === 0 && declaration.bare ? stageName(stage) : withValue(stage, values))} /></div>
@@ -26,7 +26,7 @@ export function StageForm({ stage, declaration, onChange }: {
     <div className="grid gap-3">
       {about}
       {declaration.value && (
-        <TextField label={declaration.name} kind={declaration.value} value={single} hint={t(`stages.${declaration.name}.value`)}
+        <TextField label={declaration.name} kind={declaration.value} value={single} hint={t(`stages.${declaration.name}.value.about`)}
           onApply={(value) => value !== undefined && onChange(withValue(stage, value))} />
       )}
       {declaration.parameters.map((parameter) => {

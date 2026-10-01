@@ -368,3 +368,11 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the global configuration shown |
 | When | the page is laid out |
 | Then | the palette, canvas and inspector run left to right above the source and target trees |
+
+## `PGE-046` Every parameter, setting and single value is named in both languages
+
+| Step | Statement |
+| --- | --- |
+| Given | the parameters and single values the core declares, and the settings the page offers |
+| When | the page's texts in Traditional Chinese and English are read |
+| Then | each has a name in both |

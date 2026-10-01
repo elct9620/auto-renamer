@@ -97,28 +97,64 @@
     "filter": {
       "about": "依副檔名或檔名樣式放行；在管線開頭認領檔案，在中途排除檔案。",
       "parameters": {
-        "ext": "副檔名清單，不分大小寫、不含點。",
-        "glob": "檔名樣式，與 ext 同時給時都要符合。",
-        "invert": "反轉結果，用來排除符合的檔案。"
+        "ext": {
+          "name": "副檔名",
+          "about": "副檔名清單，不分大小寫、不含點。"
+        },
+        "glob": {
+          "name": "檔名樣式",
+          "about": "檔名樣式，與 ext 同時給時都要符合。"
+        },
+        "invert": {
+          "name": "反轉",
+          "about": "反轉結果，用來排除符合的檔案。"
+        }
       }
     },
     "number": {
       "about": "從欄位取出一個數字，例如集數或季數。",
       "parameters": {
-        "from": "從哪個欄位找，預設 name。",
-        "into": "寫入哪個欄位。",
-        "nth": "明指取第幾個候選，負數從尾端算。",
-        "prefix": "只取緊接在這個字之後的數字，例如 Season。",
-        "exclude": "排除這些欄位目前的值，避免把季數當成集數。"
+        "from": {
+          "name": "來源欄位",
+          "about": "從哪個欄位找，預設 name。"
+        },
+        "into": {
+          "name": "寫入欄位",
+          "about": "寫入哪個欄位。"
+        },
+        "nth": {
+          "name": "第幾個",
+          "about": "明指取第幾個候選，負數從尾端算。"
+        },
+        "prefix": {
+          "name": "前綴字",
+          "about": "只取緊接在這個字之後的數字，例如 Season。"
+        },
+        "exclude": {
+          "name": "排除欄位",
+          "about": "排除這些欄位目前的值，避免把季數當成集數。"
+        }
       }
     },
     "regex": {
       "about": "用正規表示式擷取或改寫欄位，內建階段處理不了時才用。",
       "parameters": {
-        "pattern": "正規表示式，具名群組會成為欄位。",
-        "from": "比對哪個欄位，預設 name。",
-        "into": "把整段比對寫入這個欄位。",
-        "replace": "改寫比對到的內容，而不是擷取。"
+        "pattern": {
+          "name": "正規表示式",
+          "about": "正規表示式，具名群組會成為欄位。"
+        },
+        "from": {
+          "name": "來源欄位",
+          "about": "比對哪個欄位，預設 name。"
+        },
+        "into": {
+          "name": "寫入欄位",
+          "about": "把整段比對寫入這個欄位。"
+        },
+        "replace": {
+          "name": "改寫成",
+          "about": "改寫比對到的內容，而不是擷取。"
+        }
       }
     },
     "set": {
@@ -130,74 +166,149 @@
     "replace": {
       "about": "把欄位中的字面文字換成另一段。",
       "parameters": {
-        "find": "要找的文字。",
-        "with": "換成的文字。",
-        "field": "改寫哪個欄位，預設 name。"
+        "find": {
+          "name": "尋找",
+          "about": "要找的文字。"
+        },
+        "with": {
+          "name": "取代為",
+          "about": "換成的文字。"
+        },
+        "field": {
+          "name": "欄位",
+          "about": "改寫哪個欄位，預設 name。"
+        }
       }
     },
     "case": {
       "about": "改變欄位的大小寫。",
       "parameters": {
-        "to": "lower、upper 或 title。",
-        "field": "改寫哪個欄位，預設 name。"
+        "to": {
+          "name": "大小寫",
+          "about": "lower、upper 或 title。"
+        },
+        "field": {
+          "name": "欄位",
+          "about": "改寫哪個欄位，預設 name。"
+        }
       }
     },
     "strip": {
       "about": "去掉括號標籤並整理多餘空白。",
       "parameters": {
-        "groups": "要去掉的括號，預設只有 []。",
-        "field": "改寫哪個欄位，預設 name。"
+        "groups": {
+          "name": "括號種類",
+          "about": "要去掉的括號，預設只有 []。"
+        },
+        "field": {
+          "name": "欄位",
+          "about": "改寫哪個欄位，預設 name。"
+        }
       }
     },
     "format": {
       "about": "依樣板組出檔名，副檔名自動接在最後。",
-      "value": "檔名樣板，例如 {show} s{season:02}e{episode:02}。"
+      "value": {
+        "name": "檔名樣板",
+        "about": "檔名樣板，例如 {show} s{season:02}e{episode:02}。"
+      }
     },
     "folder": {
       "about": "依樣板在目的地加入子資料夾。",
-      "value": "資料夾樣板，以 / 分段。"
+      "value": {
+        "name": "資料夾樣板",
+        "about": "資料夾樣板，以 / 分段。"
+      }
     },
     "lift": {
       "about": "把計畫路徑往上提。",
       "parameters": {
-        "to": "資料夾名稱樣式，提到最近符合的上層。"
+        "to": {
+          "name": "上提至",
+          "about": "資料夾名稱樣式，提到最近符合的上層。"
+        }
       },
-      "value": "往上提幾層。"
+      "value": {
+        "name": "上提層數",
+        "about": "往上提幾層。"
+      }
     },
     "next": {
       "about": "欄位未設時，取目的地既有檔案的最大值加一。",
       "parameters": {
-        "into": "寫入哪個欄位。",
-        "like": "比對既有檔名的樣板，into 欄位是要遞增的部分。"
+        "into": {
+          "name": "寫入欄位",
+          "about": "寫入哪個欄位。"
+        },
+        "like": {
+          "name": "比對樣板",
+          "about": "比對既有檔名的樣板，into 欄位是要遞增的部分。"
+        }
       }
     },
     "rank": {
       "about": "在同一組檔案中排序並編號，例如多個字幕。",
       "parameters": {
-        "into": "寫入編號的欄位。",
-        "by": "依這些欄位分組。",
-        "prefer": "原始檔名含這些字的排前面。"
+        "into": {
+          "name": "寫入欄位",
+          "about": "寫入編號的欄位。"
+        },
+        "by": {
+          "name": "分組欄位",
+          "about": "依這些欄位分組。"
+        },
+        "prefer": {
+          "name": "優先字樣",
+          "about": "原始檔名含這些字的排前面。"
+        }
       }
     },
     "take": {
       "about": "依影片的檔名前綴，把欄位複製給字幕。",
       "parameters": {
-        "fields": "要複製的欄位。",
-        "from": "來源管線，預設前面所有管線。"
+        "fields": {
+          "name": "複製欄位",
+          "about": "要複製的欄位。"
+        },
+        "from": {
+          "name": "來源管線",
+          "about": "來源管線，預設前面所有管線。"
+        }
       }
     },
     "move": {
       "about": "把檔案搬到計畫路徑，絕不覆寫既有檔案。",
       "parameters": {
-        "on_conflict": "撞名時 reject 拒絕，或 suffix 加後綴重試一次。",
-        "suffix": "撞名時加上的後綴，預設 _v2。"
+        "on_conflict": {
+          "name": "撞名時",
+          "about": "撞名時 reject 拒絕，或 suffix 加後綴重試一次。"
+        },
+        "suffix": {
+          "name": "後綴",
+          "about": "撞名時加上的後綴，預設 _v2。"
+        }
       }
     },
     "cleanup": {
       "about": "刪除搬移後清空的資料夾，只在單元之內。",
       "parameters": {
-        "keep": "符合這些樣式的資料夾保留。"
+        "keep": {
+          "name": "保留資料夾",
+          "about": "符合這些樣式的資料夾保留。"
+        }
       }
     }
+  },
+  "settings": {
+    "source": "來源資料夾",
+    "target": "目的資料夾",
+    "unit": "單元",
+    "pipelines": "管線",
+    "vars": "變數",
+    "dry_run": "試運行",
+    "batch_max": "批次上限",
+    "batch_window": "批次時間窗",
+    "batch_max_wait": "最長等待",
+    "root": "單元樣式"
   }
 }

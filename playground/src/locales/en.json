@@ -97,28 +97,64 @@
     "filter": {
       "about": "Lets files through by extension or name pattern; first in a pipeline it claims files, later it drops them.",
       "parameters": {
-        "ext": "Extensions, any case, without the dot.",
-        "glob": "A file name pattern; with ext, both must match.",
-        "invert": "Inverts the result, to drop what matches."
+        "ext": {
+          "name": "Extensions",
+          "about": "Extensions, any case, without the dot."
+        },
+        "glob": {
+          "name": "Name pattern",
+          "about": "A file name pattern; with ext, both must match."
+        },
+        "invert": {
+          "name": "Invert",
+          "about": "Inverts the result, to drop what matches."
+        }
       }
     },
     "number": {
       "about": "Takes one number out of a field, such as the episode or season.",
       "parameters": {
-        "from": "The field to look in; name by default.",
-        "into": "The field to write.",
-        "nth": "Which candidate to take; negative counts from the end.",
-        "prefix": "Only the number right after this word, such as Season.",
-        "exclude": "Skips the current values of these fields, so a season is not taken for an episode."
+        "from": {
+          "name": "Source field",
+          "about": "The field to look in; name by default."
+        },
+        "into": {
+          "name": "Target field",
+          "about": "The field to write."
+        },
+        "nth": {
+          "name": "Which one",
+          "about": "Which candidate to take; negative counts from the end."
+        },
+        "prefix": {
+          "name": "Prefix",
+          "about": "Only the number right after this word, such as Season."
+        },
+        "exclude": {
+          "name": "Excluded fields",
+          "about": "Skips the current values of these fields, so a season is not taken for an episode."
+        }
       }
     },
     "regex": {
       "about": "Captures or rewrites a field with a regular expression, for what the built-in stages cannot do.",
       "parameters": {
-        "pattern": "The regular expression; named groups become fields.",
-        "from": "The field to match; name by default.",
-        "into": "Writes the whole match into this field.",
-        "replace": "Rewrites the match instead of capturing it."
+        "pattern": {
+          "name": "Regular expression",
+          "about": "The regular expression; named groups become fields."
+        },
+        "from": {
+          "name": "Source field",
+          "about": "The field to match; name by default."
+        },
+        "into": {
+          "name": "Target field",
+          "about": "Writes the whole match into this field."
+        },
+        "replace": {
+          "name": "Rewrite to",
+          "about": "Rewrites the match instead of capturing it."
+        }
       }
     },
     "set": {
@@ -130,74 +166,149 @@
     "replace": {
       "about": "Replaces literal text in a field.",
       "parameters": {
-        "find": "The text to find.",
-        "with": "The text to put in its place.",
-        "field": "The field to rewrite; name by default."
+        "find": {
+          "name": "Find",
+          "about": "The text to find."
+        },
+        "with": {
+          "name": "Replace with",
+          "about": "The text to put in its place."
+        },
+        "field": {
+          "name": "Field",
+          "about": "The field to rewrite; name by default."
+        }
       }
     },
     "case": {
       "about": "Changes the case of a field.",
       "parameters": {
-        "to": "lower, upper or title.",
-        "field": "The field to rewrite; name by default."
+        "to": {
+          "name": "Case",
+          "about": "lower, upper or title."
+        },
+        "field": {
+          "name": "Field",
+          "about": "The field to rewrite; name by default."
+        }
       }
     },
     "strip": {
       "about": "Removes bracketed tags and tidies the spaces left.",
       "parameters": {
-        "groups": "The brackets to remove; only [] by default.",
-        "field": "The field to rewrite; name by default."
+        "groups": {
+          "name": "Brackets",
+          "about": "The brackets to remove; only [] by default."
+        },
+        "field": {
+          "name": "Field",
+          "about": "The field to rewrite; name by default."
+        }
       }
     },
     "format": {
       "about": "Builds the file name from a template; the extension is added at the end.",
-      "value": "The name template, such as {show} s{season:02}e{episode:02}."
+      "value": {
+        "name": "Name template",
+        "about": "The name template, such as {show} s{season:02}e{episode:02}."
+      }
     },
     "folder": {
       "about": "Adds folders under the target from a template.",
-      "value": "The folder template, split by /."
+      "value": {
+        "name": "Folder template",
+        "about": "The folder template, split by /."
+      }
     },
     "lift": {
       "about": "Moves the planned path up.",
       "parameters": {
-        "to": "A folder name pattern; lifts to the nearest folder that matches."
+        "to": {
+          "name": "Lift to",
+          "about": "A folder name pattern; lifts to the nearest folder that matches."
+        }
       },
-      "value": "How many levels to move up."
+      "value": {
+        "name": "Levels up",
+        "about": "How many levels to move up."
+      }
     },
     "next": {
       "about": "For a field still unset, takes the highest value among the files already at the target, plus one.",
       "parameters": {
-        "into": "The field to write.",
-        "like": "The template existing names are matched by; the into field is the part counted."
+        "into": {
+          "name": "Target field",
+          "about": "The field to write."
+        },
+        "like": {
+          "name": "Match template",
+          "about": "The template existing names are matched by; the into field is the part counted."
+        }
       }
     },
     "rank": {
       "about": "Orders and numbers the files of a group, such as several subtitles.",
       "parameters": {
-        "into": "The field to write the number into.",
-        "by": "The fields files are grouped by.",
-        "prefer": "Files whose original name holds these come first."
+        "into": {
+          "name": "Target field",
+          "about": "The field to write the number into."
+        },
+        "by": {
+          "name": "Group by",
+          "about": "The fields files are grouped by."
+        },
+        "prefer": {
+          "name": "Prefer",
+          "about": "Files whose original name holds these come first."
+        }
       }
     },
     "take": {
       "about": "Copies fields to a subtitle from the video whose name it starts with.",
       "parameters": {
-        "fields": "The fields to copy.",
-        "from": "The pipeline to take from; all earlier ones by default."
+        "fields": {
+          "name": "Fields to copy",
+          "about": "The fields to copy."
+        },
+        "from": {
+          "name": "Source pipeline",
+          "about": "The pipeline to take from; all earlier ones by default."
+        }
       }
     },
     "move": {
       "about": "Moves the file to its planned path, never overwriting a file.",
       "parameters": {
-        "on_conflict": "On a clash, reject refuses; suffix retries once with a suffix.",
-        "suffix": "The suffix added on a clash; _v2 by default."
+        "on_conflict": {
+          "name": "On a clash",
+          "about": "On a clash, reject refuses; suffix retries once with a suffix."
+        },
+        "suffix": {
+          "name": "Suffix",
+          "about": "The suffix added on a clash; _v2 by default."
+        }
       }
     },
     "cleanup": {
       "about": "Removes folders the move emptied, only inside the unit.",
       "parameters": {
-        "keep": "Folders matching these patterns are kept."
+        "keep": {
+          "name": "Folders to keep",
+          "about": "Folders matching these patterns are kept."
+        }
       }
     }
+  },
+  "settings": {
+    "source": "Source folder",
+    "target": "Target folder",
+    "unit": "Unit",
+    "pipelines": "Pipelines",
+    "vars": "Variables",
+    "dry_run": "Dry run",
+    "batch_max": "Batch limit",
+    "batch_window": "Batch window",
+    "batch_max_wait": "Longest wait",
+    "root": "Unit patterns"
   }
 }

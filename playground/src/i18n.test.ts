@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import './setup.test-helper'
 import { stages } from './core'
 import { type Language, languageOf, texts } from './i18n'
+import { SETTINGS } from './settings'
 
 function keys(table: object, prefix = ''): string[] {
   return Object.entries(table).flatMap(([key, value]) =>
@@ -30,10 +31,24 @@ describe('languages', () => {
     const described = new Set(keys(texts[language]))
     const expected = stages().flatMap((stage) => [
       `stages.${stage.name}.about`,
-      ...stage.parameters.map((parameter) => `stages.${stage.name}.parameters.${parameter.name}`),
-      ...(stage.value ? [`stages.${stage.name}.value`] : []),
+      ...stage.parameters.map((parameter) => `stages.${stage.name}.parameters.${parameter.name}.about`),
+      ...(stage.value ? [`stages.${stage.name}.value.about`] : []),
     ])
 
     expect(expected.filter((key) => !described.has(key))).toEqual([])
+  })
+
+  // @behavior PGE-046
+  it.each(['zh-TW', 'en'] as Language[])('names in %s every parameter, setting and single value', (language) => {
+    const named = new Set(keys(texts[language]))
+    const expected = [
+      ...stages().flatMap((stage) => [
+        ...stage.parameters.map((parameter) => `stages.${stage.name}.parameters.${parameter.name}.name`),
+        ...(stage.value ? [`stages.${stage.name}.value.name`] : []),
+      ]),
+      ...SETTINGS.map((setting) => `settings.${setting.key}`),
+    ]
+
+    expect(expected.filter((key) => !named.has(key))).toEqual([])
   })
 })
