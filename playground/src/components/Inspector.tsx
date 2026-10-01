@@ -1,7 +1,9 @@
+import { ArrowLeft, ArrowRight, type LucideIcon, Settings2, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Choice } from '@/components/Choice'
+import { KIND_ICONS } from '@/components/kinds'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -70,10 +72,10 @@ function inline(value: Value | undefined): string {
   return render({ value: [value] }).trim().replace(/^value = \[/, '').replace(/\]$/, '')
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, icon: Icon, children }: { title: string; icon: LucideIcon; children: React.ReactNode }) {
   return (
     <section className="grid gap-3">
-      <h2 className="text-sm font-semibold">{title}</h2>
+      <h2 className="flex items-center gap-1.5 text-sm font-semibold"><Icon className="size-4 text-muted-foreground" />{title}</h2>
       {children}
     </section>
   )
@@ -93,7 +95,7 @@ export function Inspector({ config, kind, selected, onChange, onSelect }: {
     const root = kind === 'global' ? ['default'] : []
     const defaults = asTable(root.length ? config.default : config)
     return (
-      <Section title={kind === 'global' ? t('inspector.defaults') : t('inspector.folder')}>
+      <Section icon={Settings2} title={kind === 'global' ? t('inspector.defaults') : t('inspector.folder')}>
         <p className="text-xs text-muted-foreground">{t('inspector.hint')}</p>
         <TomlField key={`vars-${kind}`} label="vars" value={inline(defaults.vars)}
           onApply={(value) => onChange(setIn(config, [...root, 'vars'], value))} />
@@ -111,13 +113,13 @@ export function Inspector({ config, kind, selected, onChange, onSelect }: {
     const path = ['watch', selected.name]
     const watch = asTable(asTable(config.watch)[selected.name])
     return (
-      <Section title={t('inspector.watch', { name: selected.name })}>
+      <Section icon={KIND_ICONS.watch} title={t('inspector.watch', { name: selected.name })}>
         {['source', 'target', 'unit', 'pipelines', 'vars', 'dry_run'].map((key) => (
           <TomlField key={`${selected.name}-${key}`} label={key} value={inline(watch[key])}
             onApply={(value) => onChange(setIn(config, [...path, key], value))} />
         ))}
         <Button variant="destructive" size="sm" onClick={() => { onChange(setIn(config, path, undefined)); onSelect(null) }}>
-          {t('inspector.removeWatch')}
+          <Trash2 />{t('inspector.removeWatch')}
         </Button>
       </Section>
     )
@@ -125,7 +127,7 @@ export function Inspector({ config, kind, selected, onChange, onSelect }: {
 
   if (selected.kind === 'pipeline') {
     return (
-      <Section title={t('inspector.pipeline', { name: selected.name })}>
+      <Section icon={KIND_ICONS.pipeline} title={t('inspector.pipeline', { name: selected.name })}>
         <Field label={t('inspector.name')} error={nameError}>
           <Input key={selected.name} className="h-8 font-mono text-xs" defaultValue={selected.name} onBlur={(event) => {
             const name = event.target.value.trim()
@@ -144,7 +146,7 @@ export function Inspector({ config, kind, selected, onChange, onSelect }: {
             onChange={(name) => onChange(addStage(config, selected.name, newStage(name, stages(), read)))} />
         </Field>
         <Button variant="destructive" size="sm" onClick={() => { onChange(removePipeline(config, selected.name)); onSelect(null) }}>
-          {t('inspector.removePipeline')}
+          <Trash2 />{t('inspector.removePipeline')}
         </Button>
       </Section>
     )
@@ -155,19 +157,19 @@ export function Inspector({ config, kind, selected, onChange, onSelect }: {
   if (stage === undefined) return null
   const at = (index: number) => onSelect({ ...selected, index })
   return (
-    <Section title={t('inspector.stage', { kind: stageName(stage), position: selected.index + 1, pipeline: selected.pipeline })}>
+    <Section icon={KIND_ICONS.stage} title={t('inspector.stage', { kind: stageName(stage), position: selected.index + 1, pipeline: selected.pipeline })}>
       <StageForm key={`${selected.pipeline}-${selected.index}`} stage={stage}
         declaration={stages().find((declaration) => declaration.name === stageName(stage))!}
         onChange={(next) => onChange(replaceStage(config, selected.pipeline, selected.index, next))} />
       <div className="flex gap-2">
         <Button variant="outline" size="sm" disabled={selected.index === 0} onClick={() => {
           onChange(moveStage(config, selected.pipeline, selected.index, -1)); at(selected.index - 1)
-        }}>{t('inspector.earlier')}</Button>
+        }}><ArrowLeft />{t('inspector.earlier')}</Button>
         <Button variant="outline" size="sm" disabled={selected.index === pipelineStages.length - 1} onClick={() => {
           onChange(moveStage(config, selected.pipeline, selected.index, 1)); at(selected.index + 1)
-        }}>{t('inspector.later')}</Button>
+        }}>{t('inspector.later')}<ArrowRight /></Button>
         <Button variant="destructive" size="sm" onClick={() => { onChange(removeStage(config, selected.pipeline, selected.index)); onSelect(null) }}>
-          {t('inspector.remove')}
+          <Trash2 />{t('inspector.remove')}
         </Button>
       </div>
     </Section>

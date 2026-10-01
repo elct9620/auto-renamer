@@ -1,4 +1,4 @@
-import { File, FileCog, Folder, X } from 'lucide-react'
+import { File, FileCog, FilePlus, Folder, FolderPlus, X } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -103,8 +103,8 @@ export function TreePanel({ title, root, entries, marks, onEdit }: {
       <div className="flex gap-2">
         <Input className="h-7 font-mono text-xs" placeholder={t('tree.placeholder', { path: 'Show/Season 1/file.mkv', configuration: `Show/${FOLDER_CONFIGURATION}` })}
           value={path} onChange={(event) => setPath(event.target.value)} />
-        <Button size="sm" variant="outline" disabled={!valid} onClick={() => add(false)}>{t('tree.addFile')}</Button>
-        <Button size="sm" variant="outline" disabled={!valid} onClick={() => add(true)}>{t('tree.addFolder')}</Button>
+        <Button size="sm" variant="outline" disabled={!valid} onClick={() => add(false)}><FilePlus />{t('tree.addFile')}</Button>
+        <Button size="sm" variant="outline" disabled={!valid} onClick={() => add(true)}><FolderPlus />{t('tree.addFolder')}</Button>
       </div>
     </div>
   )

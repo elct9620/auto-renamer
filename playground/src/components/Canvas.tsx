@@ -17,6 +17,7 @@ import '@xyflow/react/dist/style.css'
 import { type DragEvent, useEffect, useMemo } from 'react'
 
 import { BaseNode, BaseNodeContent, BaseNodeHeader, BaseNodeHeaderTitle } from '@/components/base-node'
+import { KIND_ICONS } from '@/components/kinds'
 import { cn } from '@/lib/utils'
 import {
   type Table,
@@ -41,11 +42,13 @@ const tones = {
   stage: 'cursor-grab',
 }
 
-function ConfigNode({ data, tone, joins }: { data: NodeData; tone: keyof typeof tones; joins: 'source' | 'target' | null }) {
+function ConfigNode({ data, kind, joins }: { data: NodeData; kind: keyof typeof tones; joins: 'source' | 'target' | null }) {
+  const Icon = KIND_ICONS[kind]
   return (
-    <BaseNode className={cn('min-w-36 text-sm', tones[tone])}>
+    <BaseNode className={cn('min-w-36 text-sm', tones[kind])}>
       <Handle type="target" position={Position.Left} isConnectable={joins === 'target'} />
-      <BaseNodeHeader>
+      <BaseNodeHeader className="justify-start">
+        <Icon className="size-3.5 shrink-0 text-muted-foreground" />
         <BaseNodeHeaderTitle className="text-sm font-medium">{data.label}</BaseNodeHeaderTitle>
       </BaseNodeHeader>
       {data.detail && (
@@ -60,9 +63,9 @@ function ConfigNode({ data, tone, joins }: { data: NodeData; tone: keyof typeof 
 
 // A watch is joined to pipelines by its handle; stages follow each other only by order.
 const nodeTypes = {
-  watch: ({ data }: NodeProps<Node<NodeData>>) => <ConfigNode data={data} tone="watch" joins="source" />,
-  pipeline: ({ data }: NodeProps<Node<NodeData>>) => <ConfigNode data={data} tone="pipeline" joins="target" />,
-  stage: ({ data }: NodeProps<Node<NodeData>>) => <ConfigNode data={data} tone="stage" joins={null} />,
+  watch: ({ data }: NodeProps<Node<NodeData>>) => <ConfigNode data={data} kind="watch" joins="source" />,
+  pipeline: ({ data }: NodeProps<Node<NodeData>>) => <ConfigNode data={data} kind="pipeline" joins="target" />,
+  stage: ({ data }: NodeProps<Node<NodeData>>) => <ConfigNode data={data} kind="stage" joins={null} />,
 }
 
 function isJoint(connection: Connection | Edge): boolean {

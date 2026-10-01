@@ -1,3 +1,4 @@
+import { Check, Download, Play, Upload } from 'lucide-react'
 import { type ChangeEvent, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -125,9 +126,9 @@ export default function App() {
           options={[{ value: 'global', label: t('kind.global') }, { value: 'folder', label: t('kind.folder') }]}
           onChange={(value) => { setKind(value as Kind); setSelected(null) }} />
         <Button variant="outline" size="sm" asChild>
-          <label>{t('import')}<input type="file" accept=".toml" onChange={importFile} hidden /></label>
+          <label><Upload />{t('import')}<input type="file" accept=".toml" onChange={importFile} hidden /></label>
         </Button>
-        <Button size="sm" onClick={save} disabled={!status.ok}>{t('download')}</Button>
+        <Button size="sm" onClick={save} disabled={!status.ok}><Download />{t('download')}</Button>
         <Badge variant={status.ok ? 'secondary' : 'destructive'}>
           {status.ok ? (status.lines.length ? t('status.warnings', { count: status.lines.length }) : t('status.valid')) : t('status.refused')}
         </Badge>
@@ -155,9 +156,9 @@ export default function App() {
           <div className="flex flex-col justify-center gap-2 border-x p-3">
             <Choice label={t('tree.watch')} value={watch} options={watches.map((name) => ({ value: name, label: name }))}
               onChange={setWatch} />
-            <Button size="sm" onClick={run} disabled={!status.ok || !watches.includes(watch)}>{t('tree.trigger')} ▶</Button>
+            <Button size="sm" onClick={run} disabled={!status.ok || !watches.includes(watch)}><Play />{t('tree.trigger')}</Button>
             {simulation && (
-              <Button size="sm" variant="outline" onClick={() => editEntries(() => simulation.entries)}>{t('tree.keep')}</Button>
+              <Button size="sm" variant="outline" onClick={() => editEntries(() => simulation.entries)}><Check />{t('tree.keep')}</Button>
             )}
           </div>
           <TreePanel title={t('tree.target')} root={roots.target} entries={simulation?.entries ?? entries} marks={marks} onEdit={editEntries} />
