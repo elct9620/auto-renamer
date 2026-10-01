@@ -86,7 +86,20 @@
   },
   "examples": {
     "label": "範例",
-    "single": "單檔集數"
+    "full": "影集情境完整組合",
+    "single": "單檔集數",
+    "unsure": "分不出集數",
+    "subtitles": "兩集同批與字幕",
+    "release": "整包資料夾",
+    "subs": "Subs 子資料夾",
+    "next": "遞增序號",
+    "lifted": "提出後遞增",
+    "clash": "撞名",
+    "large": "太大的批次",
+    "movie": "電影",
+    "music": "音樂",
+    "photo": "照片",
+    "cleanup": "清理"
   },
   "unit": {
     "directory": "directory（父資料夾）",

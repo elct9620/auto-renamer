@@ -64,6 +64,7 @@ Some tests depend on things outside their own file.
 | moves between mounts in `tests/move.rs` | the `mv` on PATH |
 | MV-028 in `tests/move.rs` | the 1 MiB tmpfs at `/small` of the test container |
 | `playground/src/config.test.ts`, `tree.test.ts`, `i18n.test.ts`, `settings.test.ts` | the module `pnpm wasm` builds, whose `stages()` lists the stages `declare.rs` reads |
+| `playground/src/examples.test.ts` | the outputs `docs/cases.md` gives each example, simulated by the module `pnpm wasm` builds |
 | `playground/e2e/page.e2e.ts` | the example the page opens with, `FIRST` in `examples.ts`, and `pnpm build` having run |
 | DEC-035 in `tests/declaration.rs` | debug assertions, which a release build drops |
 

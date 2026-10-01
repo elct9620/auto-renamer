@@ -86,7 +86,20 @@
   },
   "examples": {
     "label": "Examples",
-    "single": "Single episodes"
+    "full": "Every series case together",
+    "single": "Single episodes",
+    "unsure": "Episodes that cannot be told",
+    "subtitles": "Two episodes with subtitles",
+    "release": "A release folder",
+    "subs": "A Subs folder",
+    "next": "Counting on",
+    "lifted": "Counting on after lifting",
+    "clash": "A name already taken",
+    "large": "A batch too large",
+    "movie": "Movies",
+    "music": "Music",
+    "photo": "Photos",
+    "cleanup": "Cleaning up"
   },
   "unit": {
     "directory": "directory (parent folder)",
