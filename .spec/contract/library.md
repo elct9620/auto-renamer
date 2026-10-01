@@ -450,7 +450,7 @@ pub struct Judged {}
 
 ## `plan_batch`
 
-Plan a whole batch through the pipelines of a watch, in the order they are listed, against what the target holds. What the stages share lives only for this one batch.
+Plan a whole batch, each path at most once, through the pipelines of a watch, in the order they are listed, against what the target holds. What the stages share lives only for this one batch.
 
 | Attribute | Value |
 | --- | --- |

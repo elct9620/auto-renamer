@@ -47,9 +47,10 @@ struct Outcome {
 
 /// Plans a whole batch through the pipelines of a watch, in the order they are listed.
 ///
-/// Files are taken in the order of their paths. Each is claimed by the first pipeline whose leading filters
-/// accept it, and the stages of a pipeline run over all of its files one stage at a time. Nothing touches the
-/// filesystem: a stage that would only notes its effect on the files that reach it.
+/// Files are taken in the order of their paths, each path at most once in a batch. Each is claimed by the
+/// first pipeline whose leading filters accept it, and the stages of a pipeline run over all of its files
+/// one stage at a time. Nothing touches the filesystem: a stage that would only notes its effect on the files
+/// that reach it.
 ///
 /// What the stages share lives only for this one batch, so files of different units never share numbers
 /// or fields.
