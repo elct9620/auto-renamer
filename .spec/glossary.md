@@ -121,3 +121,11 @@ The notifications that say something changed, waiting for the runner. It holds a
 
 - `Inbox` - Queue is what the design calls it.
 - `Backlog` - Queue is what the design calls it.
+
+### Playground
+
+The page on GitHub Pages where a configuration is edited, simulated, and downloaded as a global or folder configuration. Only the core runs there for real.
+
+### Simulation
+
+A run of the playground: the user's virtual source is triggered, each unit becomes a batch, the core plans it, and the virtual files are moved by the verdicts. A preview is what a dry run reports instead, and a simulation honours a dry run as the CLI does.

@@ -73,6 +73,7 @@ source 與 target 分離，媒體伺服器只掃描 target，它產生的 `.nfo`
 | 3 設定 | 2 | ✅ |
 | 4 執行行為 | 2、3 | ✅ |
 | 5 內建階段 | 2 | ✅ |
+| 6 Playground | 2、3、4 | 🚧 |
 
 ✅ 該章每一句都有 `.spec/behavior` 的行為與測試對應，4.6 標明由量測確認的除外。章節依實作的依賴排列。
 
@@ -82,6 +83,7 @@ source 與 target 分離，媒體伺服器只掃描 target，它產生的 `.nfo`
 |---|---|
 | Linux binary | 靜態 musl |
 | 容器映像 | `scratch`，push main 更新 `latest` |
+| Playground | GitHub Pages，push main 更新 |
 
 映像沒有 shell、CA 憑證與時區資料，所以只做本機檔案操作。inotify 是核心功能，不受影響。版本由 release-please 管理，release 時映像加上版本標籤。
 
@@ -631,6 +633,39 @@ stages = [
 ```
 
 同一套階段處理影集以外的檔案，不需要新增階段。
+
+## 6 Playground
+
+在瀏覽器編輯設定，在虛擬目錄上模擬改名，再下載成全域設定或目錄設定。Playground 不監看任何資料夾，所以「只保證 Linux」只約束 CLI。
+
+```
+  virtual tree ─► trigger ─► core (WASM) ─► virtual move
+  built by user   one batch   same as CLI    tree updated
+```
+
+### 6.1 真實與模擬
+
+只有管線是真的，監看與搬移都在虛擬目錄上模擬。
+
+| 部分 | 執行 | 方式 |
+|---|---|---|
+| 監看 | 模擬 | 觸發時每個單元各成一個批次 |
+| 管線 | 真實 | 與 CLI 同一份核心，含目錄設定 |
+| 搬移 | 模擬 | 依核心的結論搬動虛擬檔案 |
+
+撞名、清理與乾跑的規則與 CLI 相同。虛擬目錄的根是 watch 的 source 與 target，可放 `auto-renamer.toml`，檔案帶修改時間。寫入穩定、批次時間窗與原地改名次數取決於時間，不模擬。
+
+### 6.2 匯入與下載
+
+設定文字只由核心讀寫，所以下載的檔案與 CLI 讀到的一致。
+
+| 動作 | 規則 |
+|---|---|
+| 匯入 | 能通過解析的設定都能編輯 |
+| 下載 | 先以 CLI 的解析器驗證 |
+| 往返 | 註解與排版不保留 |
+
+全域設定與目錄設定都能匯入與下載，驗證不通過就不能下載。
 
 ## 附錄
 
