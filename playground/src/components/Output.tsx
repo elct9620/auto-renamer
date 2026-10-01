@@ -1,8 +1,36 @@
+import { ChevronDown, ChevronRight } from 'lucide-react'
+import { Fragment, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { StageName } from '@/components/Fields'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import type { Simulation } from '../core'
+import type { Outcome, Simulation } from '../core'
+import { changes } from '../steps'
+
+/** How the pipeline planned one file: the claim, then each stage it reached with only what that stage changed. */
+function Timeline({ outcome }: { outcome: Outcome }) {
+  const { t } = useTranslation()
+  return (
+    <ol aria-label={t('output.steps', { file: outcome.origin })} className="grid gap-1 py-1 pl-6">
+      {outcome.steps.map((step, index) => (
+        <li key={index} className="flex flex-wrap items-baseline gap-x-2">
+          <span className="font-sans font-medium">
+            {step.name === null ? t('output.claimed', { pipeline: step.pipeline }) : <StageName name={step.name} />}
+          </span>
+          {step.stop !== null && (
+            <span className="text-destructive">{step.stop === 'excluded' ? t('output.excluded') : step.stop}</span>
+          )}
+          {changes(outcome.steps[index - 1], step).map((change) => (
+            <span key={change.key}>
+              {change.key}: {change.from !== undefined && <><s className="text-muted-foreground">{change.from}</s> → </>}{change.to}
+            </span>
+          ))}
+        </li>
+      ))}
+    </ol>
+  )
+}
 
 export function Output({ fileName, text, status, simulation }: {
   fileName: string
@@ -11,6 +39,7 @@ export function Output({ fileName, text, status, simulation }: {
   simulation: Simulation | null
 }) {
   const { t } = useTranslation()
+  const [open, setOpen] = useState<string | null>(null)
   return (
     <Tabs defaultValue="results" className="flex min-h-0 min-w-0 flex-col p-3">
       <TabsList>
@@ -27,10 +56,22 @@ export function Output({ fileName, text, status, simulation }: {
             </thead>
             <tbody>
               {simulation.outcomes.map((outcome) => (
-                <tr key={outcome.origin} className="border-t">
-                  <td className="p-1">{outcome.origin}</td><td className="p-1">{t(`what.${outcome.what}`, outcome.what)}</td>
-                  <td className="p-1">{outcome.to}</td><td className="p-1">{outcome.reason}</td>
-                </tr>
+                <Fragment key={outcome.origin}>
+                  <tr className="border-t">
+                    <td className="p-1">
+                      <button className="flex items-center gap-1 text-left" aria-expanded={open === outcome.origin}
+                        disabled={outcome.steps.length === 0} onClick={() => setOpen(open === outcome.origin ? null : outcome.origin)}>
+                        {open === outcome.origin ? <ChevronDown className="size-3.5 shrink-0" /> : <ChevronRight className="size-3.5 shrink-0" />}
+                        {outcome.origin}
+                      </button>
+                    </td>
+                    <td className="p-1">{t(`what.${outcome.what}`, outcome.what)}</td>
+                    <td className="p-1">{outcome.to}</td><td className="p-1">{outcome.reason}</td>
+                  </tr>
+                  {open === outcome.origin && (
+                    <tr ref={(row) => row?.scrollIntoView({ block: 'nearest' })}><td colSpan={4}><Timeline outcome={outcome} /></td></tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           </table>

@@ -71,7 +71,10 @@
     "file": "檔案",
     "became": "狀態",
     "to": "目的地",
-    "why": "原因"
+    "why": "原因",
+    "claimed": "由 {{pipeline}} 認領",
+    "excluded": "已排除",
+    "steps": "{{file}} 的處理步驟"
   },
   "what": {
     "moved": "已搬移",

@@ -42,8 +42,9 @@ pub struct Judged {
 pub struct Step<'a> {
     pub origin: &'a Path,
     pub pipeline: &'a str,
-    /// The stage just run, by its place among the pipeline's stages; none for the claim by its leading filters.
-    pub stage: Option<usize>,
+    /// The stage just run, by its place among the pipeline's stages and its name; none for the claim by its
+    /// leading filters.
+    pub stage: Option<(usize, &'static str)>,
     pub flow: &'a Flow,
 }
 
@@ -104,24 +105,25 @@ pub(crate) fn plan(
 
         // A file is told up to the step that stopped it, and no more after.
         let mut stopped = HashSet::new();
-        let mut tell =
-            |batch: &Batch, stage: Option<usize>, observe: &mut Option<&mut dyn FnMut(Step)>| {
-                let Some(observe) = observe else { return };
-                for (origin, flow) in batch.files() {
-                    if stopped.contains(origin) {
-                        continue;
-                    }
-                    observe(Step {
-                        origin,
-                        pipeline: name,
-                        stage,
-                        flow,
-                    });
-                    if flow.is_err() {
-                        stopped.insert(origin.to_path_buf());
-                    }
+        let mut tell = |batch: &Batch,
+                        stage: Option<(usize, &'static str)>,
+                        observe: &mut Option<&mut dyn FnMut(Step)>| {
+            let Some(observe) = observe else { return };
+            for (origin, flow) in batch.files() {
+                if stopped.contains(origin) {
+                    continue;
                 }
-            };
+                observe(Step {
+                    origin,
+                    pipeline: name,
+                    stage,
+                    flow,
+                });
+                if flow.is_err() {
+                    stopped.insert(origin.to_path_buf());
+                }
+            }
+        };
         let claimed = Batch::new(claimed);
         tell(&claimed, None, &mut observe);
         let files = rest
@@ -129,7 +131,11 @@ pub(crate) fn plan(
             .enumerate()
             .fold(claimed, |batch, (index, stage)| {
                 let batch = stage.run(batch, &mut context);
-                tell(&batch, Some(filters.len() + index), &mut observe);
+                tell(
+                    &batch,
+                    Some((filters.len() + index, stage.name())),
+                    &mut observe,
+                );
                 batch
             })
             .into_files();

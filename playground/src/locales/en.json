@@ -71,7 +71,10 @@
     "file": "File",
     "became": "Became",
     "to": "To",
-    "why": "Why"
+    "why": "Why",
+    "claimed": "Claimed by {{pipeline}}",
+    "excluded": "Excluded",
+    "steps": "Steps of {{file}}"
   },
   "what": {
     "moved": "moved",

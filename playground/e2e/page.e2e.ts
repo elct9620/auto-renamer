@@ -327,3 +327,15 @@ test('overriding a pipeline in a folder opens that folder\'s configuration', asy
   await expect(node(page, 'video')).toBeVisible()
   await expect(node(page, 'series')).toHaveCount(0)
 })
+
+// @behavior PGE-066
+test('choosing a result shows how its file was planned', async ({ page }) => {
+  await page.getByRole('button', { name: 'Trigger' }).click()
+
+  await page.getByRole('button', { name: 'Series/Alpha/[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv' }).click()
+
+  const steps = page.getByRole('list', { name: /^Steps of / }).getByRole('listitem')
+  await expect(steps.first()).toHaveText('Claimed by video')
+  await expect(steps.filter({ hasText: 'episode: 12' })).toHaveCount(1)
+  await expect(steps.last()).toContainText('cleanup')
+})

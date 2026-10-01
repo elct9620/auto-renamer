@@ -175,7 +175,10 @@ fn should_plan_one_file_as_a_batch_of_one_each_stage_on_the_result_of_the_last()
 }
 
 /// Each step told while planning, as the stage it followed and what the file held then.
-fn steps(list: &[(&str, &str)], records: Vec<auto_renamer::Record>) -> Vec<(Option<usize>, Flow)> {
+fn steps(
+    list: &[(&str, &str)],
+    records: Vec<auto_renamer::Record>,
+) -> Vec<(Option<(usize, &'static str)>, Flow)> {
     let mut told = Vec::new();
     plan_batch_observed(&pipelines(list), records, &Files::none(), &mut |step| {
         told.push((step.stage, step.flow.clone()))
@@ -200,7 +203,7 @@ fn should_tell_each_step_of_every_file() {
     let told = steps(&list, vec![record("Show 07.mkv")]);
 
     let stages: Vec<_> = told.iter().map(|(stage, _)| *stage).collect();
-    assert_eq!(stages, [None, Some(1), Some(2)]);
+    assert_eq!(stages, [None, Some((1, "number")), Some((2, "format"))]);
     assert_eq!(field(&told[0].1, "episode"), None);
     assert_eq!(field(&told[1].1, "episode"), Some(Value::Number(7)));
     assert_eq!(
@@ -220,6 +223,6 @@ fn should_tell_a_stopped_file_no_further_than_the_stage_that_stopped_it() {
     let told = steps(&list, vec![record("a.mkv")]);
 
     let (stage, flow) = told.last().expect("the file was told");
-    assert_eq!(*stage, Some(0));
+    assert_eq!(*stage, Some((0, "format")));
     assert!(matches!(flow, Err(Stop::Rejected(rejection)) if rejection.stage == "format"));
 }

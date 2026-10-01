@@ -78,12 +78,13 @@ pub struct Outcome {
     pub replaced: bool,
 }
 
-/// One step of a file's planning: the pipeline, the stage by its place or none for the claim, and either
+/// One step of a file's planning: the pipeline, the stage by its place and name or none for the claim, and either
 /// the plan and fields the file went on with or why it stopped there.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct SimulatedStep {
     pub pipeline: String,
     pub stage: Option<usize>,
+    pub name: Option<&'static str>,
     pub plan: Option<String>,
     pub fields: BTreeMap<String, String>,
     pub stop: Option<String>,
@@ -107,7 +108,8 @@ impl SimulatedStep {
         };
         SimulatedStep {
             pipeline: step.pipeline.to_string(),
-            stage: step.stage,
+            stage: step.stage.map(|(place, _)| place),
+            name: step.stage.map(|(_, name)| name),
             plan,
             fields,
             stop,

@@ -37,6 +37,7 @@ export interface Declaration {
 export interface SimulatedStep {
   pipeline: string
   stage: number | null
+  name: string | null
   plan: string | null
   fields: Record<string, string>
   stop: string | null

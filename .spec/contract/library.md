@@ -527,7 +527,7 @@ pub fn plan_batch(pipelines: &[(String, Pipeline)], records: Vec<Record>, target
 
 ## `Step`
 
-What one file holds at one point of planning: the pipeline that claimed it, the stage just run by its place in that pipeline or none for the claim, and the flow it goes on with.
+What one file holds at one point of planning: the pipeline that claimed it, the stage just run by its place in that pipeline and its name or none for the claim, and the flow it goes on with.
 
 | Attribute | Value |
 | --- | --- |

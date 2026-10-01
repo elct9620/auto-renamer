@@ -521,3 +521,19 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the pipeline `video` selected in the global configuration |
 | When | it is overridden in the folder `Series` |
 | Then | `Series/auto-renamer.toml` is the one being edited, and its canvas draws `video` |
+
+## `PGE-065` A file's timeline marks only what each step changed
+
+| Step | Statement |
+| --- | --- |
+| Given | the steps of a file whose number stage set `episode` and whose format stage rewrote `name` |
+| When | its timeline is drawn |
+| Then | the number step shows only `episode`, and the format step shows only `name` from the old to the new value |
+
+## `PGE-066` Choosing a result shows how its file was planned
+
+| Step | Statement |
+| --- | --- |
+| Given | the opening example triggered |
+| When | a file is chosen among the results |
+| Then | its steps are shown in order, from the pipeline that claimed it to the stage that named it |
