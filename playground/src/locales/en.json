@@ -77,5 +77,6 @@
   },
   "canvas": {
     "resetLayout": "Reset layout"
-  }
+  },
+  "restore": "Restore example"
 }

@@ -1,4 +1,4 @@
-import { Check, Download, Play, Upload } from 'lucide-react'
+import { Check, Download, Play, RotateCcw, Upload } from 'lucide-react'
 import { type ChangeEvent, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -41,7 +41,13 @@ const EXAMPLE_TREE: Entry[] = [
   { path: '/downloads/Alpha/Season 1/[Team] Alpha 02 [1080p].mkv', folder: false, modified: Date.now(), text: '' },
 ]
 
+/** Everything the page holds starts from the example, so restoring it is starting the page over. */
 export default function App() {
+  const [restored, setRestored] = useState(0)
+  return <Playground key={restored} onRestore={() => setRestored(restored + 1)} />
+}
+
+function Playground({ onRestore }: { onRestore: () => void }) {
   const { t, i18n } = useTranslation()
   const [kind, setKind] = useState<Kind>('global')
   const [config, setConfig] = useState<Table>(() => read(EXAMPLE))
@@ -129,6 +135,7 @@ export default function App() {
           <label><Upload />{t('import')}<input type="file" accept=".toml" onChange={importFile} hidden /></label>
         </Button>
         <Button size="sm" onClick={save} disabled={!status.ok}><Download />{t('download')}</Button>
+        <Button variant="ghost" size="sm" onClick={onRestore}><RotateCcw />{t('restore')}</Button>
         <Badge variant={status.ok ? 'secondary' : 'destructive'}>
           {status.ok ? (status.lines.length ? t('status.warnings', { count: status.lines.length }) : t('status.valid')) : t('status.refused')}
         </Badge>
