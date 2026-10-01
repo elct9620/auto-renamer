@@ -19,7 +19,7 @@
     "refused": "無法下載：{{reason}}"
   },
   "palette": {
-    "addWatch": "新增 watch",
+    "addWatch": "新增監控",
     "addPipeline": "新增管線",
     "stages": "階段",
     "hint": "把階段拖到管線上。"
@@ -27,9 +27,9 @@
   "inspector": {
     "defaults": "預設值",
     "folder": "目錄設定",
-    "hint": "選取 watch、管線或階段來編輯。",
-    "watch": "Watch {{name}}",
-    "removeWatch": "移除 watch",
+    "hint": "選取監控、管線或階段來編輯。",
+    "watch": "監控 {{name}}",
+    "removeWatch": "移除監控",
     "pipeline": "管線 {{name}}",
     "name": "名稱",
     "nameMissing": "管線需要名稱",
@@ -61,13 +61,13 @@
     "trigger": "觸發",
     "keep": "保留結果",
     "placeholder": "{{path}} 或 {{configuration}}",
-    "watch": "要觸發的 watch",
+    "watch": "要觸發的監控",
     "addHere": "在 {{name}} 裡新增",
     "path": "新檔案或資料夾的路徑"
   },
   "output": {
     "results": "結果",
-    "empty": "觸發 watch，看每個檔案會到哪裡。",
+    "empty": "觸發監控，看每個檔案會到哪裡。",
     "file": "檔案",
     "became": "狀態",
     "to": "目的地",

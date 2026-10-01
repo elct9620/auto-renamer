@@ -138,3 +138,19 @@ The page on GitHub Pages where a configuration is edited, simulated, and downloa
 ### Simulation
 
 A run of the playground: the user's virtual source is triggered, each unit becomes a batch, the core plans it, and the virtual files are moved by the verdicts. A preview is what a dry run reports instead, and a simulation honours a dry run as the CLI does.
+
+## Traditional Chinese
+
+### Includes
+
+- `README.md`
+- `docs/*.md`
+- `playground/src/locales/zh-TW.json`
+
+### 監控
+
+A watch, as the Traditional Chinese text calls it; the key `watch` stays as the CLI writes it.
+
+#### Rejected
+
+- `監看` - 監控 is what the Traditional Chinese text calls a watch.

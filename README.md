@@ -40,12 +40,12 @@ auto-renamer --config /etc/auto-renamer/config.toml
 
 ## Playground
 
-不寫 TOML 也能組設定：在 [Playground](https://elct9620.github.io/auto-renamer/) 的流程圖上拖放階段、把 watch 連到管線，觸發後在來源與目標兩棵虛擬目錄上看每個檔案的去向，再下載成全域設定或 `auto-renamer.toml`。介面有繁體中文與英文。
+不寫 TOML 也能組設定：在 [Playground](https://elct9620.github.io/auto-renamer/) 的流程圖上拖放階段、把監控連到管線，觸發後在來源與目標兩棵虛擬目錄上看每個檔案的去向，再下載成全域設定或 `auto-renamer.toml`。介面有繁體中文與英文。
 
 | 部分 | 在 playground 裡 |
 |---|---|
 | 管線、目錄設定 | 與 CLI 同一份核心，編成 WebAssembly |
-| 監看、搬移 | 在虛擬目錄上模擬 |
+| 監控、搬移 | 在虛擬目錄上模擬 |
 
 ## 容器執行
 
@@ -100,7 +100,7 @@ cargo test --workspace --locked
 cd playground && pnpm install && pnpm wasm && pnpm test && pnpm dev
 ```
 
-Linux 專屬的測試（監看、訊號、跨檔案系統）在其他系統上略過，用 `docker compose -f docker-compose.test.yml run --rm sut` 執行。`pnpm wasm` 需要與 `crates/wasm` 同版本的 `wasm-bindgen`。提交依 Conventional Commits，版本由 release-please 管理。
+Linux 專屬的測試（監控、訊號、跨檔案系統）在其他系統上略過，用 `docker compose -f docker-compose.test.yml run --rm sut` 執行。`pnpm wasm` 需要與 `crates/wasm` 同版本的 `wasm-bindgen`。提交依 Conventional Commits，版本由 release-please 管理。
 
 ## 授權
 
