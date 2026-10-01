@@ -4,7 +4,12 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import { init } from './core'
 import './index.css'
-import './styles.css'
+
+// shadcn/ui themes by a `dark` class, so the page follows the system's scheme through it.
+const dark = window.matchMedia('(prefers-color-scheme: dark)')
+const followScheme = () => document.documentElement.classList.toggle('dark', dark.matches)
+followScheme()
+dark.addEventListener('change', followScheme)
 
 // The core answers synchronously once its module is loaded, so the page waits for it before drawing.
 await init()

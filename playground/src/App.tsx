@@ -1,33 +1,17 @@
-import {
-  Background,
-  Controls,
-  Handle,
-  type Node,
-  type NodeProps,
-  Position,
-  ReactFlow,
-} from '@xyflow/react'
-import '@xyflow/react/dist/style.css'
 import { type ChangeEvent, useMemo, useState } from 'react'
 
-import {
-  type Table,
-  type Value,
-  addStage,
-  asTable,
-  download,
-  moveStage,
-  newStage,
-  readStage,
-  removeStage,
-  replaceStage,
-  setIn,
-  stagesOf,
-  stageText,
-} from './config'
-import { type Entry, type Kind, type Simulation, check, read, render, simulate, stages } from './core'
-import { type NodeData, type Selected, toGraph } from './graph'
-import { addEntry } from './tree'
+import { Canvas } from '@/components/Canvas'
+import { Inspector } from '@/components/Inspector'
+import { Output } from '@/components/Output'
+import { Palette } from '@/components/Palette'
+import { TreePanel } from '@/components/TreePanel'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { errorOf } from '@/lib/utils'
+import { type Table, asTable, download, setIn } from './config'
+import { type Entry, type Kind, type Simulation, check, read, render, simulate } from './core'
+import type { Selected } from './graph'
+import { rootsOf } from './tree'
 
 const EXAMPLE = `[default]
 pipelines = ["video"]
@@ -53,190 +37,6 @@ const EXAMPLE_TREE: Entry[] = [
   { path: '/downloads/Alpha/Season 1/[Team] Alpha 02 [1080p].mkv', folder: false, modified: Date.now(), text: '' },
 ]
 
-function Box({ data, className }: { data: NodeData; className: string }) {
-  return (
-    <div className={`node ${className}`}>
-      <Handle type="target" position={Position.Left} />
-      <strong>{data.label}</strong>
-      {data.detail && <small>{data.detail}</small>}
-      <Handle type="source" position={Position.Right} />
-    </div>
-  )
-}
-
-const nodeTypes = {
-  watch: ({ data }: NodeProps<Node<NodeData>>) => <Box data={data} className="watch" />,
-  pipeline: ({ data }: NodeProps<Node<NodeData>>) => <Box data={data} className="pipeline" />,
-  stage: ({ data }: NodeProps<Node<NodeData>>) => <Box data={data} className="stage" />,
-}
-
-function errorOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
-}
-
-/** A text field whose value is read as an inline TOML value, applied once it reads. It starts over from
- * the configuration whenever the configuration's value changes, as after an import. */
-function TomlField(props: { label: string; value: string; onApply: (value: Value | undefined) => void }) {
-  return <EditedTomlField key={props.value} {...props} />
-}
-
-function EditedTomlField({ label, value, onApply }: { label: string; value: string; onApply: (value: Value | undefined) => void }) {
-  const [text, setText] = useState(value)
-  const [error, setError] = useState('')
-  const apply = () => {
-    if (text.trim() === '') {
-      setError('')
-      onApply(undefined)
-      return
-    }
-    try {
-      onApply(read(`value = ${text}`).value)
-      setError('')
-    } catch (failure) {
-      setError(errorOf(failure))
-    }
-  }
-  return (
-    <label>
-      {label}
-      <textarea value={text} rows={2} onChange={(event) => setText(event.target.value)} onBlur={apply} />
-      {error && <span className="error">{error}</span>}
-    </label>
-  )
-}
-
-function inline(value: Value | undefined): string {
-  if (value === undefined) return ''
-  return render({ value: [value] }).trim().replace(/^value = \[/, '').replace(/\]$/, '')
-}
-
-function Inspector({ config, kind, selected, onChange, onSelect }: {
-  config: Table
-  kind: Kind
-  selected: Selected | null
-  onChange: (config: Table) => void
-  onSelect: (selected: Selected | null) => void
-}) {
-  const [stageError, setStageError] = useState('')
-
-  if (selected === null) {
-    const root = kind === 'global' ? ['default'] : []
-    return (
-      <section>
-        <h2>{kind === 'global' ? 'Defaults' : 'Folder configuration'}</h2>
-        <p className="hint">Select a watch, a pipeline or a stage to edit it.</p>
-        <TomlField key={`vars-${kind}`} label="vars" value={inline(asTable(root.length ? config.default : config).vars)}
-          onApply={(value) => onChange(setIn(config, [...root, 'vars'], value))} />
-        {kind === 'global' && (
-          <TomlField key="default-pipelines" label="pipelines" value={inline(asTable(config.default).pipelines)}
-            onApply={(value) => onChange(setIn(config, ['default', 'pipelines'], value))} />
-        )}
-        <TomlField key={`batch-${kind}`} label="batch_max" value={inline(asTable(root.length ? config.default : config).batch_max)}
-          onApply={(value) => onChange(setIn(config, [...root, 'batch_max'], value))} />
-      </section>
-    )
-  }
-
-  if (selected.kind === 'watch') {
-    const path = ['watch', selected.name]
-    const watch = asTable(asTable(config.watch)[selected.name])
-    const field = (key: string) => (
-      <TomlField key={`${selected.name}-${key}`} label={key} value={inline(watch[key])}
-        onApply={(value) => onChange(setIn(config, [...path, key], value))} />
-    )
-    return (
-      <section>
-        <h2>Watch {selected.name}</h2>
-        {['source', 'target', 'unit', 'pipelines', 'vars', 'dry_run'].map(field)}
-        <button onClick={() => { onChange(setIn(config, path, undefined)); onSelect(null) }}>Remove watch</button>
-      </section>
-    )
-  }
-
-  if (selected.kind === 'pipeline') {
-    return (
-      <section>
-        <h2>Pipeline {selected.name}</h2>
-        <label>
-          Add a stage
-          <select value="" onChange={(event) => {
-            if (event.target.value) onChange(addStage(config, selected.name, newStage(event.target.value, stages(), read)))
-          }}>
-            <option value="">choose…</option>
-            {stages().map(({ name }) => <option key={name}>{name}</option>)}
-          </select>
-        </label>
-        <button onClick={() => { onChange(setIn(config, ['pipeline', selected.name], undefined)); onSelect(null) }}>
-          Remove pipeline
-        </button>
-      </section>
-    )
-  }
-
-  const pipelineStages = stagesOf(config, selected.pipeline)
-  const stage = pipelineStages[selected.index]
-  if (stage === undefined) return null
-  const at = (index: number) => onSelect({ ...selected, index })
-  return (
-    <section>
-      <h2>Stage {selected.index + 1} of {selected.pipeline}</h2>
-      <label>
-        Written as
-        <textarea key={`${selected.pipeline}-${selected.index}-${stageText(stage, render)}`}
-          defaultValue={stageText(stage, render)} rows={4}
-          onBlur={(event) => {
-            try {
-              onChange(replaceStage(config, selected.pipeline, selected.index, readStage(event.target.value, read)))
-              setStageError('')
-            } catch (failure) {
-              setStageError(errorOf(failure))
-            }
-          }} />
-        {stageError && <span className="error">{stageError}</span>}
-      </label>
-      <div className="row">
-        <button disabled={selected.index === 0} onClick={() => {
-          onChange(moveStage(config, selected.pipeline, selected.index, -1)); at(selected.index - 1)
-        }}>Earlier</button>
-        <button disabled={selected.index === pipelineStages.length - 1} onClick={() => {
-          onChange(moveStage(config, selected.pipeline, selected.index, 1)); at(selected.index + 1)
-        }}>Later</button>
-        <button onClick={() => { onChange(removeStage(config, selected.pipeline, selected.index)); onSelect(null) }}>
-          Remove
-        </button>
-      </div>
-    </section>
-  )
-}
-
-function TreeEditor({ entries, onChange }: { entries: Entry[]; onChange: (entries: Entry[]) => void }) {
-  const [path, setPath] = useState('')
-  const files = entries.filter((entry) => !entry.folder)
-  return (
-    <div>
-      <ul className="tree">
-        {files.map((entry) => (
-          <li key={entry.path}>
-            <code>{entry.path}</code>
-            {entry.path.endsWith('/auto-renamer.toml') && (
-              <textarea value={entry.text} rows={3} onChange={(event) =>
-                onChange(entries.map((other) => other.path === entry.path ? { ...other, text: event.target.value } : other))} />
-            )}
-            <button onClick={() => onChange(entries.filter((other) => other.path !== entry.path))}>×</button>
-          </li>
-        ))}
-      </ul>
-      <div className="row">
-        <input placeholder="/downloads/Show/file.mkv" value={path} onChange={(event) => setPath(event.target.value)} />
-        <button disabled={!path.startsWith('/')} onClick={() => {
-          onChange(addEntry(entries, path, false))
-          setPath('')
-        }}>Add file</button>
-      </div>
-    </div>
-  )
-}
-
 export default function App() {
   const [kind, setKind] = useState<Kind>('global')
   const [config, setConfig] = useState<Table>(() => read(EXAMPLE))
@@ -246,17 +46,17 @@ export default function App() {
   const [watch, setWatch] = useState('series')
   const [simulation, setSimulation] = useState<Simulation | null>(null)
 
-  const graph = useMemo(() => toGraph(config), [config])
   const text = useMemo(() => render(config), [config])
   const status = useMemo(() => {
     try {
-      const warnings = check(kind, text)
-      return { ok: true, lines: warnings }
+      return { ok: true, lines: check(kind, text) }
     } catch (error) {
       return { ok: false, lines: [errorOf(error)] }
     }
   }, [kind, text])
   const watches = Object.keys(asTable(config.watch))
+  const roots = rootsOf(config, watch)
+  const fileName = kind === 'global' ? 'config.toml' : 'auto-renamer.toml'
 
   const importFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -288,11 +88,17 @@ export default function App() {
 
   const add = (table: 'watch' | 'pipeline') => {
     const existing = Object.keys(asTable(config[table]))
-    let name = table === 'watch' ? 'new_watch' : 'new_pipeline'
-    for (let n = 2; existing.includes(name); n += 1) name = `${table === 'watch' ? 'new_watch' : 'new_pipeline'}_${n}`
+    const base = table === 'watch' ? 'new_watch' : 'new_pipeline'
+    let name = base
+    for (let n = 2; existing.includes(name); n += 1) name = `${base}_${n}`
     const value: Table = table === 'watch' ? { source: '/downloads' } : { stages: [] }
     setConfig(setIn(config, [table, name], value))
     setSelected({ kind: table, name })
+  }
+
+  const changeEntries = (next: Entry[]) => {
+    setEntries(next)
+    setSimulation(null)
   }
 
   const run = () => {
@@ -306,67 +112,56 @@ export default function App() {
   }
 
   return (
-    <div className="app">
-      <header>
-        <h1>auto-renamer playground</h1>
-        <div className="row">
-          <select value={kind} onChange={(event) => { setKind(event.target.value as Kind); setSelected(null) }}>
-            <option value="global">Global configuration</option>
-            <option value="folder">Folder configuration</option>
-          </select>
-          {kind === 'global' && <button onClick={() => add('watch')}>Add watch</button>}
-          <button onClick={() => add('pipeline')}>Add pipeline</button>
-          <label className="button">Import<input type="file" accept=".toml" onChange={importFile} hidden /></label>
-          <button onClick={save} disabled={!status.ok}>Download</button>
-        </div>
-        {message && <p className="message">{message}</p>}
+    <div className="grid h-dvh grid-rows-[auto_minmax(0,1fr)_auto_minmax(0,11rem)] bg-background text-foreground">
+      <header className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+        <h1 className="mr-2 text-sm font-semibold">auto-renamer playground</h1>
+        <select className="h-8 rounded-md border bg-background px-2 text-sm" value={kind}
+          onChange={(event) => { setKind(event.target.value as Kind); setSelected(null) }}>
+          <option value="global">Global configuration</option>
+          <option value="folder">Folder configuration</option>
+        </select>
+        <Button variant="outline" size="sm" asChild>
+          <label>Import<input type="file" accept=".toml" onChange={importFile} hidden /></label>
+        </Button>
+        <Button size="sm" onClick={save} disabled={!status.ok}>Download</Button>
+        <Badge variant={status.ok ? 'secondary' : 'destructive'}>
+          {status.ok ? (status.lines.length ? `${status.lines.length} warning(s)` : 'valid') : 'refused'}
+        </Badge>
+        {message && <span className="text-xs text-muted-foreground">{message}</span>}
       </header>
-      <main>
-        <div className="canvas">
-          <ReactFlow nodes={graph.nodes} edges={graph.edges} nodeTypes={nodeTypes} fitView
-            onNodeClick={(_, node) => setSelected((node.data as NodeData).selected)}
-            onPaneClick={() => setSelected(null)}>
-            <Background />
-            <Controls />
-          </ReactFlow>
+
+      <main className="grid min-h-0 grid-cols-[11rem_minmax(0,1fr)_20rem] border-b">
+        <aside className="min-h-0 overflow-auto border-r">
+          <Palette global={kind === 'global'} onAdd={add} />
+        </aside>
+        <div className="min-h-0">
+          <Canvas config={config} onSelect={setSelected} />
         </div>
-        <aside>
+        <aside className="min-h-0 overflow-auto border-l p-3">
           <Inspector config={config} kind={kind} selected={selected} onChange={setConfig} onSelect={setSelected} />
         </aside>
       </main>
-      <footer>
-        <section>
-          <h2>{kind === 'global' ? 'config.toml' : 'auto-renamer.toml'}</h2>
-          <pre className={status.ok ? '' : 'refused'}>{text}</pre>
-          {status.lines.map((line) => <p key={line} className={status.ok ? 'warning' : 'error'}>{line}</p>)}
-        </section>
-        {kind === 'global' && (
-          <section>
-            <h2>Simulation</h2>
-            <p className="hint">Files in the source, and any <code>auto-renamer.toml</code> beside them. Each unit is processed as one batch.</p>
-            <TreeEditor entries={entries} onChange={(next) => { setEntries(next); setSimulation(null) }} />
-            <div className="row">
-              <select value={watch} onChange={(event) => setWatch(event.target.value)}>
-                {watches.map((name) => <option key={name}>{name}</option>)}
-              </select>
-              <button onClick={run} disabled={!status.ok || !watches.includes(watch)}>Trigger</button>
-              {simulation && <button onClick={() => { setEntries(simulation.entries); setSimulation(null) }}>Keep the result</button>}
-            </div>
+
+      {kind === 'global' ? (
+        <section className="grid h-56 min-h-0 grid-cols-[minmax(0,1fr)_10rem_minmax(0,1fr)] border-b">
+          <TreePanel title="Source" root={roots.source} entries={entries} onChange={changeEntries} />
+          <div className="flex flex-col justify-center gap-2 border-x p-3">
+            <select className="h-8 rounded-md border bg-background px-2 text-sm" value={watch}
+              onChange={(event) => setWatch(event.target.value)}>
+              {watches.map((name) => <option key={name}>{name}</option>)}
+            </select>
+            <Button size="sm" onClick={run} disabled={!status.ok || !watches.includes(watch)}>Trigger ▶</Button>
             {simulation && (
-              <table>
-                <thead><tr><th>File</th><th>Became</th><th>To</th><th>Why</th></tr></thead>
-                <tbody>
-                  {simulation.outcomes.map((outcome) => (
-                    <tr key={outcome.origin}>
-                      <td>{outcome.origin}</td><td>{outcome.what}</td><td>{outcome.to}</td><td>{outcome.reason}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <Button size="sm" variant="outline" onClick={() => changeEntries(simulation.entries)}>Keep the result</Button>
             )}
-          </section>
-        )}
-      </footer>
+          </div>
+          <TreePanel title="Target" root={roots.target} entries={entries} onChange={changeEntries} />
+        </section>
+      ) : (
+        <div />
+      )}
+
+      <Output fileName={fileName} text={text} status={status} simulation={simulation} />
     </div>
   )
 }
