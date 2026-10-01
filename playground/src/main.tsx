@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import App from './App.tsx'
+import { TooltipProvider } from './components/ui/tooltip'
 import { init } from './core'
 import './index.css'
 import { startI18n } from './i18n'
@@ -19,6 +20,8 @@ await init()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <TooltipProvider>
+      <App />
+    </TooltipProvider>
   </StrictMode>,
 )

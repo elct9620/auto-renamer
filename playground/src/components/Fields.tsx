@@ -8,6 +8,11 @@ import type { ParameterKind } from '../core'
 
 // Fields the stage and settings forms share.
 
+/** What a field is for, under it. */
+export function Hint({ children }: { children: React.ReactNode }) {
+  return <p className="text-xs text-muted-foreground">{children}</p>
+}
+
 function shown(value: Value | undefined): string {
   if (value === undefined || typeof value === 'object' && !Array.isArray(value)) return ''
   return Array.isArray(value) ? value.join(', ') : String(value)
@@ -23,13 +28,14 @@ function parsed(kind: ParameterKind, text: string): Value | undefined {
 }
 
 /** A value typed as text and read as `kind` once the field is left; `caption` replaces the plain label. */
-export function TextField({ label, required, kind, value, placeholder, caption, onApply }: {
+export function TextField({ label, required, kind, value, placeholder, caption, hint, onApply }: {
   label: string
   required?: boolean
   kind: ParameterKind
   value: Value | undefined
   placeholder?: string
   caption?: React.ReactNode
+  hint?: string
   onApply: (value: Value | undefined) => void
 }) {
   const { t } = useTranslation()
@@ -40,6 +46,7 @@ export function TextField({ label, required, kind, value, placeholder, caption, 
         type={kind === 'integer' ? 'number' : 'text'} min={kind === 'integer' ? 1 : undefined}
         placeholder={placeholder ?? (kind === 'texts' ? 'a, b, c' : undefined)}
         onBlur={(event) => onApply(parsed(kind, event.target.value))} />
+      {hint && <Hint>{hint}</Hint>}
       {required && value === undefined && <p className="text-xs text-destructive">{t('inspector.required')}</p>}
     </label>
   )

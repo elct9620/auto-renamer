@@ -237,3 +237,11 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | a watch, the default or a folder configuration holding a setting its form offers, at the setting's example |
 | When | the configuration is checked |
 | Then | it is not refused |
+
+## `PGE-030` Every stage and parameter the core declares is described in both languages
+
+| Step | Statement |
+| --- | --- |
+| Given | the stages the core declares, with their parameters and single values |
+| When | the page's texts in Traditional Chinese and English are read |
+| Then | each stage, parameter and single value has a description in both |

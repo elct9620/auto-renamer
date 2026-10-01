@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { STAGE_DRAG } from '@/components/Canvas'
 import { KIND_ICONS } from '@/components/kinds'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { stages } from '../core'
 
 export function Palette({ global, onAdd }: { global: boolean; onAdd: (table: 'watch' | 'pipeline') => void }) {
@@ -18,11 +19,16 @@ export function Palette({ global, onAdd }: { global: boolean; onAdd: (table: 'wa
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('palette.stages')}</h2>
         <p className="text-xs text-muted-foreground">{t('palette.hint')}</p>
         {stages().map(({ name }) => (
-          <div key={name} draggable className="flex cursor-grab items-center gap-1.5 rounded-md border bg-card px-2 py-1 font-mono text-xs active:cursor-grabbing"
-            onDragStart={(event) => {
-              event.dataTransfer.setData(STAGE_DRAG, name)
-              event.dataTransfer.effectAllowed = 'copy'
-            }}><GripVertical className="size-3.5 text-muted-foreground" />{name}</div>
+          <Tooltip key={name}>
+            <TooltipTrigger asChild>
+              <div draggable className="flex cursor-grab items-center gap-1.5 rounded-md border bg-card px-2 py-1 font-mono text-xs active:cursor-grabbing"
+                onDragStart={(event) => {
+                  event.dataTransfer.setData(STAGE_DRAG, name)
+                  event.dataTransfer.effectAllowed = 'copy'
+                }}><GripVertical className="size-3.5 text-muted-foreground" />{name}</div>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="max-w-64">{t(`stages.${name}.about`)}</TooltipContent>
+          </Tooltip>
         ))}
       </div>
     </div>
