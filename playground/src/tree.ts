@@ -2,7 +2,7 @@
 // target of a watch.
 
 import { type Table, asTable } from './config'
-import type { Entry } from './core'
+import type { Entry, Simulation } from './core'
 
 export interface TreeNode {
   name: string
@@ -70,4 +70,14 @@ export function renameEntry(entries: Entry[], path: string, name: string): Entry
     entry.path === path || within(entry.path, path)
       ? { ...entry, path: renamed + entry.path.slice(path.length) }
       : entry)
+}
+
+/** What a simulation said of each path: a file where it started, and where it arrived. */
+export function marksOf(simulation: Simulation | null): Record<string, string> {
+  const marks: Record<string, string> = {}
+  for (const outcome of simulation?.outcomes ?? []) {
+    marks[outcome.origin] = outcome.what
+    if (outcome.to !== null) marks[outcome.to] = outcome.what
+  }
+  return marks
 }

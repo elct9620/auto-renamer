@@ -181,3 +181,11 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | a move stage whose `on_conflict` is `suffix` |
 | When | `on_conflict` is cleared in the form |
 | Then | the stage is written as the text `move` |
+
+## `PGE-021` A file a simulation moved is marked where it arrived
+
+| Step | Statement |
+| --- | --- |
+| Given | a simulation that moved `/downloads/Alpha/x.mkv` to `/video/Alpha/Alpha.mkv` |
+| When | the trees are drawn from it |
+| Then | `/video/Alpha/Alpha.mkv` is marked as moved |

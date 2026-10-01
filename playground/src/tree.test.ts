@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import './setup.test-helper'
 import type { Entry } from './core'
-import { read } from './core'
-import { removeEntry, renameEntry, rootsOf, treeOf } from './tree'
+import { read, simulate } from './core'
+import { marksOf, removeEntry, renameEntry, rootsOf, treeOf } from './tree'
 
 function file(path: string): Entry {
   return { path, folder: false, modified: 0, text: '' }
@@ -46,5 +46,16 @@ describe('editing the tree', () => {
     const entries = [file('/downloads/Alpha/x.mkv'), file('/downloads/Alphabet/y.mkv')]
 
     expect(paths(renameEntry(entries, '/downloads/Alpha', 'Beta'))).toEqual(['/downloads/Beta/x.mkv', '/downloads/Alphabet/y.mkv'])
+  })
+})
+
+describe('marking a simulation', () => {
+  // @behavior PGE-021
+  it('marks a file the simulation moved where it arrived', () => {
+    const config = `[pipeline.p]\nstages = [{ format = "Alpha" }, "move"]\n\n[watch.w]\nsource = "/downloads"\ntarget = "/video"\npipelines = ["p"]\nunit = "directory"\n`
+
+    const marks = marksOf(simulate(config, 'w', [file('/downloads/Alpha/x.mkv')]))
+
+    expect(marks['/video/Alpha/Alpha.mkv']).toBe('moved')
   })
 })

@@ -11,7 +11,7 @@ import { errorOf } from '@/lib/utils'
 import { type Table, asTable, download, setIn } from './config'
 import { type Entry, type Kind, type Simulation, check, read, render, simulate } from './core'
 import type { Selected } from './graph'
-import { rootsOf } from './tree'
+import { marksOf, rootsOf } from './tree'
 
 const EXAMPLE = `[default]
 pipelines = ["video"]
@@ -96,10 +96,11 @@ export default function App() {
     setSelected({ kind: table, name })
   }
 
-  const changeEntries = (next: Entry[]) => {
-    setEntries(next)
+  const editEntries = (change: (entries: Entry[]) => Entry[]) => {
+    setEntries(change(entries))
     setSimulation(null)
   }
+  const marks = marksOf(simulation)
 
   const run = () => {
     try {
@@ -144,7 +145,7 @@ export default function App() {
 
       {kind === 'global' ? (
         <section className="grid h-56 min-h-0 grid-cols-[minmax(0,1fr)_10rem_minmax(0,1fr)] border-b">
-          <TreePanel title="Source" root={roots.source} entries={entries} onChange={changeEntries} />
+          <TreePanel title="Source" root={roots.source} entries={entries} marks={marks} onEdit={editEntries} />
           <div className="flex flex-col justify-center gap-2 border-x p-3">
             <select className="h-8 rounded-md border bg-background px-2 text-sm" value={watch}
               onChange={(event) => setWatch(event.target.value)}>
@@ -152,10 +153,10 @@ export default function App() {
             </select>
             <Button size="sm" onClick={run} disabled={!status.ok || !watches.includes(watch)}>Trigger ▶</Button>
             {simulation && (
-              <Button size="sm" variant="outline" onClick={() => changeEntries(simulation.entries)}>Keep the result</Button>
+              <Button size="sm" variant="outline" onClick={() => editEntries(() => simulation.entries)}>Keep the result</Button>
             )}
           </div>
-          <TreePanel title="Target" root={roots.target} entries={entries} onChange={changeEntries} />
+          <TreePanel title="Target" root={roots.target} entries={simulation?.entries ?? entries} marks={marks} onEdit={editEntries} />
         </section>
       ) : (
         <div />
