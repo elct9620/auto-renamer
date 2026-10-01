@@ -18,7 +18,7 @@
           {
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop.sh",
-            "statusMessage": "Running fmt, clippy and tests..."
+            "statusMessage": "Running sumi, React Doctor, fmt, clippy and tests..."
           }
         ]
       }

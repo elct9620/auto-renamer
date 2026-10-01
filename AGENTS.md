@@ -21,7 +21,7 @@ Each part has a boundary; what lies past it belongs to the operating system and 
 
 ## Checks
 
-`.claude/hooks/stop.sh` blocks finishing until the checks CI runs pass. Linux-only code (`runner`, and the tests of watching, signals and moves between filesystems) is compiled out on macOS, where the checks pass without running it. The playground's checks need `wasm-bindgen`, so only CI runs them. Run the Linux code in the test container:
+`.claude/hooks/stop.sh` blocks finishing until the checks CI runs pass, and until React Doctor finds no error in `playground/`; only the hook runs React Doctor. Linux-only code (`runner`, and the tests of watching, signals and moves between filesystems) is compiled out on macOS, where the checks pass without running it. The playground's checks need `wasm-bindgen`, so only CI runs them. Run the Linux code in the test container:
 
 ```
 docker compose -f docker-compose.test.yml run --rm sut
@@ -48,6 +48,7 @@ Nothing updates these automatically, so each pair changes together.
 | sumi | `SUMI_VERSION` and `SUMI_SHA256` in `ci.yml` |
 | wasm-bindgen | the exact `wasm-bindgen` in `crates/wasm/Cargo.toml`, and `WASM_BINDGEN_VERSION` and `WASM_BINDGEN_SHA256` in `ci.yml` |
 | pnpm | `packageManager` in `playground/package.json` and `PNPM_VERSION` in `ci.yml` |
+| React Doctor | the `react-doctor@` version in `.claude/hooks/stop.sh` |
 | GitHub Actions | a full commit SHA with a version comment |
 
 Actions from `actions/*`, `docker/*` and `googleapis/release-please-action` are approved; any other needs the user's approval first.
