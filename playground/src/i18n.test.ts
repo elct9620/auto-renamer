@@ -39,10 +39,11 @@ describe('languages', () => {
   })
 
   // @behavior PGE-046
-  it.each(['zh-TW', 'en'] as Language[])('names in %s every parameter, setting and single value', (language) => {
+  it.each(['zh-TW', 'en'] as Language[])('names in %s every stage, parameter, setting and single value', (language) => {
     const named = new Set(keys(texts[language]))
     const expected = [
       ...stages().flatMap((stage) => [
+        `stages.${stage.name}.name`,
         ...stage.parameters.map((parameter) => `stages.${stage.name}.parameters.${parameter.name}.name`),
         ...(stage.value ? [`stages.${stage.name}.value.name`] : []),
       ]),

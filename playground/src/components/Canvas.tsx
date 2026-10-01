@@ -20,6 +20,7 @@ import { type DragEvent, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { BaseNode, BaseNodeContent, BaseNodeHeader, BaseNodeHeaderTitle } from '@/components/base-node'
+import { StageName } from '@/components/Fields'
 import { KIND_ICONS, stageIcon } from '@/components/kinds'
 import { cn } from '@/lib/utils'
 import {
@@ -52,7 +53,7 @@ function ConfigNode({ data, kind, joins }: { data: NodeData; kind: keyof typeof 
       <Handle type="target" position={Position.Left} isConnectable={joins === 'target'} />
       <BaseNodeHeader className="justify-start">
         <Icon className="size-3.5 shrink-0 text-muted-foreground" />
-        <BaseNodeHeaderTitle className="text-sm font-medium">{data.label}</BaseNodeHeaderTitle>
+        <BaseNodeHeaderTitle className="text-sm font-medium">{kind === 'stage' ? <StageName name={data.label} /> : data.label}</BaseNodeHeaderTitle>
       </BaseNodeHeader>
       {data.detail && (
         <BaseNodeContent className="pt-0">

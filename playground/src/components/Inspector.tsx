@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Choice } from '@/components/Choice'
+import { StageName } from '@/components/Fields'
 import { SettingsForm } from '@/components/SettingsForm'
 import { KIND_ICONS, stageIcon } from '@/components/kinds'
 import { Button } from '@/components/ui/button'
@@ -35,7 +36,7 @@ function Field({ label, children, error }: { label: string; children: React.Reac
   )
 }
 
-function Section({ title, icon: Icon, children }: { title: string; icon: LucideIcon; children: React.ReactNode }) {
+function Section({ title, icon: Icon, children }: { title: React.ReactNode; icon: LucideIcon; children: React.ReactNode }) {
   return (
     <section className="grid gap-3">
       <h2 className="flex items-center gap-1.5 text-sm font-semibold"><Icon className="size-4 text-muted-foreground" />{title}</h2>
@@ -108,7 +109,9 @@ export function Inspector({ config, kind, selected, onChange, onSelect }: {
   if (stage === undefined) return null
   const at = (index: number) => onSelect({ ...selected, index })
   return (
-    <Section icon={stageIcon(stageName(stage))} title={t('inspector.stage', { kind: stageName(stage), position: selected.index + 1, pipeline: selected.pipeline })}>
+    <Section icon={stageIcon(stageName(stage))} title={<>
+      <StageName name={stageName(stage)} /> · {t('inspector.stage', { position: selected.index + 1, pipeline: selected.pipeline })}
+    </>}>
       <StageForm key={`${selected.pipeline}-${selected.index}`} stage={stage}
         declaration={stages().find((declaration) => declaration.name === stageName(stage))!}
         onChange={(next) => onChange(replaceStage(config, selected.pipeline, selected.index, next))} />

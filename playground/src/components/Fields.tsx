@@ -30,6 +30,17 @@ export function Caption({ name, code, required, children }: {
   )
 }
 
+/** A stage by its name in the page's language, with the name the configuration writes beside it. */
+export function StageName({ name }: { name: string }) {
+  const { t } = useTranslation()
+  return (
+    <span className="inline-flex items-baseline gap-1.5">
+      {t(`stages.${name}.name`)}
+      <code className="font-mono text-[0.85em] font-normal text-muted-foreground">{name}</code>
+    </span>
+  )
+}
+
 function shown(value: Value | undefined): string {
   if (value === undefined || typeof value === 'object' && !Array.isArray(value)) return ''
   return Array.isArray(value) ? value.join(', ') : String(value)

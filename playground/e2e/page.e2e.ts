@@ -1,7 +1,7 @@
 import { type Page, expect, test } from '@playwright/test'
 
 function node(page: Page, name: string) {
-  return page.locator('.react-flow__node', { hasText: new RegExp(`^${name}`) })
+  return page.locator('.react-flow__node').filter({ has: page.getByText(name, { exact: true }) })
 }
 
 async function configText(page: Page): Promise<string> {
@@ -226,4 +226,14 @@ test('a folder configuration added in a folder is opened', async ({ page }) => {
 
   await expect(page.getByRole('button', { name: 'auto-renamer.toml', exact: true })).toBeVisible()
   await expect(page.getByText('Folder configuration of /downloads/Alpha', { exact: true })).toBeVisible()
+})
+
+// @behavior PGE-052
+test('a stage is shown by its name beside the CLI\'s name', async ({ page }) => {
+  await page.getByRole('combobox', { name: 'Language' }).click()
+  await page.getByRole('option', { name: '繁體中文' }).click()
+
+  const filter = page.locator('aside').first().locator('span', { has: page.locator('code', { hasText: /^filter$/ }) })
+
+  await expect(filter).toHaveText('篩選filter')
 })

@@ -369,11 +369,11 @@ The playground page draws a configuration for people who do not read TOML: each 
 | When | the page is laid out |
 | Then | the palette, canvas and inspector run left to right above the source and target trees |
 
-## `PGE-046` Every parameter, setting and single value is named in both languages
+## `PGE-046` Every stage, parameter, setting and single value is named in both languages
 
 | Step | Statement |
 | --- | --- |
-| Given | the parameters and single values the core declares, and the settings the page offers |
+| Given | the stages, parameters and single values the core declares, and the settings the page offers |
 | When | the page's texts in Traditional Chinese and English are read |
 | Then | each has a name in both |
 
@@ -417,3 +417,11 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | a source holding the folder `Alpha` |
 | When | a folder configuration is added in `Alpha` |
 | Then | the source holds `Alpha/auto-renamer.toml`, and it is the one being edited |
+
+## `PGE-052` A stage is shown by its name beside the CLI's name
+
+| Step | Statement |
+| --- | --- |
+| Given | the page shown in Traditional Chinese |
+| When | the palette is shown |
+| Then | the filter stage reads 篩選 with `filter` beside it |

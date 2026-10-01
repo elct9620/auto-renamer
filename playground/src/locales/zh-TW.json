@@ -32,7 +32,7 @@
     "addStage": "新增階段",
     "choose": "請選擇……",
     "removePipeline": "移除管線",
-    "stage": "{{kind}} · {{pipeline}} 的第 {{position}} 個階段",
+    "stage": "{{pipeline}} 的第 {{position}} 個階段",
     "earlier": "往前",
     "later": "往後",
     "remove": "移除",
@@ -92,6 +92,7 @@
   },
   "stages": {
     "filter": {
+      "name": "篩選",
       "about": "依副檔名或檔名樣式放行；在管線開頭認領檔案，在中途排除檔案。",
       "parameters": {
         "ext": {
@@ -109,6 +110,7 @@
       }
     },
     "number": {
+      "name": "取數字",
       "about": "從欄位取出一個數字，例如集數或季數。",
       "parameters": {
         "from": {
@@ -134,6 +136,7 @@
       }
     },
     "regex": {
+      "name": "正規表示式",
       "about": "用正規表示式擷取或改寫欄位，內建階段處理不了時才用。",
       "parameters": {
         "pattern": {
@@ -155,12 +158,15 @@
       }
     },
     "set": {
+      "name": "設定值",
       "about": "設定固定值，覆蓋既有的欄位。"
     },
     "default": {
+      "name": "預設值",
       "about": "欄位未設時才填入固定值，放在擷取之後。"
     },
     "replace": {
+      "name": "取代",
       "about": "把欄位中的字面文字換成另一段。",
       "parameters": {
         "find": {
@@ -178,6 +184,7 @@
       }
     },
     "case": {
+      "name": "大小寫",
       "about": "改變欄位的大小寫。",
       "parameters": {
         "to": {
@@ -191,6 +198,7 @@
       }
     },
     "strip": {
+      "name": "去標籤",
       "about": "去掉括號標籤並整理多餘空白。",
       "parameters": {
         "groups": {
@@ -204,6 +212,7 @@
       }
     },
     "format": {
+      "name": "組檔名",
       "about": "依樣板組出檔名，副檔名自動接在最後。",
       "value": {
         "name": "檔名樣板",
@@ -211,6 +220,7 @@
       }
     },
     "folder": {
+      "name": "加資料夾",
       "about": "依樣板在目的地加入子資料夾。",
       "value": {
         "name": "資料夾樣板",
@@ -218,6 +228,7 @@
       }
     },
     "lift": {
+      "name": "上提路徑",
       "about": "把計畫路徑往上提。",
       "parameters": {
         "to": {
@@ -231,6 +242,7 @@
       }
     },
     "next": {
+      "name": "遞增序號",
       "about": "欄位未設時，取目的地既有檔案的最大值加一。",
       "parameters": {
         "into": {
@@ -244,6 +256,7 @@
       }
     },
     "rank": {
+      "name": "組內編號",
       "about": "在同一組檔案中排序並編號，例如多個字幕。",
       "parameters": {
         "into": {
@@ -261,6 +274,7 @@
       }
     },
     "take": {
+      "name": "借用欄位",
       "about": "依影片的檔名前綴，把欄位複製給字幕。",
       "parameters": {
         "fields": {
@@ -274,6 +288,7 @@
       }
     },
     "move": {
+      "name": "搬移",
       "about": "把檔案搬到計畫路徑，絕不覆寫既有檔案。",
       "parameters": {
         "on_conflict": {
@@ -287,6 +302,7 @@
       }
     },
     "cleanup": {
+      "name": "清理",
       "about": "刪除搬移後清空的資料夾，只在單元之內。",
       "parameters": {
         "keep": {
