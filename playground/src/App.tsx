@@ -11,7 +11,7 @@ import { TreePanel } from '@/components/TreePanel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { errorOf } from '@/lib/utils'
-import { type Table, asTable, download, setIn } from './config'
+import { type Table, asTable, download, folderStart, setIn } from './config'
 import { type Entry, type Kind, type Simulation, check, read, render, simulate } from './core'
 import { type Example, EXAMPLES, FIRST } from './examples'
 import type { Selected } from './graph'
@@ -173,7 +173,8 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
       </main>
 
       <section className="grid h-56 min-h-0 grid-cols-[minmax(0,1fr)_10rem_minmax(0,1fr)] border-b">
-        <TreePanel title={t('tree.source')} root={roots.source} entries={entries} marks={marks} editing={editing} onEdit={editEntries} onOpen={open} />
+        <TreePanel title={t('tree.source')} root={roots.source} entries={entries} marks={marks} editing={editing}
+          starting={render(folderStart(config, watch))} onEdit={editEntries} onOpen={open} />
         <div className="flex flex-col justify-center gap-2 border-x p-3">
           <Choice label={t('tree.watch')} value={watch} options={watches.map((name) => ({ value: name, label: name }))}
             onChange={setWatch} />

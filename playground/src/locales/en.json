@@ -60,7 +60,8 @@
     "addHere": "Add in {{name}}",
     "path": "Path of a new file or folder",
     "open": "Edit this folder configuration",
-    "configure": "Add a folder configuration in {{name}}"
+    "configure": "Add a folder configuration in {{name}}",
+    "hint": "To make a folder an exception, add a folder configuration with the button beside it."
   },
   "output": {
     "results": "Results",

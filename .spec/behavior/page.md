@@ -473,3 +473,19 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the watch `series` joined to the pipeline `video` |
 | When | the remove button on that joint is pressed |
 | Then | the joint is gone and the configuration text lists no `video` for the watch |
+
+## `PGE-059` A new folder configuration starts with the watch's values
+
+| Step | Statement |
+| --- | --- |
+| Given | a default with `vars = { group = "Team" }` and the watch `series` with `vars = { show = "Alpha" }` |
+| When | a folder configuration is started for `series` |
+| Then | its text sets `group = "Team"` and `show = "Alpha"` and nothing else |
+
+## `PGE-060` Adding a folder configuration is offered without hovering
+
+| Step | Statement |
+| --- | --- |
+| Given | the source tree of the opening example |
+| When | it is shown |
+| Then | each folder shows its button adding a folder configuration, and the tree says how to add one |

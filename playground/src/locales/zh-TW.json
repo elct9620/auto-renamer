@@ -60,7 +60,8 @@
     "addHere": "在 {{name}} 裡新增",
     "path": "新檔案或資料夾的路徑",
     "open": "編輯這份目錄設定",
-    "configure": "在 {{name}} 新增目錄設定"
+    "configure": "在 {{name}} 新增目錄設定",
+    "hint": "要讓某個資料夾例外，按它旁邊的按鈕新增目錄設定。"
   },
   "output": {
     "results": "結果",

@@ -19,6 +19,8 @@ function isName(name: string): boolean {
 /** What a row can do to the tree, and the folder configuration open in the editor. */
 interface Actions {
   editing: string | null
+  /** The text a folder configuration added in a folder starts with. */
+  starting: string
   onEdit: Edit
   onStart: (folder: string) => void
   onOpen?: (path: string) => void
@@ -31,7 +33,7 @@ function Row({ node, mark, actions }: { node: TreeNode; mark?: string; actions: 
   const Icon = node.folder ? Folder : configuration ? FileCog : File
   const configure = (folder: string) => {
     const path = `${folder}/${FOLDER_CONFIGURATION}`
-    actions.onEdit((all) => (all.some((entry) => entry.path === path) ? all : writeFile(all, path, '')))
+    actions.onEdit((all) => (all.some((entry) => entry.path === path) ? all : writeFile(all, path, actions.starting)))
     actions.onOpen?.(path)
   }
   return (
@@ -53,15 +55,18 @@ function Row({ node, mark, actions }: { node: TreeNode; mark?: string; actions: 
         </button>
       )}
       {mark && <Badge variant={mark.startsWith('moved') || mark === 'previewed' ? 'secondary' : 'outline'}>{t(`what.${mark}`, mark)}</Badge>}
-      <span className="ml-auto flex opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+      <span className="ml-auto flex">
+        {node.folder && actions.onOpen && (
+          <Button variant="ghost" size="icon-xs" className="text-muted-foreground" title={t('tree.configure', { name: node.name })}
+            aria-label={t('tree.configure', { name: node.name })} onClick={() => configure(node.path)}>
+            <FileCog />
+          </Button>
+        )}
+      </span>
+      <span className="flex opacity-0 group-hover:opacity-100 focus-within:opacity-100">
         {node.folder && (
           <Button variant="ghost" size="icon-xs" aria-label={t('tree.addHere', { name: node.name })} onClick={() => actions.onStart(node.path)}>
             <Plus />
-          </Button>
-        )}
-        {node.folder && actions.onOpen && (
-          <Button variant="ghost" size="icon-xs" aria-label={t('tree.configure', { name: node.name })} onClick={() => configure(node.path)}>
-            <FileCog />
           </Button>
         )}
         <Button variant="ghost" size="icon-xs" aria-label={t('tree.remove', { name: node.name })}
@@ -87,12 +92,13 @@ function Branch({ nodes, marks, actions }: { nodes: TreeNode[]; marks: Record<st
 }
 
 /** One root of the virtual tree. It shows `entries`, and every edit is made to the tree the page keeps. */
-export function TreePanel({ title, root, entries, marks, editing, onEdit, onOpen }: {
+export function TreePanel({ title, root, entries, marks, editing, starting = '', onEdit, onOpen }: {
   title: string
   root: string
   entries: Entry[]
   marks: Record<string, string>
   editing: string | null
+  starting?: string
   onEdit: Edit
   /** Opens a folder configuration in the editor; only the source offers it, since only there does one apply. */
   onOpen?: (path: string) => void
@@ -115,8 +121,9 @@ export function TreePanel({ title, root, entries, marks, editing, onEdit, onOpen
       <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {title} <span className="font-mono normal-case">{root}</span>
       </h2>
+      {onOpen && <p className="flex items-center gap-1 text-xs text-muted-foreground"><FileCog className="size-3.5" />{t('tree.hint')}</p>}
       <div className="min-h-0 flex-1 overflow-auto">
-        <Branch nodes={treeOf(entries, root)} marks={marks} actions={{ editing, onEdit, onStart: start, onOpen }} />
+        <Branch nodes={treeOf(entries, root)} marks={marks} actions={{ editing, starting, onEdit, onStart: start, onOpen }} />
       </div>
       <div className="flex gap-2">
         <Input ref={input} list={folders} aria-label={t('tree.path')} className="h-7 font-mono text-xs" placeholder={t('tree.placeholder', { path: 'Show/Season 1/file.mkv', configuration: `Show/${FOLDER_CONFIGURATION}` })}

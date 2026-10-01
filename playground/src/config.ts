@@ -34,6 +34,13 @@ export function pipelinesOf(config: Table, watch: string): string[] {
   return own === undefined ? asNames(asTable(config.default).pipelines) : asNames(own)
 }
 
+/** What a folder configuration started for a watch holds: the values the watch gives its files, for the folder
+ * to change. Nothing is taken from the folder's name; the user names the show. */
+export function folderStart(config: Table, watch: string): Table {
+  const vars = { ...asTable(asTable(config.default).vars), ...asTable(asTable(asTable(config.watch)[watch]).vars) }
+  return Object.keys(vars).length ? { vars } : {}
+}
+
 function withStages(config: Table, pipeline: string, stages: Stage[]): Table {
   const pipelines = asTable(config.pipeline)
   return {

@@ -283,3 +283,15 @@ test('a joint\'s remove button drops the pipeline from the watch', async ({ page
   await expect(page.getByRole('button', { name: 'Remove video from series' })).toHaveCount(0)
   expect(await configText(page)).toContain('pipelines = []')
 })
+
+// @behavior PGE-060
+test('adding a folder configuration is offered without hovering', async ({ page }) => {
+  const tree = source(page)
+
+  const button = tree.getByRole('button', { name: 'Add a folder configuration in Alpha' })
+
+  // Playwright counts a transparent element as visible, so the opacity of the row part holding it is checked.
+  await expect(button).toBeVisible()
+  await expect(button.locator('..')).toHaveCSS('opacity', '1')
+  await expect(tree.getByText('To make a folder an exception', { exact: false })).toBeVisible()
+})

@@ -6,6 +6,7 @@ import {
   addStage,
   asTable,
   download,
+  folderStart,
   insertStage,
   joinPipeline,
   moveStage,
@@ -265,5 +266,16 @@ describe('download', () => {
     const offered = download('folder', read('[vars]\nshow = "Beta"'), render, check)
 
     expect(offered.file?.name).toBe('auto-renamer.toml')
+  })
+})
+
+describe('starting a folder configuration', () => {
+  // @behavior PGE-059
+  it('starts with the values the watch gives its files', () => {
+    const config = read('[default]\nvars = { group = "Team" }\n\n[watch.series]\nsource = "/downloads"\nvars = { show = "Alpha" }\n')
+
+    const started = read(render(folderStart(config, 'series')))
+
+    expect(started).toEqual({ vars: { group: 'Team', show: 'Alpha' } })
   })
 })
