@@ -49,8 +49,8 @@
     "chooseFolder": "選擇資料夾",
     "after": "跑完這個階段的檔案",
     "none": "沒有檔案跑到這個階段。",
-    "taken_one": "{{count}} 個檔案走的是目錄設定取代的管線。",
-    "taken_other": "{{count}} 個檔案走的是目錄設定取代的管線。"
+    "taken_one": "另有 {{count}} 個檔案由目錄設定的同名管線處理。",
+    "taken_other": "另有 {{count}} 個檔案由目錄設定的同名管線處理。"
   },
   "tree": {
     "source": "來源",

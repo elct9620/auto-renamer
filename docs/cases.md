@@ -189,7 +189,7 @@ Playground 的完整組合把影集情境疊在一起。source 為 `/Downloads`�
 | 太大的批次 | `Series/Theta_Show/Season 01/[Team][Theta_Show][Batch]/` 的 6 個檔案 | 整批留在 source |
 | 一律遞增 | `Series/Kappa/Season 01/[Group] Kappa - 07 [1080p].mkv` | `Series/Kappa/Season 01/Kappa s01e03.mkv` |
 
-target 原有 `Beta Show s01e12.mp4` 與 `Kappa s01e01.mkv`、`Kappa s01e02.mkv`。Kappa 的目錄設定以不擷取集數的 `video` 取代全域的那條，所以檔名中的 07 被忽略。
+target 原有 `Beta Show s01e12.mp4` 與 `Kappa s01e01.mkv`、`Kappa s01e02.mkv`。Kappa 的目錄設定把全域的 `video` 換成不擷取集數的一條，檔名中的 07 因此不採用。
 
 ## 7 驗證方式
 
