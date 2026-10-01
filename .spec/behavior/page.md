@@ -1,0 +1,79 @@
+# Page
+
+The playground page draws a configuration for people who do not read TOML: each watch is joined to the pipelines it uses, and each pipeline is its stages in order. The table the core reads is the only state; the drawing and every edit are made from it and back into it, so what is downloaded is what was drawn.
+
+## Includes
+
+- `playground/src/**/*.test.ts`
+
+## `PGE-001` A pipeline is drawn as its stages in order
+
+| Step | Statement |
+| --- | --- |
+| Given | a configuration whose pipeline `video` has the stages filter, format and move |
+| When | it is drawn |
+| Then | the pipeline leads to the filter, the filter to the format, and the format to the move |
+
+## `PGE-002` A watch is joined to the pipelines it lists
+
+| Step | Statement |
+| --- | --- |
+| Given | a configuration whose watch `series` lists the pipelines `video` and `subtitle` |
+| When | it is drawn |
+| Then | the watch leads to `video` first and to `subtitle` second |
+
+## `PGE-003` A watch without its own list is joined to the default pipelines
+
+| Step | Statement |
+| --- | --- |
+| Given | a configuration whose default lists the pipeline `video` and whose watch lists none |
+| When | it is drawn |
+| Then | the watch leads to `video` |
+
+## `PGE-004` A stage added to a pipeline goes after the others
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline with the stages filter and move |
+| When | a format stage is added to it |
+| Then | its stages are filter, move and format |
+
+## `PGE-005` A stage moved earlier is written earlier
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline with the stages filter, move and format |
+| When | the format stage is moved one place earlier |
+| Then | its stages are filter, format and move |
+
+## `PGE-006` A removed stage leaves the others in order
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline with the stages filter, format and move |
+| When | the format stage is removed |
+| Then | its stages are filter and move |
+
+## `PGE-007` A stage's settings are written as its value
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline whose first stage is a filter on `mkv` |
+| When | its settings are set to a filter on `mp4` |
+| Then | the first stage is a filter on `mp4` and the other stages are unchanged |
+
+## `PGE-008` A stage without settings is written as its name
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline |
+| When | a move stage is added with no settings |
+| Then | the stage is written as the text `move` |
+
+## `PGE-009` A configuration that is refused cannot be downloaded
+
+| Step | Statement |
+| --- | --- |
+| Given | a configuration the core refuses |
+| When | a download is asked for |
+| Then | no file is offered and the reason is shown |

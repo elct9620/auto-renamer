@@ -7,6 +7,7 @@ auto-renamer 是一個 workspace：`crates/core` 決定檔案的名稱與去向�
   crates/wasm   auto-renamer-wasm: check, read, render, simulate on a virtual tree
   src/lib.rs    auto-renamer: filesystem, watcher, runner; re-exports core
   src/main.rs   wiring only
+  playground/   React Flow page over crates/wasm; the TOML table is its only state
 ```
 
 ## 結構風格

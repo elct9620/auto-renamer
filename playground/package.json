@@ -1,0 +1,28 @@
+{
+  "name": "auto-renamer-playground",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "pnpm@11.27.0",
+  "scripts": {
+    "wasm": "cargo build -p auto-renamer-wasm --target wasm32-unknown-unknown --profile playground --locked && wasm-bindgen --target web --out-dir src/wasm ../target/wasm32-unknown-unknown/playground/auto_renamer_wasm.wasm",
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "test": "vitest run",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@xyflow/react": "^12.12.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.2"
+  }
+}
