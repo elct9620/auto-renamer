@@ -22,7 +22,7 @@ import {
   withParameter,
 } from './config'
 import { check, read, render, stages } from './core'
-import { dropAt, pipelineId, stageId, toGraph, watchId } from './graph'
+import { dropAt, laidOut, pipelineId, relaid, stageId, toGraph, watchId } from './graph'
 
 const CONFIG = `
 [default]
@@ -80,6 +80,38 @@ describe('drawing', () => {
   })
 })
 
+describe('layout', () => {
+  function positionOf(config: Table, layout: Record<string, { x: number; y: number }>, id: string) {
+    return laidOut(toGraph(config).nodes, layout).find((node) => node.id === id)?.position
+  }
+
+  // @behavior PGE-027
+  it('draws a node moved by hand where it was left', () => {
+    const config = read(CONFIG)
+
+    expect(positionOf(config, { [watchId('series')]: { x: 500, y: 300 } }, watchId('series'))).toEqual({ x: 500, y: 300 })
+  })
+
+  it('drops a stage on the pipeline where it is drawn', () => {
+    const config = read(CONFIG)
+    const moved = laidOut(toGraph(config).nodes, { [pipelineId('subtitle')]: { x: 240, y: 600 } })
+
+    expect(dropAt(moved, { x: 700, y: 600 })).toEqual({ pipeline: 'subtitle', index: 1 })
+  })
+
+  // @behavior PGE-028
+  it('draws the stages of a pipeline whose order changed in their order', () => {
+    const before = read(CONFIG)
+    const layout = { [stageId('video', 1)]: { x: 900, y: 400 }, [watchId('series')]: { x: 500, y: 300 } }
+
+    const after = moveStage(before, 'video', 1, -1)
+    const kept = relaid(layout, before, after)
+
+    const ordered = toGraph(after).nodes.filter((node) => node.id.startsWith('stage:video:'))
+    expect(ordered.map((node) => positionOf(after, kept, node.id))).toEqual(ordered.map((node) => node.position))
+  })
+})
+
 describe('editing', () => {
   const pipeline = (stages: string) => read(`[pipeline.video]\nstages = ${stages}`)
 
@@ -129,9 +161,10 @@ describe('editing', () => {
 
   it('drops a stage before the stage nearest the point', () => {
     const config = read(CONFIG)
-    const [, second] = toGraph(config).nodes.filter((node) => node.id.startsWith('stage:video:'))
+    const { nodes } = toGraph(config)
+    const [, second] = nodes.filter((node) => node.id.startsWith('stage:video:'))
 
-    expect(dropAt(config, { x: second.position.x, y: second.position.y })).toEqual({ pipeline: 'video', index: 1 })
+    expect(dropAt(nodes, { x: second.position.x + 10, y: second.position.y })).toEqual({ pipeline: 'video', index: 1 })
   })
 
   // @behavior PGE-016

@@ -74,5 +74,8 @@
     "unclaimed": "未認領",
     "excluded": "已排除",
     "left too large": "數量過多未處理"
+  },
+  "canvas": {
+    "resetLayout": "重設版面"
   }
 }

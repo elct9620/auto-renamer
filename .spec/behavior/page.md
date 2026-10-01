@@ -213,3 +213,19 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the English and the Traditional Chinese texts of the page |
 | When | they are compared |
 | Then | each names the same texts |
+
+## `PGE-027` A node moved on the canvas is drawn where it was left
+
+| Step | Statement |
+| --- | --- |
+| Given | a drawing of a configuration with the watch `series` |
+| When | the watch is moved by hand |
+| Then | it is drawn where it was left |
+
+## `PGE-028` Stages whose order changed are drawn in their order
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline whose format stage was moved by hand |
+| When | its stages are put in another order |
+| Then | each of its stages is drawn where its order places it |

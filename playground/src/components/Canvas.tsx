@@ -1,6 +1,7 @@
 import {
   Background,
   type Connection,
+  ControlButton,
   Controls,
   type Edge,
   Handle,
@@ -14,7 +15,9 @@ import {
   useReactFlow,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { type DragEvent, useEffect, useMemo } from 'react'
+import { LayoutGrid } from 'lucide-react'
+import { type DragEvent, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { BaseNode, BaseNodeContent, BaseNodeHeader, BaseNodeHeaderTitle } from '@/components/base-node'
 import { KIND_ICONS } from '@/components/kinds'
@@ -31,7 +34,7 @@ import {
   setIn,
 } from '../config'
 import { read, stages } from '../core'
-import { type Joint, type NodeData, type Selected, dropAt, toGraph } from '../graph'
+import { type Joint, type Layout, type NodeData, type Selected, dropAt, laidOut, relaid, toGraph } from '../graph'
 
 /** The type a stage dragged from the palette carries its name under. */
 export const STAGE_DRAG = 'application/x-auto-renamer-stage'
@@ -90,20 +93,28 @@ function Flow({ config, onChange, onSelect }: {
   onChange: (config: Table) => void
   onSelect: (selected: Selected | null) => void
 }) {
+  const { t } = useTranslation()
   const graph = useMemo(() => toGraph(config), [config])
-  const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes)
+  const [layout, setLayout] = useState<Layout>({})
+  const [drawn, setDrawn] = useState(config)
+  if (drawn !== config) {
+    setDrawn(config)
+    setLayout(relaid(layout, drawn, config))
+  }
+  const shown = useMemo(() => laidOut(graph.nodes, layout), [graph, layout])
+  const [nodes, setNodes, onNodesChange] = useNodesState(shown)
   const [edges, setEdges, onEdgesChange] = useEdgesState(graph.edges)
   const { screenToFlowPosition } = useReactFlow()
   useEffect(() => {
-    setNodes(graph.nodes)
+    setNodes((current) => shown.map((node) => ({ ...node, selected: current.find((one) => one.id === node.id)?.selected })))
     setEdges(graph.edges)
-  }, [graph, setNodes, setEdges])
+  }, [shown, graph, setNodes, setEdges])
 
   const drop = (event: DragEvent) => {
     const kind = event.dataTransfer.getData(STAGE_DRAG)
     if (!kind) return
     event.preventDefault()
-    const place = dropAt(config, screenToFlowPosition({ x: event.clientX, y: event.clientY }))
+    const place = dropAt(shown, screenToFlowPosition({ x: event.clientX, y: event.clientY }))
     if (place) onChange(insertStage(config, place.pipeline, place.index, newStage(kind, stages(), read)))
   }
 
@@ -113,14 +124,13 @@ function Flow({ config, onChange, onSelect }: {
       onEdgesChange={onEdgesChange}
       onNodeDragStop={(_, node) => {
         const moved = (node.data as NodeData).selected
-        const place = dropAt(config, node.position)
-        if (moved.kind !== 'stage' || place?.pipeline !== moved.pipeline) {
-          setNodes(graph.nodes)
+        const place = dropAt(shown.filter((other) => other.id !== node.id), node.position)
+        if (moved.kind === 'stage' && place?.pipeline === moved.pipeline && place.index !== moved.index) {
+          onChange(moveStage(config, moved.pipeline, moved.index, place.index - moved.index))
+          onSelect({ ...moved, index: place.index })
           return
         }
-        const to = Math.min(place.index, graph.nodes.filter((other) => other.id.startsWith(`stage:${moved.pipeline}:`)).length - 1)
-        onChange(moveStage(config, moved.pipeline, moved.index, to - moved.index))
-        onSelect({ ...moved, index: to })
+        setLayout({ ...layout, [node.id]: node.position })
       }}
       isValidConnection={isJoint}
       onConnect={(connection) => {
@@ -146,7 +156,11 @@ function Flow({ config, onChange, onSelect }: {
       onNodeClick={(_, node) => onSelect((node.data as NodeData).selected)}
       onPaneClick={() => onSelect(null)}>
       <Background />
-      <Controls />
+      <Controls>
+        <ControlButton title={t('canvas.resetLayout')} aria-label={t('canvas.resetLayout')} onClick={() => setLayout({})}>
+          <LayoutGrid />
+        </ControlButton>
+      </Controls>
     </ReactFlow>
   )
 }

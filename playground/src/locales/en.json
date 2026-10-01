@@ -74,5 +74,8 @@
     "unclaimed": "unclaimed",
     "excluded": "excluded",
     "left too large": "left too large"
+  },
+  "canvas": {
+    "resetLayout": "Reset layout"
   }
 }

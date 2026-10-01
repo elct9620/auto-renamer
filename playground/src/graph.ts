@@ -1,4 +1,4 @@
-import type { Edge, Node } from '@xyflow/react'
+import type { Edge, Node, XYPosition } from '@xyflow/react'
 
 import { type Stage, type Table, asTable, pipelinesOf, stageName, stagesOf } from './config'
 
@@ -35,14 +35,19 @@ export interface Joint extends Record<string, unknown> {
   pipeline: string
 }
 
-/** Where a stage dropped at a point of the drawing goes: the pipeline on that row, before the stage
- * nearest the point. */
-export function dropAt(config: Table, point: { x: number; y: number }): { pipeline: string; index: number } | null {
-  const pipelines = Object.keys(asTable(config.pipeline))
-  const pipeline = pipelines[Math.round(point.y / ROW)]
-  if (pipeline === undefined) return null
-  const index = Math.round((point.x - FIRST_STAGE) / COLUMN)
-  return { pipeline, index: Math.min(Math.max(index, 0), stagesOf(config, pipeline).length) }
+/** Where a stage dropped at a point of the drawing goes: the pipeline drawn on that row, after each of its
+ * stages whose middle is left of the point. `nodes` are as drawn, without the stage being moved. */
+export function dropAt(nodes: Node<NodeData>[], point: XYPosition): { pipeline: string; index: number } | null {
+  const row = nodes
+    .filter((node) => node.type === 'pipeline' && Math.abs(node.position.y - point.y) < ROW / 2)
+    .sort((a, b) => Math.abs(a.position.y - point.y) - Math.abs(b.position.y - point.y))[0]
+  if (row === undefined || row.data.selected.kind !== 'pipeline') return null
+  const pipeline = row.data.selected.name
+  const index = nodes.filter((node) => {
+    const one = node.data.selected
+    return one.kind === 'stage' && one.pipeline === pipeline && node.position.x + COLUMN / 2 <= point.x
+  }).length
+  return { pipeline, index }
 }
 
 function stageDetail(stage: Stage): string | undefined {
@@ -69,7 +74,6 @@ export function toGraph(config: Table): { nodes: Node<NodeData>[]; edges: Edge[]
       id: watchId(name),
       type: 'watch',
       position: { x: 0, y: row * ROW },
-      draggable: false,
       data: {
         label: name,
         detail: typeof watch.source === 'string' ? watch.source : undefined,
@@ -95,7 +99,6 @@ export function toGraph(config: Table): { nodes: Node<NodeData>[]; edges: Edge[]
       id: pipelineId(pipeline),
       type: 'pipeline',
       position: { x: COLUMN, y },
-      draggable: false,
       data: { label: pipeline, selected: { kind: 'pipeline', name: pipeline } },
     })
     let previous = pipelineId(pipeline)
@@ -117,4 +120,22 @@ export function toGraph(config: Table): { nodes: Node<NodeData>[]; edges: Edge[]
   })
 
   return { nodes, edges }
+}
+
+/** Where nodes were left by hand, by id; the configuration's order places every other node. */
+export type Layout = Record<string, XYPosition>
+
+export function laidOut(nodes: Node<NodeData>[], layout: Layout): Node<NodeData>[] {
+  return nodes.map((node) => (layout[node.id] ? { ...node, position: layout[node.id] } : node))
+}
+
+/** The layout kept across a change of the configuration. A stage is known by its place in its pipeline, so a
+ * pipeline whose stages changed order draws them in order again rather than at another stage's spot. */
+export function relaid(layout: Layout, before: Table, after: Table): Layout {
+  const pipelines = new Set([...Object.keys(asTable(before.pipeline)), ...Object.keys(asTable(after.pipeline))])
+  const changed = [...pipelines].filter((pipeline) =>
+    stagesOf(before, pipeline).map(stageName).join() !== stagesOf(after, pipeline).map(stageName).join())
+  if (changed.length === 0) return layout
+  return Object.fromEntries(Object.entries(layout).filter(([id]) =>
+    !changed.some((pipeline) => id.startsWith(`stage:${pipeline}:`))))
 }
