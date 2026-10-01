@@ -121,7 +121,7 @@ export default function App() {
   return (
     <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto_minmax(0,11rem)] bg-background text-foreground">
       <header className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
-        <h1 className="mr-2 text-sm font-semibold">{t('title')}</h1>
+        <h1 className="mr-2 text-sm font-semibold">Auto Renamer Playground</h1>
         <Choice label={t('kind.label')} className="w-auto" value={kind}
           options={[{ value: 'global', label: t('kind.global') }, { value: 'folder', label: t('kind.folder') }]}
           onChange={(value) => { setKind(value as Kind); setSelected(null) }} />
