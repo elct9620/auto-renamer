@@ -16,6 +16,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import { type DragEvent, useEffect, useMemo } from 'react'
 
+import { BaseNode, BaseNodeContent, BaseNodeHeader, BaseNodeHeaderTitle } from '@/components/base-node'
 import { cn } from '@/lib/utils'
 import {
   type Table,
@@ -37,30 +38,31 @@ export const STAGE_DRAG = 'application/x-auto-renamer-stage'
 const tones = {
   watch: 'border-sky-500/60 bg-sky-50 dark:bg-sky-950',
   pipeline: 'border-amber-500/60 bg-amber-50 dark:bg-amber-950',
-  stage: 'border-border bg-card cursor-grab',
+  stage: 'cursor-grab',
 }
 
-function Box({ data, tone, selected, joins }: {
-  data: NodeData
-  tone: keyof typeof tones
-  selected: boolean
-  joins: 'source' | 'target' | null
-}) {
+function ConfigNode({ data, tone, joins }: { data: NodeData; tone: keyof typeof tones; joins: 'source' | 'target' | null }) {
   return (
-    <div className={cn('grid min-w-36 gap-0.5 rounded-md border px-3 py-2 text-sm shadow-xs', tones[tone], selected && 'ring-2 ring-ring')}>
+    <BaseNode className={cn('min-w-36 text-sm', tones[tone])}>
       <Handle type="target" position={Position.Left} isConnectable={joins === 'target'} />
-      <strong className="font-medium">{data.label}</strong>
-      {data.detail && <small className="max-w-48 truncate font-mono text-xs text-muted-foreground">{data.detail}</small>}
+      <BaseNodeHeader>
+        <BaseNodeHeaderTitle className="text-sm font-medium">{data.label}</BaseNodeHeaderTitle>
+      </BaseNodeHeader>
+      {data.detail && (
+        <BaseNodeContent className="pt-0">
+          <small className="max-w-48 truncate font-mono text-xs text-muted-foreground">{data.detail}</small>
+        </BaseNodeContent>
+      )}
       <Handle type="source" position={Position.Right} isConnectable={joins === 'source'} />
-    </div>
+    </BaseNode>
   )
 }
 
 // A watch is joined to pipelines by its handle; stages follow each other only by order.
 const nodeTypes = {
-  watch: ({ data, selected }: NodeProps<Node<NodeData>>) => <Box data={data} tone="watch" selected={selected} joins="source" />,
-  pipeline: ({ data, selected }: NodeProps<Node<NodeData>>) => <Box data={data} tone="pipeline" selected={selected} joins="target" />,
-  stage: ({ data, selected }: NodeProps<Node<NodeData>>) => <Box data={data} tone="stage" selected={selected} joins={null} />,
+  watch: ({ data }: NodeProps<Node<NodeData>>) => <ConfigNode data={data} tone="watch" joins="source" />,
+  pipeline: ({ data }: NodeProps<Node<NodeData>>) => <ConfigNode data={data} tone="pipeline" joins="target" />,
+  stage: ({ data }: NodeProps<Node<NodeData>>) => <ConfigNode data={data} tone="stage" joins={null} />,
 }
 
 function isJoint(connection: Connection | Edge): boolean {

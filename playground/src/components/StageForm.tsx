@@ -1,7 +1,9 @@
 import { Plus, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { Choice } from '@/components/Choice'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { type Stage, type Value, parametersOf, stageName, withParameter, withValue } from '../config'
 import type { Declaration, ParameterKind } from '../core'
@@ -94,21 +96,19 @@ export function StageForm({ stage, declaration, onChange }: {
         if (parameter.kind === 'boolean') {
           return (
             <label key={parameter.name} className="flex items-center gap-2 font-mono text-xs">
-              <input type="checkbox" checked={value === true} onChange={(event) => apply(event.target.checked || undefined)} />
+              <Checkbox checked={value === true} onCheckedChange={(checked) => apply(checked === true || undefined)} />
               {parameter.name}
             </label>
           )
         }
         if (parameter.choices.length > 0) {
           return (
-            <label key={parameter.name} className="grid gap-1.5">
+            <div key={parameter.name} className="grid gap-1.5">
               <span className="font-mono text-xs font-medium">{parameter.name}{parameter.required && <span className="text-destructive">*</span>}</span>
-              <select className="h-8 rounded-md border bg-background px-2 font-mono text-xs" value={shown(value)}
-                onChange={(event) => apply(event.target.value || undefined)}>
-                <option value="">—</option>
-                {parameter.choices.map((choice) => <option key={choice}>{choice}</option>)}
-              </select>
-            </label>
+              <Choice label={parameter.name} className="font-mono text-xs" value={shown(value)} clearable
+                options={parameter.choices.map((choice) => ({ value: choice, label: choice }))}
+                onChange={(choice) => apply(choice || undefined)} />
+            </div>
           )
         }
         return (

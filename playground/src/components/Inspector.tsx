@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { Choice } from '@/components/Choice'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -139,12 +140,8 @@ export function Inspector({ config, kind, selected, onChange, onSelect }: {
           }} />
         </Field>
         <Field label={t('inspector.addStage')}>
-          <select className="h-8 rounded-md border bg-background px-2 text-sm" value="" onChange={(event) => {
-            if (event.target.value) onChange(addStage(config, selected.name, newStage(event.target.value, stages(), read)))
-          }}>
-            <option value="">{t('inspector.choose')}</option>
-            {stages().map(({ name }) => <option key={name}>{name}</option>)}
-          </select>
+          <Choice value="" placeholder={t('inspector.choose')} options={stages().map(({ name }) => ({ value: name, label: name }))}
+            onChange={(name) => onChange(addStage(config, selected.name, newStage(name, stages(), read)))} />
         </Field>
         <Button variant="destructive" size="sm" onClick={() => { onChange(removePipeline(config, selected.name)); onSelect(null) }}>
           {t('inspector.removePipeline')}

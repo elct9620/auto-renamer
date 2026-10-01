@@ -2,6 +2,7 @@ import { type ChangeEvent, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Canvas } from '@/components/Canvas'
+import { Choice } from '@/components/Choice'
 import { Inspector } from '@/components/Inspector'
 import { Output } from '@/components/Output'
 import { Palette } from '@/components/Palette'
@@ -120,11 +121,9 @@ export default function App() {
     <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto_minmax(0,11rem)] bg-background text-foreground">
       <header className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
         <h1 className="mr-2 text-sm font-semibold">{t('title')}</h1>
-        <select aria-label={t('kind.label')} className="h-8 rounded-md border bg-background px-2 text-sm" value={kind}
-          onChange={(event) => { setKind(event.target.value as Kind); setSelected(null) }}>
-          <option value="global">{t('kind.global')}</option>
-          <option value="folder">{t('kind.folder')}</option>
-        </select>
+        <Choice label={t('kind.label')} className="w-auto" value={kind}
+          options={[{ value: 'global', label: t('kind.global') }, { value: 'folder', label: t('kind.folder') }]}
+          onChange={(value) => { setKind(value as Kind); setSelected(null) }} />
         <Button variant="outline" size="sm" asChild>
           <label>{t('import')}<input type="file" accept=".toml" onChange={importFile} hidden /></label>
         </Button>
@@ -133,10 +132,9 @@ export default function App() {
           {status.ok ? (status.lines.length ? t('status.warnings', { count: status.lines.length }) : t('status.valid')) : t('status.refused')}
         </Badge>
         {message && <span className="text-xs text-muted-foreground">{message}</span>}
-        <select aria-label={t('language')} className="ml-auto h-8 rounded-md border bg-background px-2 text-sm"
-          value={i18n.language} onChange={(event) => i18n.changeLanguage(event.target.value)}>
-          {Object.entries(LANGUAGES).map(([code, name]) => <option key={code} value={code}>{name}</option>)}
-        </select>
+        <Choice label={t('language')} className="ml-auto w-auto" value={i18n.language}
+          options={Object.entries(LANGUAGES).map(([code, name]) => ({ value: code, label: name }))}
+          onChange={(code) => i18n.changeLanguage(code)} />
       </header>
 
       <main className="grid min-h-0 grid-cols-[11rem_minmax(0,1fr)_20rem] border-b">
@@ -155,10 +153,8 @@ export default function App() {
         <section className="grid h-56 min-h-0 grid-cols-[minmax(0,1fr)_10rem_minmax(0,1fr)] border-b">
           <TreePanel title={t('tree.source')} root={roots.source} entries={entries} marks={marks} onEdit={editEntries} />
           <div className="flex flex-col justify-center gap-2 border-x p-3">
-            <select aria-label={t('tree.watch')} className="h-8 rounded-md border bg-background px-2 text-sm" value={watch}
-              onChange={(event) => setWatch(event.target.value)}>
-              {watches.map((name) => <option key={name}>{name}</option>)}
-            </select>
+            <Choice label={t('tree.watch')} value={watch} options={watches.map((name) => ({ value: name, label: name }))}
+              onChange={setWatch} />
             <Button size="sm" onClick={run} disabled={!status.ok || !watches.includes(watch)}>{t('tree.trigger')} ▶</Button>
             {simulation && (
               <Button size="sm" variant="outline" onClick={() => editEntries(() => simulation.entries)}>{t('tree.keep')}</Button>
