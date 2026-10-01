@@ -50,7 +50,7 @@ function ConfigNode({ data, kind, joins }: { data: NodeData; kind: keyof typeof 
   const Icon = kind === 'stage' ? stageIcon(data.label) : KIND_ICONS[kind]
   return (
     <BaseNode className={cn('min-w-36 text-sm', tones[kind])}>
-      <Handle type="target" position={Position.Left} isConnectable={joins === 'target'} />
+      <Handle type="target" position={Position.Top} isConnectable={joins === 'target'} />
       <BaseNodeHeader className="justify-start">
         <Icon className="size-3.5 shrink-0 text-muted-foreground" />
         <BaseNodeHeaderTitle className="text-sm font-medium">{kind === 'stage' ? <StageName name={data.label} /> : data.label}</BaseNodeHeaderTitle>
@@ -60,12 +60,12 @@ function ConfigNode({ data, kind, joins }: { data: NodeData; kind: keyof typeof 
           <small className="max-w-48 truncate font-mono text-xs text-muted-foreground">{data.detail}</small>
         </BaseNodeContent>
       )}
-      <Handle type="source" position={Position.Right} isConnectable={joins === 'source'} />
+      <Handle type="source" position={Position.Bottom} isConnectable={joins === 'source'} />
     </BaseNode>
   )
 }
 
-// A watch is joined to pipelines by its handle; stages follow each other only by order.
+// Everything flows down: a watch is joined to pipelines by its handle; stages follow each other only by order.
 const nodeTypes = {
   watch: ({ data }: NodeProps<Node<NodeData>>) => <ConfigNode data={data} kind="watch" joins="source" />,
   pipeline: ({ data }: NodeProps<Node<NodeData>>) => <ConfigNode data={data} kind="pipeline" joins="target" />,

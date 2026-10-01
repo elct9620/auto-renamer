@@ -39,12 +39,14 @@ test('a node moved on the canvas leaves the configuration as it was', async ({ p
 
 // @behavior PGE-033
 test('a reset layout draws every node where its order places it', async ({ page }) => {
-  const first = (await node(page, 'series').boundingBox())!
+  // A drag may pan the view, so the watch is placed against a pipeline rather than the page.
+  const top = async (name: string) => Math.round((await node(page, name).boundingBox())!.y)
+  const gap = (await top('video')) - (await top('series'))
   await dragBy(page, 'series', 150)
 
   await page.getByRole('button', { name: 'Reset layout' }).click()
 
-  await expect.poll(async () => Math.round((await node(page, 'series').boundingBox())!.y)).toBe(Math.round(first.y))
+  await expect.poll(async () => (await top('video')) - (await top('series'))).toBe(gap)
 })
 
 // @behavior PGE-034

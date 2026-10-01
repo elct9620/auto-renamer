@@ -15,7 +15,8 @@ export interface NodeData extends Record<string, unknown> {
 
 const COLUMN = 240
 const ROW = 110
-const FIRST_STAGE = COLUMN * 2
+// A stage sits below the one before it, so a long pipeline grows down instead of shrinking the drawing.
+const STEP = 80
 
 export function watchId(name: string): string {
   return `watch:${name}`
@@ -35,17 +36,17 @@ export interface Joint extends Record<string, unknown> {
   pipeline: string
 }
 
-/** Where a stage dropped at a point of the drawing goes: the pipeline drawn on that row, after each of its
- * stages whose middle is left of the point. `nodes` are as drawn, without the stage being moved. */
+/** Where a stage dropped at a point of the drawing goes: the pipeline drawn in that column, after each of its
+ * stages whose middle is above the point. `nodes` are as drawn, without the stage being moved. */
 export function dropAt(nodes: Node<NodeData>[], point: XYPosition): { pipeline: string; index: number } | null {
-  const row = nodes
-    .filter((node) => node.type === 'pipeline' && Math.abs(node.position.y - point.y) < ROW / 2)
-    .sort((a, b) => Math.abs(a.position.y - point.y) - Math.abs(b.position.y - point.y))[0]
-  if (row === undefined || row.data.selected.kind !== 'pipeline') return null
-  const pipeline = row.data.selected.name
+  const column = nodes
+    .filter((node) => node.type === 'pipeline' && Math.abs(node.position.x - point.x) < COLUMN / 2)
+    .sort((a, b) => Math.abs(a.position.x - point.x) - Math.abs(b.position.x - point.x))[0]
+  if (column === undefined || column.data.selected.kind !== 'pipeline') return null
+  const pipeline = column.data.selected.name
   const index = nodes.filter((node) => {
     const one = node.data.selected
-    return one.kind === 'stage' && one.pipeline === pipeline && node.position.x + COLUMN / 2 <= point.x
+    return one.kind === 'stage' && one.pipeline === pipeline && node.position.y + STEP / 2 <= point.y
   }).length
   return { pipeline, index }
 }
@@ -59,8 +60,8 @@ function stageDetail(stage: Stage): string | undefined {
 }
 
 /**
- * The drawing of a configuration: each watch on the left, joined in order to the pipelines it runs,
- * and each pipeline followed by its stages from left to right.
+ * The drawing of a configuration, read from the top down: the watches in the top row, joined in order to
+ * the pipelines they run in the row below, each pipeline with its stages stacked under it.
  */
 export function toGraph(config: Table): { nodes: Node<NodeData>[]; edges: Edge[] } {
   const nodes: Node<NodeData>[] = []
@@ -68,12 +69,12 @@ export function toGraph(config: Table): { nodes: Node<NodeData>[]; edges: Edge[]
   const pipelines = Object.keys(asTable(config.pipeline))
   const watches = Object.keys(asTable(config.watch))
 
-  watches.forEach((name, row) => {
+  watches.forEach((name, column) => {
     const watch = asTable(asTable(config.watch)[name])
     nodes.push({
       id: watchId(name),
       type: 'watch',
-      position: { x: 0, y: row * ROW },
+      position: { x: column * COLUMN, y: 0 },
       data: {
         label: name,
         detail: typeof watch.source === 'string' ? watch.source : undefined,
@@ -93,12 +94,12 @@ export function toGraph(config: Table): { nodes: Node<NodeData>[]; edges: Edge[]
     })
   })
 
-  pipelines.forEach((pipeline, row) => {
-    const y = row * ROW
+  pipelines.forEach((pipeline, column) => {
+    const x = COLUMN * column
     nodes.push({
       id: pipelineId(pipeline),
       type: 'pipeline',
-      position: { x: COLUMN, y },
+      position: { x, y: ROW },
       data: { label: pipeline, selected: { kind: 'pipeline', name: pipeline } },
     })
     let previous = pipelineId(pipeline)
@@ -107,7 +108,7 @@ export function toGraph(config: Table): { nodes: Node<NodeData>[]; edges: Edge[]
       nodes.push({
         id,
         type: 'stage',
-        position: { x: FIRST_STAGE + COLUMN * index, y },
+        position: { x, y: ROW + STEP * (index + 1) },
         data: {
           label: stageName(stage),
           detail: stageDetail(stage),

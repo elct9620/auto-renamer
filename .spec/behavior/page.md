@@ -441,3 +441,11 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | `Alpha/auto-renamer.toml` opened from the tree |
 | When | the download is chosen |
 | Then | the file offered is named `auto-renamer.toml` |
+
+## `PGE-056` A pipeline's stages are stacked below it in order
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline `video` with the stages filter, format and move |
+| When | it is drawn |
+| Then | each stage is drawn in the pipeline's column, below the one before it |

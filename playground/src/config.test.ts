@@ -78,6 +78,17 @@ describe('drawing', () => {
     expect(edgeBetween(config, watchId('movies'), pipelineId('video'))).toBeDefined()
     expect(edgeBetween(config, watchId('movies'), pipelineId('subtitle'))).toBeUndefined()
   })
+
+  // @behavior PGE-056
+  it('stacks the stages of a pipeline below it in order', () => {
+    const { nodes } = toGraph(read(CONFIG))
+    const column = ['pipeline:video', 'stage:video:0', 'stage:video:1', 'stage:video:2']
+      .map((id) => nodes.find((node) => node.id === id)!.position)
+
+    expect(new Set(column.map(({ x }) => x)).size).toBe(1)
+    expect(column.map(({ y }) => y)).toEqual([...column.map(({ y }) => y)].sort((a, b) => a - b))
+    expect(new Set(column.map(({ y }) => y)).size).toBe(column.length)
+  })
 })
 
 describe('layout', () => {
@@ -94,9 +105,9 @@ describe('layout', () => {
 
   it('drops a stage on the pipeline where it is drawn', () => {
     const config = read(CONFIG)
-    const moved = laidOut(toGraph(config).nodes, { [pipelineId('subtitle')]: { x: 240, y: 600 } })
+    const moved = laidOut(toGraph(config).nodes, { [pipelineId('subtitle')]: { x: 1200, y: 0 } })
 
-    expect(dropAt(moved, { x: 700, y: 600 })).toEqual({ pipeline: 'subtitle', index: 1 })
+    expect(dropAt(moved, { x: 1200, y: 600 })).toEqual({ pipeline: 'subtitle', index: 1 })
   })
 
   // @behavior PGE-028
@@ -164,7 +175,7 @@ describe('editing', () => {
     const { nodes } = toGraph(config)
     const [, second] = nodes.filter((node) => node.id.startsWith('stage:video:'))
 
-    expect(dropAt(nodes, { x: second.position.x + 10, y: second.position.y })).toEqual({ pipeline: 'video', index: 1 })
+    expect(dropAt(nodes, { x: second.position.x, y: second.position.y + 10 })).toEqual({ pipeline: 'video', index: 1 })
   })
 
   // @behavior PGE-016
