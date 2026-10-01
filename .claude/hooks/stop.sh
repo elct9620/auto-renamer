@@ -21,6 +21,6 @@ else
   echo "sumi is not installed; the specification was not checked." >&2
 fi
 
-out=$(cargo fmt --check 2>&1) || fail "cargo fmt --check" "$out"
-out=$(cargo clippy --all-targets --locked -- -D warnings 2>&1) || fail "cargo clippy" "$out"
-out=$(cargo test --locked 2>&1) || fail "cargo test" "$out"
+out=$(cargo fmt --all --check 2>&1) || fail "cargo fmt --check" "$out"
+out=$(cargo clippy --workspace --all-targets --locked -- -D warnings 2>&1) || fail "cargo clippy" "$out"
+out=$(cargo test --workspace --locked 2>&1) || fail "cargo test" "$out"

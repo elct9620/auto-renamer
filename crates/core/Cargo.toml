@@ -1,0 +1,12 @@
+[package]
+name = "auto-renamer-core"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+chrono.workspace = true
+globset = "0.4.20"
+regex = "1.13.1"
+toml.workspace = true

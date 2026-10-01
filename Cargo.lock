@@ -15,12 +15,21 @@ dependencies = [
 name = "auto-renamer"
 version = "0.1.0"
 dependencies = [
+ "auto-renamer-core",
  "chrono",
- "globset",
  "notify",
- "regex",
  "rustix",
  "signal-hook",
+ "toml",
+]
+
+[[package]]
+name = "auto-renamer-core"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "globset",
+ "regex",
  "toml",
 ]
 

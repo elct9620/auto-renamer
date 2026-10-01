@@ -1,5 +1,6 @@
-# Only Cargo.toml, Cargo.lock and src/ are needed to build.
+# Only the manifests, Cargo.lock, src/ and crates/core/ are needed to build.
 *
 !Cargo.toml
 !Cargo.lock
 !src
+!crates/core

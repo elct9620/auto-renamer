@@ -13,7 +13,7 @@ use crate::cli::Options;
 use crate::config::Config;
 use crate::filesystem::FsTree;
 use crate::scan::Scan;
-use crate::service::{Renames, process_batch, report};
+use crate::service::{Processed, Renames, What, process_batch};
 use crate::watcher::{Machine, Queue, Ready, Translated, rewrites, translate};
 
 /// How long a change to the configuration file is awaited for more changes before it is read.
@@ -376,4 +376,22 @@ fn wait(session: &Session, reload_at: Option<SystemTime>, now: SystemTime) -> Du
         .min()
         .map(|due| due.duration_since(now).unwrap_or(Duration::ZERO))
         .map_or(POLL, |until| until.min(POLL))
+}
+
+/// Logs what became of one file of a batch.
+fn report(entry: &Processed) {
+    let origin = entry.origin.display();
+    match &entry.what {
+        What::Moved(to) => eprintln!("[info] {origin} -> {}", to.display()),
+        What::MovedThenFailed { to, reason } => {
+            eprintln!("[warn] {origin} -> {}, then failed: {reason}", to.display())
+        }
+        What::Previewed(to) => eprintln!("[info] {origin} would go to {}", to.display()),
+        What::Unchanged => {}
+        What::Unclaimed => eprintln!("[info] {origin} left: no pipeline claims it"),
+        What::Excluded => eprintln!("[info] {origin} left: a filter excluded it"),
+        What::Skipped(reason) => eprintln!("[warn] {origin} skipped: {reason}"),
+        What::Refused(reason) => eprintln!("[warn] {origin} refused: {reason}"),
+        What::LeftTooLarge => eprintln!("[warn] {origin} left: the batch is too large"),
+    }
 }

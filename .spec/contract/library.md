@@ -1,10 +1,11 @@
 # Library
 
-The interfaces the library keeps for its own binary and tests. None is published outside this project.
+The interfaces the library keeps for its own binary, its tests and the playground. None is published as a crate.
 
 ## Includes
 
 - `src/**/*.rs`
+- `crates/*/src/**/*.rs`
 
 ## `Value`
 
@@ -942,18 +943,6 @@ Plan a ready batch through the pipelines of its watch, with the folder configura
 
 ```rust
 pub fn process_batch(tree: &dyn Tree, watch: &Watch, unit: &Path, files: &[PathBuf], renames: &mut Renames) -> Vec<Processed> {}
-```
-
-## `report`
-
-Log what became of one file of a batch.
-
-| Attribute | Value |
-| --- | --- |
-| internal | yes |
-
-```rust
-pub fn report(entry: &Processed) {}
 ```
 
 ## `Tree`

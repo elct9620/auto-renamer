@@ -1,33 +1,38 @@
 # 架構
 
-auto-renamer 是單一套件：`src/lib.rs` 放全部邏輯，`src/main.rs` 只負責串接。
+auto-renamer 是一個 workspace：`crates/core` 決定檔案的名稱與去向，根套件把它接上 Linux 的檔案系統與通知。
 
 ```
-  src/lib.rs   all logic, as modules
-  src/main.rs  wiring only
+  crates/core   auto-renamer-core: pipeline, config, effects through a Tree
+  src/lib.rs    auto-renamer: filesystem, watcher, runner; re-exports core
+  src/main.rs   wiring only
 ```
 
 ## 結構風格
 
+core 不碰檔案系統與通知，所以能編成 WASM 給 playground 用。
+
 | 決定 | 內容 |
 |---|---|
-| 套件 | 單一套件，`lib.rs` 加 `main.rs` |
-| 邊界 | 模組，不是 crate |
+| 套件 | 根套件加 `crates/*` 成員，版本一起升 |
+| 邊界 | core 是 crate，其餘是模組 |
 | 核心 | 純函式，檔案只經注入的 `Tree` |
 | 外圍 | `filesystem`、`scan`、`runner` 與 `main` |
 | 平台 | `runner` 以 `cfg(target_os = "linux")` 隔開，其他平台的 `main` 直接拒絕 |
 
-`Dockerfile` 只複製 `Cargo.toml`、`Cargo.lock` 與 `src`，`.dockerignore` 是白名單，release-please 只管根套件，所以多 crate workspace 會破壞映像建置與發版。
+根套件以 `pub use auto_renamer_core::*` 轉出 core，測試與 `main` 只看 `auto_renamer`。release-please 的 rust 策略把每個成員升到同一版本；`Dockerfile` 先以空殼編譯兩個套件的依賴，`.dockerignore` 的白名單含 `crates/core`。
 
 ## 模組地圖
 
 ```
-  main ─► runner ─┬─► service ─┬─► engine ──► pipeline ─► stages ─┬─► template ─► record
-                  │            ├─► effects ─► stages               ├─► context ──► record
-                  │            └─► config ──► pipeline, reader     └─► reader ───► record
-                  ├─► filesystem ─► effects
-                  ├─► watcher ─► config
-                  └─► scan ────► watcher
+  root   main ─► runner ─┬─► service, config      (core)
+                         ├─► filesystem ─► effects (core)
+                         ├─► watcher ─► config
+                         └─► scan ────► watcher
+  ─────────────────────────────────────────────────── crate boundary
+  core   service ─┬─► engine ──► pipeline ─► stages ─┬─► template ─► record
+                  ├─► effects ─► stages               ├─► context ──► record
+                  └─► config ──► pipeline, reader     └─► reader ───► record
   only filesystem, scan and runner touch the filesystem
 ```
 

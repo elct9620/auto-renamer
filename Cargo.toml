@@ -1,3 +1,10 @@
+[workspace]
+members = ["crates/*"]
+
+[workspace.dependencies]
+chrono = { version = "0.4.45", default-features = false, features = ["std"] }
+toml = "1.1.6"
+
 [package]
 name = "auto-renamer"
 version = "0.1.0"
@@ -5,12 +12,13 @@ edition = "2024"
 license = "Apache-2.0"
 
 [dependencies]
-chrono = { version = "0.4.45", default-features = false, features = ["std"] }
-globset = "0.4.20"
+auto-renamer-core = { path = "crates/core" }
+chrono.workspace = true
 notify = "8"
-regex = "1.13.1"
 signal-hook = "0.4.4"
-toml = "1.1.6"
+
+[dev-dependencies]
+toml.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
 rustix = { version = "1.1.5", features = ["fs"] }

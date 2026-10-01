@@ -9,13 +9,16 @@ FROM rust:${RUST_VERSION}-alpine AS builder
 RUN apk add --no-cache musl-dev
 WORKDIR /app
 
-# Build dependencies first so they stay cached until the manifest changes.
+# Build dependencies first so they stay cached until a manifest changes.
 COPY Cargo.toml Cargo.lock ./
-RUN mkdir src && echo 'fn main() {}' > src/main.rs \
+COPY crates/core/Cargo.toml crates/core/
+RUN mkdir src crates/core/src && echo 'fn main() {}' > src/main.rs && touch crates/core/src/lib.rs \
     && cargo build --release --locked \
-    && rm -rf src target/release/auto-renamer target/release/deps/auto_renamer*
+    && rm -rf src crates/core/src target/release/auto-renamer target/release/deps/auto_renamer* \
+       target/release/.fingerprint/auto-renamer*
 
 COPY src ./src
+COPY crates/core/src ./crates/core/src
 RUN cargo build --release --locked
 
 # Linux to run the tests on: real inotify, and /dev/shm as a second filesystem for moves between mounts.
@@ -23,7 +26,7 @@ RUN cargo build --release --locked
 FROM rust:${RUST_VERSION} AS test
 COPY --from=busybox /bin/busybox /usr/local/bin/mv
 WORKDIR /app
-CMD ["cargo", "test", "--locked"]
+CMD ["cargo", "test", "--workspace", "--locked"]
 
 FROM scratch
 COPY --from=busybox /bin/busybox /bin/mv

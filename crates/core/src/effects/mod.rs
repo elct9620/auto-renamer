@@ -133,7 +133,7 @@ pub fn apply_effects(
     run
 }
 
-pub(crate) fn io_error(action: &'static str, path: &Path, kind: io::ErrorKind) -> EffectError {
+pub fn io_error(action: &'static str, path: &Path, kind: io::ErrorKind) -> EffectError {
     EffectError::Io {
         action,
         path: path.to_path_buf(),

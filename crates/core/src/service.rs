@@ -286,21 +286,3 @@ fn read_folder_config(tree: &dyn Tree, path: &Path) -> Option<io::Result<String>
     }
     Some(tree.read(path, MAX_FOLDER_CONFIG_BYTES as u64 + 1))
 }
-
-/// Logs what became of one file of a batch.
-pub fn report(entry: &Processed) {
-    let origin = entry.origin.display();
-    match &entry.what {
-        What::Moved(to) => eprintln!("[info] {origin} -> {}", to.display()),
-        What::MovedThenFailed { to, reason } => {
-            eprintln!("[warn] {origin} -> {}, then failed: {reason}", to.display())
-        }
-        What::Previewed(to) => eprintln!("[info] {origin} would go to {}", to.display()),
-        What::Unchanged => {}
-        What::Unclaimed => eprintln!("[info] {origin} left: no pipeline claims it"),
-        What::Excluded => eprintln!("[info] {origin} left: a filter excluded it"),
-        What::Skipped(reason) => eprintln!("[warn] {origin} skipped: {reason}"),
-        What::Refused(reason) => eprintln!("[warn] {origin} refused: {reason}"),
-        What::LeftTooLarge => eprintln!("[warn] {origin} left: the batch is too large"),
-    }
-}
