@@ -100,6 +100,13 @@ impl Record {
         self.fields.get(name)
     }
 
+    /// Every field with its value, in the order of their names.
+    pub fn fields(&self) -> impl Iterator<Item = (&str, &Value)> {
+        self.fields
+            .iter()
+            .map(|(name, value)| (name.as_str(), value))
+    }
+
     /// Writes a field, replacing any earlier value. The file name of the plan is always `name` and `ext`
     /// put together, so writing either one renames the plan; a result that cannot be a file name leaves the plan as it was.
     pub fn set_field(&mut self, name: &str, value: Value) {

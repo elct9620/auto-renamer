@@ -54,6 +54,14 @@ What became of one file of a simulated batch.
 pub struct Outcome {}
 ```
 
+## `SimulatedStep`
+
+What one file of a simulated batch held at one step of its planning: the pipeline, the stage by its place or none for the claim, its plan and fields while it went on, or why it stopped.
+
+```rust
+pub struct SimulatedStep {}
+```
+
 ## `Simulation`
 
 What a simulation reported and the virtual tree it left.

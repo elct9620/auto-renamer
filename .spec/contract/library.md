@@ -101,6 +101,20 @@ impl Record {
 }
 ```
 
+## `Record::fields`
+
+Every field of the record with its value, in the order of their names.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Record {
+    pub fn fields(&self) -> impl Iterator<Item = (&str, &Value)> {}
+}
+```
+
 ## `Record::set_field`
 
 Write a field, replacing any earlier value.

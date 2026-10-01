@@ -32,11 +32,24 @@ export interface Declaration {
   example: string
 }
 
+/** One step of a file's planning: the claim when `stage` is null, then each stage it reached by its place in
+ * the pipeline, holding the plan and fields it went on with or why it stopped. */
+export interface SimulatedStep {
+  pipeline: string
+  stage: number | null
+  plan: string | null
+  fields: Record<string, string>
+  stop: string | null
+}
+
+/** `replaced` says a folder configuration replaced the pipeline that planned the file. */
 export interface Outcome {
   origin: string
   what: string
   to: string | null
   reason: string | null
+  steps: SimulatedStep[]
+  replaced: boolean
 }
 
 export interface Simulation {

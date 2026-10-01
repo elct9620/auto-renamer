@@ -10,7 +10,10 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 pub use auto_renamer_core::Declaration;
-use auto_renamer_core::{Config, Declared, FolderConfig, Processed, Renames, What, process_batch};
+use auto_renamer_core::{
+    Config, Declared, FolderConfig, Processed, Renames, Step, Stop, Value, What,
+    process_batch_observed, replaced_pipelines,
+};
 use serde::{Deserialize, Serialize};
 pub use toml::Table;
 
@@ -63,13 +66,62 @@ pub struct Entry {
 }
 
 /// What became of one file of a simulated batch: `what` names it, `to` is where the file went or would
-/// go, and `reason` says why it was skipped, refused or failed.
+/// go, and `reason` says why it was skipped, refused or failed. `steps` are how its pipeline planned it,
+/// and `replaced` says a folder configuration replaced that pipeline.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Outcome {
     pub origin: String,
     pub what: &'static str,
     pub to: Option<String>,
     pub reason: Option<String>,
+    pub steps: Vec<SimulatedStep>,
+    pub replaced: bool,
+}
+
+/// One step of a file's planning: the pipeline, the stage by its place or none for the claim, and either
+/// the plan and fields the file went on with or why it stopped there.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct SimulatedStep {
+    pub pipeline: String,
+    pub stage: Option<usize>,
+    pub plan: Option<String>,
+    pub fields: BTreeMap<String, String>,
+    pub stop: Option<String>,
+}
+
+impl SimulatedStep {
+    fn of(step: &Step) -> SimulatedStep {
+        let (plan, fields, stop) = match step.flow {
+            Ok(record) => (
+                Some(record.plan().display().to_string()),
+                record
+                    .fields()
+                    .map(|(name, value)| (name.to_string(), shown(value)))
+                    .collect(),
+                None,
+            ),
+            Err(Stop::Excluded) => (None, BTreeMap::new(), Some("excluded".to_string())),
+            Err(Stop::Rejected(rejection)) => {
+                (None, BTreeMap::new(), Some(rejection.reason.clone()))
+            }
+        };
+        SimulatedStep {
+            pipeline: step.pipeline.to_string(),
+            stage: step.stage,
+            plan,
+            fields,
+            stop,
+        }
+    }
+}
+
+/// A field as the page shows it: text as it is, a number in digits, a date in RFC 3339.
+fn shown(value: &Value) -> String {
+    match value {
+        Value::Text(text) => text.clone(),
+        Value::Number(number) => number.to_string(),
+        Value::Date(date) => date.to_rfc3339(),
+    }
 }
 
 /// What a simulation reported, and the virtual tree it left.
@@ -97,8 +149,26 @@ pub fn simulate(config: &str, watch: &str, entries: Vec<Entry>) -> Result<Simula
     let mut renames = Renames::new();
     let mut outcomes = Vec::new();
     for (unit, files) in units {
-        let processed = process_batch(&tree, watch, &unit, &files, &mut renames);
-        outcomes.extend(processed.into_iter().map(outcome));
+        let replaced = replaced_pipelines(&tree, watch, &unit);
+        let mut steps: BTreeMap<PathBuf, Vec<SimulatedStep>> = BTreeMap::new();
+        let processed =
+            process_batch_observed(&tree, watch, &unit, &files, &mut renames, &mut |step| {
+                steps
+                    .entry(step.origin.to_path_buf())
+                    .or_default()
+                    .push(SimulatedStep::of(&step));
+            });
+        outcomes.extend(processed.into_iter().map(|entry| {
+            let steps = steps.remove(&entry.origin).unwrap_or_default();
+            let replaced = steps
+                .first()
+                .is_some_and(|step| replaced.contains(&step.pipeline));
+            Outcome {
+                steps,
+                replaced,
+                ..outcome(entry)
+            }
+        }));
     }
     Ok(Simulation {
         outcomes,
@@ -124,5 +194,7 @@ fn outcome(entry: Processed) -> Outcome {
         what,
         to,
         reason,
+        steps: Vec::new(),
+        replaced: false,
     }
 }

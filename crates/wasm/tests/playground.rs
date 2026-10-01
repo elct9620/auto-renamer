@@ -202,3 +202,51 @@ fn should_accept_every_stage_offered_as_its_example() {
         assert!(checked.is_ok(), "{}: {checked:?}", stage.name);
     }
 }
+
+// @behavior PLG-014
+#[test]
+fn should_carry_every_step_of_a_file() {
+    let stages = r#"[{ number = { into = "episode" } }, { format = "{show} {episode}" }]"#;
+
+    let simulation = run(&config(stages, ""), vec![file("/src/Show/x 07.mkv")]);
+
+    let steps = &outcome(&simulation, "Show/x 07.mkv")
+        .expect("the file is reported")
+        .steps;
+    let places: Vec<_> = steps.iter().map(|step| step.stage).collect();
+    assert_eq!(places, [None, Some(0), Some(1)]);
+    assert_eq!(
+        steps[1].fields.get("episode").map(String::as_str),
+        Some("7")
+    );
+    assert_eq!(
+        steps[2].fields.get("name").map(String::as_str),
+        Some("Alpha 7")
+    );
+}
+
+// @behavior PLG-015
+#[test]
+fn should_mark_a_file_a_replaced_pipeline_planned() {
+    let entries = vec![
+        file("/src/Show/x.mkv"),
+        file_with(
+            "/src/Show/auto-renamer.toml",
+            "[pipeline.p]\nstages = [{ format = \"Beta\" }, \"move\"]\n",
+        ),
+        file("/src/Other/y.mkv"),
+    ];
+
+    let simulation = run(&config(MOVE_AS_SHOW, ""), entries);
+
+    assert!(
+        outcome(&simulation, "Show/x.mkv")
+            .expect("the file is reported")
+            .replaced
+    );
+    assert!(
+        !outcome(&simulation, "Other/y.mkv")
+            .expect("the file is reported")
+            .replaced
+    );
+}

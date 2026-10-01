@@ -109,3 +109,19 @@ The playground checks, reads and writes a configuration, and simulates a watch o
 | Given | each stage the page is offered |
 | When | a global configuration whose pipeline holds its example is checked |
 | Then | it is accepted |
+
+## `PLG-014` A simulated file carries every step of its planning
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline of a number and a format, and a file it claims |
+| When | the watch is simulated |
+| Then | the file's outcome lists the claim, the number with its episode, and the format with its name, in that order |
+
+## `PLG-015` A file a replaced pipeline planned is marked as such
+
+| Step | Statement |
+| --- | --- |
+| Given | a folder configuration replacing the pipeline of its folder |
+| When | the watch is simulated |
+| Then | the outcome of a file in that folder is marked as planned by a replaced pipeline, and one elsewhere is not |
