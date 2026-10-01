@@ -1,6 +1,6 @@
 # Page
 
-The playground page draws a configuration for people who do not read TOML: each watch is joined to the pipelines it uses, and each pipeline is its stages in order. The table the core reads is the only state; the drawing and every edit are made from it and back into it, so what is downloaded is what was drawn.
+The playground page draws a configuration for people who do not read TOML: each watch is joined to the pipelines it uses, and each pipeline is its stages in order. The table the core reads is the baseline; the drawing and every edit are made from it and back into it, so what is downloaded is what was drawn. Where a node sits is only its layout, which is neither written nor kept.
 
 ## Includes
 
