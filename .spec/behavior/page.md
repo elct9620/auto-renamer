@@ -133,3 +133,35 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the stages the core describes |
 | When | a regex stage is added |
 | Then | the stage is written with the regex example |
+
+## `PGE-017` The virtual tree is shown as the watch's source and target
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch from `/downloads` to `/video` and files under both |
+| When | the tree is drawn for the watch |
+| Then | the source shows the files under `/downloads` and the target those under `/video` |
+
+## `PGE-018` A file is shown inside its folders
+
+| Step | Statement |
+| --- | --- |
+| Given | the file `/downloads/Alpha/x.mkv` |
+| When | the source tree is drawn |
+| Then | `x.mkv` is shown inside the folder `Alpha` |
+
+## `PGE-019` A removed folder takes what it holds
+
+| Step | Statement |
+| --- | --- |
+| Given | the files `/downloads/Alpha/x.mkv` and `/downloads/Beta/y.mkv` |
+| When | the folder `/downloads/Alpha` is removed |
+| Then | only `/downloads/Beta/y.mkv` is left |
+
+## `PGE-020` A renamed folder carries what it holds
+
+| Step | Statement |
+| --- | --- |
+| Given | the file `/downloads/Alpha/x.mkv` |
+| When | the folder `/downloads/Alpha` is renamed `Beta` |
+| Then | the file is `/downloads/Beta/x.mkv` |

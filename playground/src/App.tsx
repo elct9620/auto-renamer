@@ -27,6 +27,7 @@ import {
 } from './config'
 import { type Entry, type Kind, type Simulation, check, read, render, simulate, stages } from './core'
 import { type NodeData, type Selected, toGraph } from './graph'
+import { addEntry } from './tree'
 
 const EXAMPLE = `[default]
 pipelines = ["video"]
@@ -228,7 +229,7 @@ function TreeEditor({ entries, onChange }: { entries: Entry[]; onChange: (entrie
       <div className="row">
         <input placeholder="/downloads/Show/file.mkv" value={path} onChange={(event) => setPath(event.target.value)} />
         <button disabled={!path.startsWith('/')} onClick={() => {
-          onChange([...entries.filter((entry) => entry.path !== path), { path, folder: false, modified: Date.now(), text: '' }])
+          onChange(addEntry(entries, path, false))
           setPath('')
         }}>Add file</button>
       </div>
