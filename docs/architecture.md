@@ -13,8 +13,8 @@ auto-renamer 是單一套件：`src/lib.rs` 放全部邏輯，`src/main.rs` 只�
 |---|---|
 | 套件 | 單一套件，`lib.rs` 加 `main.rs` |
 | 邊界 | 模組，不是 crate |
-| 核心 | 純函式，不碰檔案系統、時間與 notify |
-| 外圍 | `effects`、`scan`、`service`、`runner` 與 `main` |
+| 核心 | 純函式，檔案只經注入的 `Tree` |
+| 外圍 | `filesystem`、`scan`、`runner` 與 `main` |
 | 平台 | `runner` 以 `cfg(target_os = "linux")` 隔開，其他平台的 `main` 直接拒絕 |
 
 `Dockerfile` 只複製 `Cargo.toml`、`Cargo.lock` 與 `src`，`.dockerignore` 是白名單，release-please 只管根套件，所以多 crate workspace 會破壞映像建置與發版。
@@ -24,11 +24,11 @@ auto-renamer 是單一套件：`src/lib.rs` 放全部邏輯，`src/main.rs` 只�
 ```
   main ─► runner ─┬─► service ─┬─► engine ──► pipeline ─► stages ─┬─► template ─► record
                   │            ├─► effects ─► stages               ├─► context ──► record
-                  │            ├─► tree                            └─► reader ───► record
-                  │            └─► config ──► pipeline, reader
+                  │            └─► config ──► pipeline, reader     └─► reader ───► record
+                  ├─► filesystem ─► effects
                   ├─► watcher ─► config
                   └─► scan ────► watcher
-  only effects, scan, service and runner touch the filesystem
+  only filesystem, scan and runner touch the filesystem
 ```
 
 依賴由外向內指向 `record`，內層不知道外層。
@@ -45,17 +45,17 @@ auto-renamer 是單一套件：`src/lib.rs` 放全部邏輯，`src/main.rs` 只�
 | `engine` | 認領順序與每個檔案的結論 | 否 |
 | `reader` | 逐鍵讀取 TOML 表格，拒絕剩下的鍵 | 否 |
 | `config` | 設定解析、層疊與驗證 | 否 |
-| `tree` | 處理批次時讀檔的介面 | 否 |
-| `effects` | 執行 `move` 與 `cleanup` | 檔案系統、`mv` |
+| `effects` | `move` 與 `cleanup` 的規則，與它們經過的 `Tree` | 否 |
 | `watcher` | 事件、單元與批次收束的狀態機 | 否 |
 | `watcher` 的翻譯 | notify 事件轉成單元事件 | 否 |
 | `watcher` 的佇列 | 篩選通知、限制數量、記下遺失 | 否 |
 | `scan` | 分次列出資料夾內的一般檔案 | 檔案系統 |
-| `service` | 批次處理、目錄設定、改名次數，經 `Tree` 讀檔 | 檔案系統（`FsTree`） |
+| `service` | 批次處理、目錄設定、改名次數 | 否 |
+| `filesystem` | `FsTree`：rename 與跨掛載的 `mv` | 檔案系統、`mv` |
 | `cli` | 命令列參數 | 否 |
 | `runner` | notify、時鐘、每圈的工作量、重新載入、停止 | notify、時間、設定檔 |
 
-`engine` 與 `watcher` 的狀態機吃注入的資料與時鐘，所以不需要真實的檔案系統就能測試。
+`engine` 與 `watcher` 的狀態機吃注入的資料與時鐘，`service` 與 `effects` 經注入的 `Tree`，所以虛擬目錄也能跑同一段處理。
 
 ## 階段模式
 
@@ -95,7 +95,7 @@ let rewritten = change(text_field(stage, &record, field)?);
   perform  service  ──► apply_effects(file.effects)     per file, in order
 ```
 
-effect 階段在規劃時只記下要做的事，整批規劃完才由 `effects` 逐檔執行。核心因此不碰檔案系統；乾跑時 `move` 只回報會搬到哪裡，`cleanup` 不執行。「effect 排在最後」是 `pipeline` 的宣告規則，引擎不依賴它。
+effect 階段在規劃時只記下要做的事，整批規劃完才由 `effects` 經 `Tree` 逐檔執行。規劃因此不碰任何檔案；乾跑時 `move` 只回報會搬到哪裡，`cleanup` 不執行。「effect 排在最後」是 `pipeline` 的宣告規則，引擎不依賴它。
 
 ### 檢視時機
 
@@ -112,7 +112,7 @@ effect 階段在規劃時只記下要做的事，整批規劃完才由 `effects`
 | 層 | 方式 |
 |---|---|
 | 核心 | 以 TOML 管線加 `docs/cases.md` 的案例做整合測試 |
-| `effects` | 暫存目錄 |
+| `effects`、`filesystem` | 暫存目錄 |
 | `watcher` 狀態機 | 注入時鐘與事件 |
 | `scan`、`service` | 暫存目錄 |
 | notify 與跨檔案系統 | 容器內的 Linux 與 `/dev/shm` |

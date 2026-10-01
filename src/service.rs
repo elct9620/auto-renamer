@@ -1,72 +1,25 @@
 //! Turns a ready batch of settled files into moved, unchanged or refused files.
 
 use std::collections::HashMap;
-use std::fs;
-use std::io::{self, Read};
+use std::io;
 use std::path::{Path, PathBuf};
-
-use chrono::{DateTime, Utc};
 
 use crate::config::{FOLDER_CONFIG, FolderConfig, MAX_FOLDER_CONFIG_BYTES, Watch};
 use crate::context::Target;
-use crate::effects::{Applied, Done, Roots, SkipReason, apply_effects};
+use crate::effects::{Applied, Done, Kind, Roots, SkipReason, Tree, apply_effects};
 use crate::engine::{Verdict, plan_batch};
 use crate::record::Record;
 use crate::stages::Effect;
-use crate::tree::{Kind, Tree};
 
-/// The target folder as the filesystem holds it.
-pub struct FsTarget {
-    root: PathBuf,
+/// The target as a stage asks for it, answered by the tree under the root of the target.
+struct TargetIn<'a> {
+    tree: &'a dyn Tree,
+    root: &'a Path,
 }
 
-impl FsTarget {
-    /// A target over the folder at the root.
-    pub fn new(root: PathBuf) -> FsTarget {
-        FsTarget { root }
-    }
-}
-
-impl Target for FsTarget {
+impl Target for TargetIn<'_> {
     fn files_in(&self, folder: &Path) -> Vec<String> {
-        let Ok(entries) = fs::read_dir(self.root.join(folder)) else {
-            return Vec::new();
-        };
-        entries
-            .flatten()
-            .filter(|entry| entry.file_type().is_ok_and(|kind| kind.is_file()))
-            .filter_map(|entry| entry.file_name().into_string().ok())
-            .collect()
-    }
-}
-
-/// The tree the filesystem holds.
-pub struct FsTree;
-
-impl Tree for FsTree {
-    fn kind(&self, path: &Path) -> io::Result<Kind> {
-        let kind = fs::symlink_metadata(path)?.file_type();
-        Ok(if kind.is_symlink() {
-            Kind::Link
-        } else if kind.is_file() {
-            Kind::File
-        } else if kind.is_dir() {
-            Kind::Folder
-        } else {
-            Kind::Other
-        })
-    }
-
-    fn modified(&self, path: &Path) -> io::Result<DateTime<Utc>> {
-        Ok(DateTime::from(fs::symlink_metadata(path)?.modified()?))
-    }
-
-    fn read(&self, path: &Path, limit: u64) -> io::Result<String> {
-        let mut text = String::new();
-        fs::File::open(path)?
-            .take(limit)
-            .read_to_string(&mut text)?;
-        Ok(text)
+        self.tree.files(&self.root.join(folder))
     }
 }
 
@@ -174,13 +127,22 @@ pub fn process_batch(
     }
 
     let pipelines = effective.pipelines();
-    let target = FsTarget::new(target_root);
+    let target = TargetIn {
+        tree,
+        root: &target_root,
+    };
     let judged = plan_batch(&pipelines, records, &target);
     for entry in judged {
         let what = match entry.verdict {
-            Verdict::Planned(record) => {
-                apply_planned(&entry.effects, &record, unit, &roots, &effective, renames)
-            }
+            Verdict::Planned(record) => apply_planned(
+                tree,
+                &entry.effects,
+                &record,
+                unit,
+                &roots,
+                &effective,
+                renames,
+            ),
             Verdict::Unclaimed => What::Unclaimed,
             Verdict::Excluded => What::Excluded,
             Verdict::Rejected(rejection) => {
@@ -198,6 +160,7 @@ pub fn process_batch(
 /// Runs the effects of a planned file, unless it has been renamed in place too many times in a row,
 /// and keeps count of its renames in place.
 fn apply_planned(
+    tree: &dyn Tree,
     effects: &[Effect],
     record: &Record,
     unit: &Path,
@@ -213,7 +176,7 @@ fn apply_planned(
             "renamed in place {count} times in a row; the pipeline may name its own result again"
         ));
     }
-    let what = effects_of(effects, record, unit, roots, watch.dry_run);
+    let what = effects_of(tree, effects, record, unit, roots, watch.dry_run);
     if in_place {
         match &what {
             What::Moved(to) | What::MovedThenFailed { to, .. } => {
@@ -246,6 +209,7 @@ fn read_record(tree: &dyn Tree, watch: &Watch, origin: &Path) -> Result<Record, 
 }
 
 fn effects_of(
+    tree: &dyn Tree,
     effects: &[Effect],
     record: &Record,
     unit: &Path,
@@ -256,7 +220,7 @@ fn effects_of(
     if effects.is_empty() {
         return What::Previewed(roots.target.join(record.plan()));
     }
-    let run = apply_effects(effects, record, unit, roots, dry_run);
+    let run = apply_effects(tree, effects, record, unit, roots, dry_run);
     let moved = run.done.into_iter().find_map(|done| match done {
         Done::Moved(applied) => Some(applied),
         Done::Cleaned(_) => None,

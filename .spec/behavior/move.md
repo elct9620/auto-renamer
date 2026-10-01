@@ -5,7 +5,7 @@ A move puts a file at its plan under the target, and it is the only thing that t
 ## Includes
 
 - `tests/move.rs`
-- `src/effects/relocate.rs`
+- `src/filesystem.rs`
 
 ## `MV-001` A file is moved to its plan under the target, folders made as needed
 

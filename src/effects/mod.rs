@@ -1,18 +1,19 @@
-//! The only code that touches the files of the source and the target.
+//! What `move` and `cleanup` do to the files of the source and the target, through a tree.
 
 use std::fmt;
-use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
 mod cleanup;
 mod relocate;
+mod tree;
 
 use crate::record::Record;
 use crate::stages::Effect;
 
 pub use cleanup::cleanup_folders;
 pub use relocate::move_file;
+pub use tree::{Kind, Tree};
 
 /// The source a file comes from and the target it goes to, which are one folder when files are renamed in place.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -99,6 +100,7 @@ pub struct EffectsRun {
 /// Carries out the effects a planned file carries, in their order, stopping at the first failure so
 /// nothing after a failed effect acts on what it did not do.
 pub fn apply_effects(
+    tree: &dyn Tree,
     effects: &[Effect],
     record: &Record,
     unit: &Path,
@@ -111,11 +113,13 @@ pub fn apply_effects(
     };
     for effect in effects {
         let done = match effect {
-            Effect::Move(policy) => move_file(policy, record, roots, dry_run).map(Done::Moved),
+            Effect::Move(policy) => {
+                move_file(tree, policy, record, roots, dry_run).map(Done::Moved)
+            }
             // A dry run leaves the file where it is, so no folder it would empty is empty yet.
             Effect::Cleanup(_) if dry_run => continue,
             Effect::Cleanup(policy) => {
-                cleanup_folders(policy, record.origin(), unit, roots).map(Done::Cleaned)
+                cleanup_folders(tree, policy, record.origin(), unit, roots).map(Done::Cleaned)
             }
         };
         match done {
@@ -127,10 +131,6 @@ pub fn apply_effects(
         }
     }
     run
-}
-
-pub(crate) fn exists(path: &Path) -> bool {
-    fs::symlink_metadata(path).is_ok()
 }
 
 pub(crate) fn io_error(action: &'static str, path: &Path, kind: io::ErrorKind) -> EffectError {

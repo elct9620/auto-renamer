@@ -422,3 +422,19 @@ fn should_refuse_a_folder_configuration_one_byte_over_the_limit_on_disk() {
         What::Refused(_)
     ));
 }
+
+// @behavior SVC-020
+#[test]
+fn should_not_count_a_folder_in_the_target_as_a_numbered_file() {
+    let run = setup(
+        r#"[{ next = { into = "episode", like = "e{episode}" } }, { format = "e{episode}" }, "move"]"#,
+        "",
+    );
+    run.sandbox.write("source/Show/x.mkv", "video");
+    run.sandbox.write("target/Show/e1.mkv", "earlier");
+    run.sandbox.make_dir("target/Show/e7");
+
+    run.process("Show", &["Show/x.mkv"]);
+
+    assert!(run.sandbox.exists("target/Show/e2.mkv"));
+}

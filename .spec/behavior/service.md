@@ -150,3 +150,11 @@ Processing a batch is what a ready batch of settled files turns into: the files 
 | Given | the same watch, the file `Show/x.mkv`, and in `Show` a folder configuration of 64 KiB and one byte that sets `show` to Beta |
 | When | the batch is processed |
 | Then | the folder configuration is reported as refused |
+
+## `SVC-020` A folder in the target is not counted as a numbered file
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch whose pipeline numbers `episode` like `e{episode}`, formats the name as `e{episode}` and moves, the file `Show/x.mkv`, and in the target the file `Show/e1.mkv` and the folder `Show/e7` |
+| When | the batch is processed |
+| Then | the target holds `Show/e2.mkv` |

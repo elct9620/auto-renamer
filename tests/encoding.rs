@@ -74,6 +74,7 @@ fn should_not_make_a_conflict_suffix_from_a_name_that_is_not_utf8() {
     };
 
     let result = auto_renamer::move_file(
+        &auto_renamer::FsTree,
         &common::move_stage(r#"{ move = { on_conflict = "suffix" } }"#),
         &planned,
         &roots,

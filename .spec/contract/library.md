@@ -675,7 +675,7 @@ Move the file of a planned record to its plan under the target, or say where it 
 | internal | yes |
 
 ```rust
-pub fn move_file(stage: &Move, record: &Record, roots: &Roots, dry_run: bool) -> Result<Applied, EffectError> {}
+pub fn move_file(tree: &dyn Tree, stage: &Move, record: &Record, roots: &Roots, dry_run: bool) -> Result<Applied, EffectError> {}
 ```
 
 ## `cleanup_folders`
@@ -687,7 +687,7 @@ Remove the folders a moved file left empty, from its folder upward and only insi
 | internal | yes |
 
 ```rust
-pub fn cleanup_folders(stage: &Cleanup, origin: &Path, unit: &Path, roots: &Roots) -> Result<Vec<PathBuf>, EffectError> {}
+pub fn cleanup_folders(tree: &dyn Tree, stage: &Cleanup, origin: &Path, unit: &Path, roots: &Roots) -> Result<Vec<PathBuf>, EffectError> {}
 ```
 
 ## `Done`
@@ -735,7 +735,7 @@ Carry out the effects a planned file carries, in their order, stopping at the fi
 | internal | yes |
 
 ```rust
-pub fn apply_effects(effects: &[Effect], record: &Record, unit: &Path, roots: &Roots, dry_run: bool) -> EffectsRun {}
+pub fn apply_effects(tree: &dyn Tree, effects: &[Effect], record: &Record, unit: &Path, roots: &Roots, dry_run: bool) -> EffectsRun {}
 ```
 
 ## `Event`
@@ -958,7 +958,7 @@ pub fn report(entry: &Processed) {}
 
 ## `Tree`
 
-The files of the source and the target as far as processing a batch needs them, so the filesystem or a virtual tree can stand behind it.
+The files of the source and the target as processing a batch reads them and its effects change them, so the filesystem or a virtual tree can stand behind it.
 
 | Attribute | Value |
 | --- | --- |
@@ -1007,6 +1007,62 @@ The text of the file at a path, never more than a limit of its bytes.
 ```rust
 pub trait Tree {
     fn read(&self, path: &Path, limit: u64) -> io::Result<String>;
+}
+```
+
+## `Tree::files`
+
+The names of the regular files in a folder, none when it cannot be listed.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub trait Tree {
+    fn files(&self, folder: &Path) -> Vec<String>;
+}
+```
+
+## `Tree::is_empty`
+
+Whether a folder holds nothing at all.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub trait Tree {
+    fn is_empty(&self, folder: &Path) -> io::Result<bool>;
+}
+```
+
+## `Tree::place`
+
+Put a file where it is wanted, making the folders on the way, without ever replacing what is there.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub trait Tree {
+    fn place(&self, from: &Path, to: &Path) -> Result<(), EffectError>;
+}
+```
+
+## `Tree::remove_folder`
+
+Remove a folder that holds nothing.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub trait Tree {
+    fn remove_folder(&self, folder: &Path) -> io::Result<()>;
 }
 ```
 

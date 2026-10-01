@@ -1,8 +1,7 @@
-use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use super::{EffectError, Roots, io_error};
+use super::{EffectError, Kind, Roots, Tree, io_error};
 use crate::stages::Cleanup;
 
 /// Removes the folders a moved file left empty, from the folder it was in upward.
@@ -10,6 +9,7 @@ use crate::stages::Cleanup;
 /// Only empty folders inside the unit go, and never the source itself. It stops at a folder that is not
 /// empty, that holds a folder configuration, that a keep pattern names, or that is a link.
 pub fn cleanup_folders(
+    tree: &dyn Tree,
     stage: &Cleanup,
     origin: &Path,
     unit: &Path,
@@ -23,10 +23,10 @@ pub fn cleanup_folders(
             break;
         }
         let path = roots.source.join(current);
-        if !is_empty_folder(&path)? {
+        if !is_empty_folder(tree, &path)? {
             break;
         }
-        match fs::remove_dir(&path) {
+        match tree.remove_folder(&path) {
             Ok(()) => {}
             Err(error)
                 if matches!(
@@ -51,16 +51,13 @@ fn is_kept(stage: &Cleanup, folder: &Path) -> bool {
 }
 
 /// A real folder holding nothing at all: not a link, and not a file.
-fn is_empty_folder(path: &Path) -> Result<bool, EffectError> {
-    let metadata = match fs::symlink_metadata(path) {
-        Ok(metadata) => metadata,
+fn is_empty_folder(tree: &dyn Tree, path: &Path) -> Result<bool, EffectError> {
+    match tree.kind(path) {
+        Ok(Kind::Folder) => {}
+        Ok(_) => return Ok(false),
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(false),
         Err(error) => return Err(io_error("inspect", path, error.kind())),
-    };
-    if !metadata.is_dir() {
-        return Ok(false);
     }
-    let mut entries =
-        fs::read_dir(path).map_err(|error| io_error("read the folder", path, error.kind()))?;
-    Ok(entries.next().is_none())
+    tree.is_empty(path)
+        .map_err(|error| io_error("read the folder", path, error.kind()))
 }

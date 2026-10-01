@@ -2,7 +2,7 @@ mod common;
 
 use std::path::{Path, PathBuf};
 
-use auto_renamer::{Applied, EffectError, Record, Roots, SkipReason, move_file};
+use auto_renamer::{Applied, EffectError, FsTree, Record, Roots, SkipReason, move_file};
 use common::{Sandbox, move_stage, record};
 
 fn reject() -> auto_renamer::stages::Move {
@@ -34,6 +34,7 @@ fn should_move_a_file_to_its_plan_under_the_target_making_the_folders() {
     sandbox.write("source/Series/x.mkv", "video");
 
     let done = move_file(
+        &FsTree,
         &reject(),
         &planned("Series/x.mkv", "Series/Alpha/y.mkv"),
         &roots(&sandbox),
@@ -51,6 +52,7 @@ fn should_remove_the_file_from_the_source_and_keep_its_content() {
     sandbox.write("source/x.mkv", "some bytes");
 
     move_file(
+        &FsTree,
         &reject(),
         &planned("x.mkv", "y.mkv"),
         &roots(&sandbox),
@@ -72,7 +74,14 @@ fn should_rename_in_place_without_a_separate_target() {
         target: sandbox.path("source"),
     };
 
-    move_file(&reject(), &planned("x.mkv", "y.mkv"), &roots, false).unwrap();
+    move_file(
+        &FsTree,
+        &reject(),
+        &planned("x.mkv", "y.mkv"),
+        &roots,
+        false,
+    )
+    .unwrap();
 
     assert!(sandbox.exists("source/y.mkv"));
     assert!(!sandbox.exists("source/x.mkv"));
@@ -88,7 +97,13 @@ fn should_leave_a_file_already_at_its_plan() {
         target: sandbox.path("source"),
     };
 
-    let done = move_file(&reject(), &planned("x.mkv", "x.mkv"), &roots, false);
+    let done = move_file(
+        &FsTree,
+        &reject(),
+        &planned("x.mkv", "x.mkv"),
+        &roots,
+        false,
+    );
 
     assert_eq!(done, Ok(Applied::Unchanged(sandbox.path("source/x.mkv"))));
     assert_eq!(sandbox.read("source/x.mkv").as_deref(), Some("video"));
@@ -102,6 +117,7 @@ fn should_not_overwrite_a_file_at_the_plan() {
     sandbox.write("target/y.mkv", "old");
 
     let done = move_file(
+        &FsTree,
         &reject(),
         &planned("x.mkv", "y.mkv"),
         &roots(&sandbox),
@@ -124,6 +140,7 @@ fn should_settle_a_conflict_with_a_suffix_when_asked() {
     sandbox.write("target/y.mkv", "old");
 
     move_file(
+        &FsTree,
         &suffix(),
         &planned("x.mkv", "y.mkv"),
         &roots(&sandbox),
@@ -144,6 +161,7 @@ fn should_refuse_a_suffix_that_also_conflicts() {
     sandbox.write("target/y_v2.mkv", "older");
 
     let done = move_file(
+        &FsTree,
         &suffix(),
         &planned("x.mkv", "y.mkv"),
         &roots(&sandbox),
@@ -165,7 +183,14 @@ fn should_put_the_suffix_before_the_extension() {
     sandbox.write("source/x", "new");
     sandbox.write("target/y", "old");
 
-    move_file(&suffix(), &planned("x", "y"), &roots(&sandbox), false).unwrap();
+    move_file(
+        &FsTree,
+        &suffix(),
+        &planned("x", "y"),
+        &roots(&sandbox),
+        false,
+    )
+    .unwrap();
 
     assert_eq!(sandbox.read("target/y_v2").as_deref(), Some("new"));
 }
@@ -177,6 +202,7 @@ fn should_refuse_a_plan_that_leaves_the_target() {
     sandbox.write("source/x.mkv", "video");
 
     let done = move_file(
+        &FsTree,
         &reject(),
         &planned("x.mkv", "../y.mkv"),
         &roots(&sandbox),
@@ -195,6 +221,7 @@ fn should_refuse_an_absolute_plan() {
     sandbox.write("source/x.mkv", "video");
 
     let done = move_file(
+        &FsTree,
         &reject(),
         &planned("x.mkv", "/tmp/auto-renamer-escape.mkv"),
         &roots(&sandbox),
@@ -219,6 +246,7 @@ fn should_not_move_a_link() {
     .unwrap();
 
     let done = move_file(
+        &FsTree,
         &reject(),
         &planned("x.mkv", "y.mkv"),
         &roots(&sandbox),
@@ -239,6 +267,7 @@ fn should_not_move_a_file_below_a_linked_folder() {
     std::os::unix::fs::symlink(sandbox.path("elsewhere"), sandbox.path("source/Linked")).unwrap();
 
     let done = move_file(
+        &FsTree,
         &reject(),
         &planned("Linked/x.mkv", "y.mkv"),
         &roots(&sandbox),
@@ -257,6 +286,7 @@ fn should_not_move_a_folder() {
     sandbox.make_dir("source/Season");
 
     let done = move_file(
+        &FsTree,
         &reject(),
         &planned("Season", "Other"),
         &roots(&sandbox),
@@ -274,6 +304,7 @@ fn should_refuse_a_file_that_is_not_there() {
     sandbox.make_dir("source");
 
     let done = move_file(
+        &FsTree,
         &reject(),
         &planned("x.mkv", "y.mkv"),
         &roots(&sandbox),
@@ -312,7 +343,14 @@ fn should_move_through_a_temporary_name_between_filesystems() {
         target: target.path(""),
     };
 
-    move_file(&reject(), &planned("x.mkv", "y.mkv"), &roots, false).unwrap();
+    move_file(
+        &FsTree,
+        &reject(),
+        &planned("x.mkv", "y.mkv"),
+        &roots,
+        false,
+    )
+    .unwrap();
 
     assert_eq!(target.read("y.mkv").as_deref(), Some("some bytes"));
     assert!(!source.exists("x.mkv"));
@@ -335,7 +373,14 @@ fn should_not_be_blocked_by_a_temporary_file_an_earlier_move_left() {
         target: target.path(""),
     };
 
-    move_file(&reject(), &planned("x.mkv", "y.mkv"), &roots, false).unwrap();
+    move_file(
+        &FsTree,
+        &reject(),
+        &planned("x.mkv", "y.mkv"),
+        &roots,
+        false,
+    )
+    .unwrap();
 
     assert_eq!(target.read("y.mkv").as_deref(), Some("some bytes"));
 }
@@ -359,7 +404,14 @@ fn should_be_seen_as_a_file_moved_in_when_renamed_within_a_folder() {
         target: sandbox.path(""),
     };
 
-    move_file(&reject(), &planned("x.mkv", "y.mkv"), &roots, false).unwrap();
+    move_file(
+        &FsTree,
+        &reject(),
+        &planned("x.mkv", "y.mkv"),
+        &roots,
+        false,
+    )
+    .unwrap();
 
     std::thread::sleep(std::time::Duration::from_millis(500));
     let seen: Vec<Translated> = receiver
@@ -396,7 +448,13 @@ fn should_leave_the_file_in_the_source_when_mv_cannot_finish() {
         target: target.path(""),
     };
 
-    let moved = move_file(&reject(), &planned("x.mkv", "y.mkv"), &roots, false);
+    let moved = move_file(
+        &FsTree,
+        &reject(),
+        &planned("x.mkv", "y.mkv"),
+        &roots,
+        false,
+    );
 
     assert!(moved.is_err());
     assert!(source.exists("x.mkv"));

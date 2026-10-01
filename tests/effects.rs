@@ -2,7 +2,9 @@ mod common;
 
 use std::path::{Path, PathBuf};
 
-use auto_renamer::{Applied, Done, Effect, EffectError, EffectsRun, Record, Roots, apply_effects};
+use auto_renamer::{
+    Applied, Done, Effect, EffectError, EffectsRun, FsTree, Record, Roots, apply_effects,
+};
 use common::{Sandbox, planned_batch, planned_record, record};
 
 fn planned() -> Record {
@@ -26,6 +28,7 @@ fn carry_out(stages: &str, sandbox: &Sandbox, dry_run: bool) -> EffectsRun {
     let planned = planned_record(&judged, "Rel/x.mkv");
 
     apply_effects(
+        &FsTree,
         &judged[0].effects,
         planned,
         Path::new("Rel"),

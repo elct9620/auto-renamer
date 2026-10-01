@@ -11,8 +11,9 @@ use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 
 use crate::cli::Options;
 use crate::config::Config;
+use crate::filesystem::FsTree;
 use crate::scan::Scan;
-use crate::service::{FsTree, Renames, process_batch, report};
+use crate::service::{Renames, process_batch, report};
 use crate::watcher::{Machine, Queue, Ready, Translated, rewrites, translate};
 
 /// How long a change to the configuration file is awaited for more changes before it is read.
