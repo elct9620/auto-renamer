@@ -176,12 +176,12 @@ target 已有 `Show s01e12.mkv`，輸入 `Show 12.mkv`。
 
 ## 6 完整組合
 
-Playground 的完整組合把影集情境疊在一起。source 為 `/Downloads`、target 為 `/Video`，管線是 5.13 的兩條，`move` 撞名時加 `_ai`，`batch_max = 5`；每個作品或季的資料夾以目錄設定指定 `show`。
+Playground 的完整組合把影集情境疊在一起。source 為 `/Downloads`、target 為 `/Video`，管線是 5.13 的兩條加上從 `Series/` 下的資料夾擷取 `show`，`move` 撞名時加 `_ai`，`batch_max = 5`。只有例外的資料夾放目錄設定。
 
 | 情境 | 輸入 | 輸出 |
 |---|---|---|
 | 季資料夾與雜訊 | `Series/Alpha/Season 01/[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv` | `Series/Alpha/Season 01/Alpha s01e12.mkv` |
-| 每季的作品名 | `Series/Alpha/Season 02/[Team] Alpha Next - 03 [1080p].mkv` | `Series/Alpha/Season 02/Alpha Next s02e03.mkv` |
+| 換名的季 | `Series/Alpha/Season 02/[Team] Alpha Next - 03 [1080p].mkv` | `Series/Alpha/Season 02/Alpha Next s02e03.mkv` |
 | 撞名 | `Series/Beta Show/[Studio] Beta Show [12][WEB][HEVC-10bit 1080p AAC][EN].mp4` | `Series/Beta Show/Beta Show s01e12_ai.mp4` |
 | 單一字幕 | 同上，副檔名 `.ass` | `Series/Beta Show/Beta Show s01e12.zh.ass` |
 | 分不出集數 | `Series/Eta Show/Season 17/[Team-7][Eta Show 17][03][x264 1080p][TC].mp4` | `Series/Eta Show/Season 17/Eta Show s17e01.mp4` |

@@ -23,11 +23,14 @@ function show(name: string): string {
 
 const EPISODE = '{ number = { into = "episode", exclude = ["season"] } },'
 
-// The series pipelines of `design.md` 5.13; `episode` and `move` are the stages examples vary.
-function video({ episode = EPISODE, move = '"move"' } = {}): string {
+// The show taken from the folder under `Series/`, so only a folder that names it otherwise needs an answer.
+const SHOW_FROM_PATH = `{ regex = { from = "path", pattern = '^Series/(?<show>[^/]+)' } },`
+
+// The series pipelines of `design.md` 5.13; `episode`, `move` and how the show is `named` vary by example.
+function video({ episode = EPISODE, move = '"move"', named = '' } = {}): string {
   return `[pipeline.video]
 stages = [
-  { filter = { ext = ["mkv", "mp4"] } },
+  { filter = { ext = ["mkv", "mp4"] } },${named ? `\n  ${named}` : ''}
   { number = { from = "path", into = "season", prefix = "Season" } },${episode ? `\n  ${episode}` : ''}
   { default = { season = 1 } },
   { lift = { to = "Season *" } },
@@ -39,10 +42,10 @@ stages = [
 `
 }
 
-function subtitle(move = '"move"'): string {
+function subtitle(move = '"move"', named = ''): string {
   return `[pipeline.subtitle]
 stages = [
-  { filter = { ext = ["ass", "srt"] } },
+  { filter = { ext = ["ass", "srt"] } },${named ? `\n  ${named}` : ''}
   { number = { from = "path", into = "season", prefix = "Season" } },
   ${EPISODE}
   { default = { season = 1 } },
@@ -63,37 +66,34 @@ ${watch}`
 
 const SUFFIX_AI = '{ move = { on_conflict = "suffix", suffix = "_ai" } }'
 
-// Every series scenario at once, with the source and the target apart: seasons named by their folders,
-// episodes found among noise or counted on, a release folder with its subtitles, a release too large,
-// a clash, a name for each season, and a folder that always counts on.
+// Every series scenario at once, with the source and the target apart: shows named by their folders,
+// seasons by theirs, episodes found among noise or counted on, a release folder with its subtitles, a
+// release too large, a clash, and folder configurations only where a folder is an exception: a season
+// that bears another name, and a folder that always counts on.
 const FULL: Example = {
   id: 'full',
   watch: 'series',
-  config: `${series('"video", "subtitle"', `${video({ move: SUFFIX_AI })}
-${subtitle(SUFFIX_AI)}`)}
+  config: `${series('"video", "subtitle"', `${video({ move: SUFFIX_AI, named: SHOW_FROM_PATH })}
+${subtitle(SUFFIX_AI, SHOW_FROM_PATH)}`)}
 [watch.series]
 source = "/downloads"
 target = "/video"
 batch_max = 5
 `,
   entries: [
-    file('/downloads/Series/Alpha/Season 01/auto-renamer.toml', show('Alpha')),
     file('/downloads/Series/Alpha/Season 01/[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv'),
     file('/downloads/Series/Alpha/Season 02/auto-renamer.toml', show('Alpha Next')),
     file('/downloads/Series/Alpha/Season 02/[Team] Alpha Next - 03 [1080p].mkv'),
-    file('/downloads/Series/Beta Show/auto-renamer.toml', show('Beta Show')),
     file('/downloads/Series/Beta Show/[Studio] Beta Show [12][WEB][HEVC-10bit 1080p AAC][EN].mp4'),
     file('/downloads/Series/Beta Show/[Studio] Beta Show [12][WEB][HEVC-10bit 1080p AAC][EN].ass'),
     file('/video/Series/Beta Show/Beta Show s01e12.mp4'),
-    file('/downloads/Series/Eta Show/auto-renamer.toml', show('Eta Show')),
     file('/downloads/Series/Eta Show/Season 17/[Team-7][Eta Show 17][03][x264 1080p][TC].mp4'),
-    file('/downloads/Series/Theta_Show/auto-renamer.toml', show('Theta_Show')),
     file('/downloads/Series/Theta_Show/Season 01/[Team][Theta_Show][27][1080p]/[Team][Theta_Show][27][1080p].mkv'),
     file('/downloads/Series/Theta_Show/Season 01/[Team][Theta_Show][27][1080p]/[Team][Theta_Show][27][1080p].cht.ass'),
     file('/downloads/Series/Theta_Show/Season 01/[Team][Theta_Show][27][1080p]/[Team][Theta_Show][27][1080p].ass'),
     ...[1, 2, 3, 4, 5, 6].map((n) =>
       file(`/downloads/Series/Theta_Show/Season 01/[Team][Theta_Show][Batch]/[Team][Theta_Show][0${n}][1080p].mkv`)),
-    file('/downloads/Series/Kappa/Season 01/auto-renamer.toml', `${show('Kappa')}\n${video({ episode: '' })}`),
+    file('/downloads/Series/Kappa/Season 01/auto-renamer.toml', video({ episode: '', named: SHOW_FROM_PATH })),
     file('/downloads/Series/Kappa/Season 01/[Group] Kappa - 07 [1080p].mkv'),
     file('/video/Series/Kappa/Season 01/Kappa s01e01.mkv'),
     file('/video/Series/Kappa/Season 01/Kappa s01e02.mkv'),
