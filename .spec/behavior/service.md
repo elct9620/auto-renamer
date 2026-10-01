@@ -134,3 +134,19 @@ Processing a batch is what a ready batch of settled files turns into: the files 
 | When | the batch is processed |
 | Then | the file is reported as previewed at the path it already has |
 
+
+## `SVC-018` A link in a batch is skipped as a link
+
+| Step | Statement |
+| --- | --- |
+| Given | the same watch and `Show/x.mkv` a link to a file outside the source |
+| When | the batch is processed |
+| Then | the file is reported as skipped for being a link, and the link is still in the source |
+
+## `SVC-019` A folder configuration one byte over the limit on disk is refused rather than cut short
+
+| Step | Statement |
+| --- | --- |
+| Given | the same watch, the file `Show/x.mkv`, and in `Show` a folder configuration of 64 KiB and one byte that sets `show` to Beta |
+| When | the batch is processed |
+| Then | the folder configuration is reported as refused |

@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 use std::fs;
-use std::io::Read;
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Utc};
@@ -13,6 +13,7 @@ use crate::effects::{Applied, Done, Roots, SkipReason, apply_effects};
 use crate::engine::{Verdict, plan_batch};
 use crate::record::Record;
 use crate::stages::Effect;
+use crate::tree::{Kind, Tree};
 
 /// The target folder as the filesystem holds it.
 pub struct FsTarget {
@@ -36,6 +37,36 @@ impl Target for FsTarget {
             .filter(|entry| entry.file_type().is_ok_and(|kind| kind.is_file()))
             .filter_map(|entry| entry.file_name().into_string().ok())
             .collect()
+    }
+}
+
+/// The tree the filesystem holds.
+pub struct FsTree;
+
+impl Tree for FsTree {
+    fn kind(&self, path: &Path) -> io::Result<Kind> {
+        let kind = fs::symlink_metadata(path)?.file_type();
+        Ok(if kind.is_symlink() {
+            Kind::Link
+        } else if kind.is_file() {
+            Kind::File
+        } else if kind.is_dir() {
+            Kind::Folder
+        } else {
+            Kind::Other
+        })
+    }
+
+    fn modified(&self, path: &Path) -> io::Result<DateTime<Utc>> {
+        Ok(DateTime::from(fs::symlink_metadata(path)?.modified()?))
+    }
+
+    fn read(&self, path: &Path, limit: u64) -> io::Result<String> {
+        let mut text = String::new();
+        fs::File::open(path)?
+            .take(limit)
+            .read_to_string(&mut text)?;
+        Ok(text)
     }
 }
 
@@ -105,13 +136,14 @@ impl Renames {
 /// Plans a ready batch through the pipelines of its watch, with the folder configurations that apply,
 /// and runs the effects on what was planned. Paths are relative to the source.
 pub fn process_batch(
+    tree: &dyn Tree,
     watch: &Watch,
     unit: &Path,
     files: &[PathBuf],
     renames: &mut Renames,
 ) -> Vec<Processed> {
     let mut processed = Vec::new();
-    let layers = folder_configs(&watch.source, unit, &mut processed);
+    let layers = folder_configs(tree, &watch.source, unit, &mut processed);
     let effective = watch.under(&layers);
 
     if files.len() > effective.batch_max {
@@ -132,7 +164,7 @@ pub fn process_batch(
     };
     let mut records = Vec::new();
     for origin in files {
-        match read_record(&effective, origin) {
+        match read_record(tree, &effective, origin) {
             Ok(record) => records.push(record),
             Err(what) => processed.push(Processed {
                 origin: origin.clone(),
@@ -160,7 +192,6 @@ pub fn process_batch(
             what,
         });
     }
-    processed.iter().for_each(report);
     processed
 }
 
@@ -198,20 +229,19 @@ fn apply_planned(
 }
 
 /// The record of a file that can be handled: a regular file with a modification time and a path that is text.
-fn read_record(watch: &Watch, origin: &Path) -> Result<Record, What> {
-    let metadata = fs::symlink_metadata(watch.source.join(origin))
-        .map_err(|_| What::Skipped(SkipReason::Missing))?;
-    if metadata.file_type().is_symlink() {
-        return Err(What::Skipped(SkipReason::Link));
+fn read_record(tree: &dyn Tree, watch: &Watch, origin: &Path) -> Result<Record, What> {
+    let path = watch.source.join(origin);
+    match tree.kind(&path) {
+        Err(_) => return Err(What::Skipped(SkipReason::Missing)),
+        Ok(Kind::Link) => return Err(What::Skipped(SkipReason::Link)),
+        Ok(Kind::File) => {}
+        Ok(_) => return Err(What::Skipped(SkipReason::NotAFile)),
     }
-    if !metadata.is_file() {
-        return Err(What::Skipped(SkipReason::NotAFile));
-    }
-    let modified = metadata
-        .modified()
+    let modified = tree
+        .modified(&path)
         .map_err(|_| What::Skipped(SkipReason::NoModificationTime))?;
-    let record = Record::new(origin, DateTime::<Utc>::from(modified))
-        .map_err(|error| What::Refused(format!("name: {error}")))?;
+    let record =
+        Record::new(origin, modified).map_err(|error| What::Refused(format!("name: {error}")))?;
     Ok(record.with_vars(watch.vars.clone()))
 }
 
@@ -251,7 +281,12 @@ fn effects_of(
 
 /// The folder configurations from the source down to the unit, from the farthest to the nearest.
 /// One that cannot be read or used is left out and reported.
-fn folder_configs(source: &Path, unit: &Path, processed: &mut Vec<Processed>) -> Vec<FolderConfig> {
+fn folder_configs(
+    tree: &dyn Tree,
+    source: &Path,
+    unit: &Path,
+    processed: &mut Vec<Processed>,
+) -> Vec<FolderConfig> {
     let mut folder = PathBuf::new();
     let mut layers = vec![folder.clone()];
     for component in unit.components() {
@@ -262,7 +297,7 @@ fn folder_configs(source: &Path, unit: &Path, processed: &mut Vec<Processed>) ->
     let mut configs = Vec::new();
     for layer in layers {
         let relative = layer.join(FOLDER_CONFIG);
-        let Some(text) = read_folder_config(&source.join(&relative)) else {
+        let Some(text) = read_folder_config(tree, &source.join(&relative)) else {
             continue;
         };
         match text
@@ -281,20 +316,15 @@ fn folder_configs(source: &Path, unit: &Path, processed: &mut Vec<Processed>) ->
 
 /// The text of a folder configuration, or none when the folder has none. Only a regular file is read,
 /// and never more than one byte past the size a folder configuration may have.
-fn read_folder_config(path: &Path) -> Option<std::io::Result<String>> {
-    let metadata = fs::symlink_metadata(path).ok()?;
-    if !metadata.is_file() {
+fn read_folder_config(tree: &dyn Tree, path: &Path) -> Option<io::Result<String>> {
+    if tree.kind(path).ok()? != Kind::File {
         return None;
     }
-    let mut text = String::new();
-    let read = fs::File::open(path).and_then(|file| {
-        file.take(MAX_FOLDER_CONFIG_BYTES as u64 + 1)
-            .read_to_string(&mut text)
-    });
-    Some(read.map(|_| text))
+    Some(tree.read(path, MAX_FOLDER_CONFIG_BYTES as u64 + 1))
 }
 
-fn report(entry: &Processed) {
+/// Logs what became of one file of a batch.
+pub fn report(entry: &Processed) {
     let origin = entry.origin.display();
     match &entry.what {
         What::Moved(to) => eprintln!("[info] {origin} -> {}", to.display()),

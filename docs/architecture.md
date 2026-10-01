@@ -24,7 +24,8 @@ auto-renamer 是單一套件：`src/lib.rs` 放全部邏輯，`src/main.rs` 只�
 ```
   main ─► runner ─┬─► service ─┬─► engine ──► pipeline ─► stages ─┬─► template ─► record
                   │            ├─► effects ─► stages               ├─► context ──► record
-                  │            └─► config ──► pipeline, reader     └─► reader ───► record
+                  │            ├─► tree                            └─► reader ───► record
+                  │            └─► config ──► pipeline, reader
                   ├─► watcher ─► config
                   └─► scan ────► watcher
   only effects, scan, service and runner touch the filesystem
@@ -44,12 +45,13 @@ auto-renamer 是單一套件：`src/lib.rs` 放全部邏輯，`src/main.rs` 只�
 | `engine` | 認領順序與每個檔案的結論 | 否 |
 | `reader` | 逐鍵讀取 TOML 表格，拒絕剩下的鍵 | 否 |
 | `config` | 設定解析、層疊與驗證 | 否 |
+| `tree` | 處理批次時讀檔的介面 | 否 |
 | `effects` | 執行 `move` 與 `cleanup` | 檔案系統、`mv` |
 | `watcher` | 事件、單元與批次收束的狀態機 | 否 |
 | `watcher` 的翻譯 | notify 事件轉成單元事件 | 否 |
 | `watcher` 的佇列 | 篩選通知、限制數量、記下遺失 | 否 |
 | `scan` | 分次列出資料夾內的一般檔案 | 檔案系統 |
-| `service` | 批次處理、目錄設定、改名次數 | 檔案系統 |
+| `service` | 批次處理、目錄設定、改名次數，經 `Tree` 讀檔 | 檔案系統（`FsTree`） |
 | `cli` | 命令列參數 | 否 |
 | `runner` | notify、時鐘、每圈的工作量、重新載入、停止 | notify、時間、設定檔 |
 

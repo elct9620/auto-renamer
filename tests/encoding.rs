@@ -41,6 +41,7 @@ fn should_refuse_a_file_whose_path_is_not_utf8_and_leave_it() {
     .unwrap();
 
     let processed = auto_renamer::process_batch(
+        &auto_renamer::FsTree,
         &config.watches()[0],
         Path::new("Show"),
         &[odd_path()],

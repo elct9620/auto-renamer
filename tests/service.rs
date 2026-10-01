@@ -2,7 +2,7 @@ mod common;
 
 use std::path::{Path, PathBuf};
 
-use auto_renamer::{Config, Processed, Renames, SkipReason, What, process_batch};
+use auto_renamer::{Config, FsTree, Processed, Renames, SkipReason, What, process_batch};
 use common::Sandbox;
 
 const MOVE_AS_SHOW: &str = r#"[{ format = "{show}" }, "move"]"#;
@@ -51,6 +51,7 @@ impl Setup {
     fn process(&self, unit: &str, files: &[&str]) -> Vec<Processed> {
         let files: Vec<PathBuf> = files.iter().map(PathBuf::from).collect();
         process_batch(
+            &FsTree,
             &self.config.watches()[0],
             Path::new(unit),
             &files,
@@ -349,6 +350,7 @@ fn should_preview_a_file_whose_plan_is_where_it_already_is_in_a_dry_run() {
     sandbox.write("source/x.mkv", "video");
 
     let processed = process_batch(
+        &FsTree,
         &config.watches()[0],
         Path::new(""),
         &[PathBuf::from("x.mkv")],
@@ -378,4 +380,45 @@ fn should_count_a_rename_in_place_that_a_later_effect_failed_after() {
         matches!(&sixth, What::Refused(reason) if reason.contains("in a row")),
         "{sixth:?}"
     );
+}
+
+// @behavior SVC-018
+#[test]
+fn should_skip_a_link_in_a_batch_as_a_link() {
+    let run = alpha("");
+    run.sandbox.write("outside.mkv", "video");
+    run.sandbox.make_dir("source/Show");
+    std::os::unix::fs::symlink(
+        run.sandbox.path("outside.mkv"),
+        run.sandbox.path("source/Show/x.mkv"),
+    )
+    .unwrap();
+
+    let processed = run.process("Show", &["Show/x.mkv"]);
+
+    assert_eq!(
+        run.what(&processed, "Show/x.mkv"),
+        What::Skipped(SkipReason::Link)
+    );
+    assert!(run.sandbox.exists("source/Show/x.mkv"));
+}
+
+// @behavior SVC-019
+#[test]
+fn should_refuse_a_folder_configuration_one_byte_over_the_limit_on_disk() {
+    let run = alpha("");
+    run.sandbox.write("source/Show/x.mkv", "video");
+    let setting = "[vars]\nshow = \"Beta\"\n";
+    let padding = 64 * 1024 + 1 - setting.len() - 3;
+    run.sandbox.write(
+        "source/Show/auto-renamer.toml",
+        &format!("{setting}# {}\n", "x".repeat(padding)),
+    );
+
+    let processed = run.process("Show", &["Show/x.mkv"]);
+
+    assert!(matches!(
+        run.what(&processed, "Show/auto-renamer.toml"),
+        What::Refused(_)
+    ));
 }

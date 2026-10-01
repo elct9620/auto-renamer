@@ -12,7 +12,7 @@ use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use crate::cli::Options;
 use crate::config::Config;
 use crate::scan::Scan;
-use crate::service::{Renames, process_batch};
+use crate::service::{FsTree, Renames, process_batch, report};
 use crate::watcher::{Machine, Queue, Ready, Translated, rewrites, translate};
 
 /// How long a change to the configuration file is awaited for more changes before it is read.
@@ -205,7 +205,9 @@ impl Session {
         }
         if let Some((index, Ready { unit, files })) = self.ready.pop_front() {
             let watch = &self.loaded.config.watches()[index];
-            process_batch(watch, &unit, &files, &mut self.renames[index]);
+            process_batch(&FsTree, watch, &unit, &files, &mut self.renames[index])
+                .iter()
+                .for_each(report);
         }
     }
 

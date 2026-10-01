@@ -14,6 +14,7 @@ pub mod scan;
 pub mod service;
 pub mod stages;
 pub mod template;
+pub mod tree;
 pub mod watcher;
 
 pub use cli::{Command, Options, parse_args};
@@ -29,7 +30,8 @@ pub use record::{NotUtf8, Record, Value};
 #[cfg(target_os = "linux")]
 pub use runner::{RunError, run};
 pub use scan::Scan;
-pub use service::{FsTarget, Processed, Renames, What, process_batch};
+pub use service::{FsTarget, FsTree, Processed, Renames, What, process_batch, report};
 pub use stages::{DeclareError, Declared, Effect, Flow, Rejection, Stop};
 pub use template::{RenderError, Template, TemplateError};
+pub use tree::{Kind, Tree};
 pub use watcher::{Event, Machine, Queue, Ready, Translated, rewrites, translate};

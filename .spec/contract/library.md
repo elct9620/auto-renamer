@@ -941,7 +941,97 @@ Plan a ready batch through the pipelines of its watch, with the folder configura
 | internal | yes |
 
 ```rust
-pub fn process_batch(watch: &Watch, unit: &Path, files: &[PathBuf], renames: &mut Renames) -> Vec<Processed> {}
+pub fn process_batch(tree: &dyn Tree, watch: &Watch, unit: &Path, files: &[PathBuf], renames: &mut Renames) -> Vec<Processed> {}
+```
+
+## `report`
+
+Log what became of one file of a batch.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub fn report(entry: &Processed) {}
+```
+
+## `Tree`
+
+The files of the source and the target as far as processing a batch needs them, so the filesystem or a virtual tree can stand behind it.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub trait Tree {}
+```
+
+## `Tree::kind`
+
+What is at a path, without following a link.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub trait Tree {
+    fn kind(&self, path: &Path) -> io::Result<Kind>;
+}
+```
+
+## `Tree::modified`
+
+When the file at a path was last modified.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub trait Tree {
+    fn modified(&self, path: &Path) -> io::Result<DateTime<Utc>>;
+}
+```
+
+## `Tree::read`
+
+The text of the file at a path, never more than a limit of its bytes.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub trait Tree {
+    fn read(&self, path: &Path, limit: u64) -> io::Result<String>;
+}
+```
+
+## `Kind`
+
+What a path holds: a file, a folder, a link, or something else.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub enum Kind {}
+```
+
+## `FsTree`
+
+The tree the filesystem holds.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct FsTree {}
 ```
 
 ## `Command`
