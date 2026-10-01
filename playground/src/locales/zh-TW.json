@@ -126,7 +126,7 @@
           "about": "明指取第幾個候選，負數從尾端算。"
         },
         "prefix": {
-          "name": "前綴字",
+          "name": "字首",
           "about": "只取緊接在這個字之後的數字，例如 Season。"
         },
         "exclude": {
@@ -275,7 +275,7 @@
     },
     "take": {
       "name": "借用欄位",
-      "about": "依影片的檔名前綴，把欄位複製給字幕。",
+      "about": "依影片檔名的開頭，把欄位複製給字幕。",
       "parameters": {
         "fields": {
           "name": "複製欄位",
@@ -293,11 +293,11 @@
       "parameters": {
         "on_conflict": {
           "name": "撞名時",
-          "about": "撞名時 reject 拒絕，或 suffix 加後綴重試一次。"
+          "about": "撞名時 reject 拒絕，或 suffix 加字尾重試一次。"
         },
         "suffix": {
-          "name": "後綴",
-          "about": "撞名時加上的後綴，預設 _v2。"
+          "name": "字尾",
+          "about": "撞名時加上的字尾，預設 _v2。"
         }
       }
     },
