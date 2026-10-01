@@ -3,7 +3,7 @@ mod common;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use auto_renamer::{Context, Judged, Pipeline, Verdict, plan_batch};
+use auto_renamer::{Judged, Pipeline, Verdict, plan_batch};
 use common::{Files, record_on, text};
 
 /// The pipelines the design gives as examples, read from the design itself so they cannot drift from it.
@@ -55,7 +55,7 @@ fn planned_against(
     let record = record_on(path, month.0, month.1, month.2).with_vars(vars);
 
     // One file is a batch of one.
-    let judged = plan_batch(&listed, vec![record], &mut Context::new(files));
+    let judged = plan_batch(&listed, vec![record], files);
     match &judged[..] {
         [
             Judged {
@@ -175,7 +175,7 @@ fn batch_against(files: &Files, show: &str, paths: &[&str]) -> Vec<(String, Stri
         .map(|path| record_on(path, 2026, 9, 27).with_vars(vars.clone()))
         .collect();
 
-    plan_batch(&listed, records, &mut Context::new(files))
+    plan_batch(&listed, records, files)
         .into_iter()
         .map(|judged| {
             let answer = match judged.verdict {

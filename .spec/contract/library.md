@@ -450,14 +450,14 @@ pub struct Judged {}
 
 ## `plan_batch`
 
-Plan a whole batch through the pipelines of a watch, in the order they are listed.
+Plan a whole batch through the pipelines of a watch, in the order they are listed, against what the target holds. What the stages share lives only for this one batch.
 
 | Attribute | Value |
 | --- | --- |
 | internal | yes |
 
 ```rust
-pub fn plan_batch(pipelines: &[(String, Pipeline)], records: Vec<Record>, context: &mut Context) -> Vec<Judged> {}
+pub fn plan_batch(pipelines: &[(String, Pipeline)], records: Vec<Record>, target: &dyn Target) -> Vec<Judged> {}
 ```
 
 ## `Config`

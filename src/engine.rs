@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::context::Context;
+use crate::context::{Context, Target};
 use crate::pipeline::Pipeline;
 use crate::record::Record;
 use crate::stages::{Batch, Earlier, Effect, Flow, Rejection, Stop};
@@ -41,11 +41,15 @@ pub struct Judged {
 /// Files are taken in the order of their paths. Each is claimed by the first pipeline whose leading filters
 /// accept it, and the stages of a pipeline run over all of its files one stage at a time. Nothing touches the
 /// filesystem: a stage that would only notes its effect on the files that reach it.
+///
+/// What the stages share lives only for this one batch, so files of different units never share numbers
+/// or fields.
 pub fn plan_batch(
     pipelines: &[(String, Pipeline)],
     records: Vec<Record>,
-    context: &mut Context,
+    target: &dyn Target,
 ) -> Vec<Judged> {
+    let mut context = Context::new(target);
     let mut waiting = records;
     let mut judged = Vec::new();
 
@@ -59,7 +63,7 @@ pub fn plan_batch(
         let files = rest
             .iter()
             .fold(Batch::new(claimed), |batch, stage| {
-                stage.run(batch, context)
+                stage.run(batch, &mut context)
             })
             .into_files();
 

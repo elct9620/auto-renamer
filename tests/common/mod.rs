@@ -114,7 +114,7 @@ pub fn pipelines(list: &[(&str, &str)]) -> Vec<(String, Pipeline)> {
 /// A batch planned against an empty target.
 pub fn planned_batch(list: &[(&str, &str)], records: Vec<Record>) -> Vec<Judged> {
     let files = Files::none();
-    plan_batch(&pipelines(list), records, &mut Context::new(&files))
+    plan_batch(&pipelines(list), records, &files)
 }
 
 pub fn verdict<'a>(judged: &'a [Judged], origin: &str) -> &'a Verdict {

@@ -1,6 +1,6 @@
 mod common;
 
-use auto_renamer::{Context, Value, Verdict, plan_batch};
+use auto_renamer::{Value, Verdict, plan_batch};
 use common::{Files, number, pipelines, planned_batch, planned_record, record, verdict, with};
 
 fn kind_of(judged: &[auto_renamer::Judged], origin: &str) -> Option<String> {
@@ -146,11 +146,7 @@ fn should_keep_the_numbers_handed_out_across_pipelines_of_one_batch() {
         ),
     ]);
 
-    let judged = plan_batch(
-        &list,
-        vec![record("x.mkv"), record("y.mp4")],
-        &mut Context::new(&files),
-    );
+    let judged = plan_batch(&list, vec![record("x.mkv"), record("y.mp4")], &files);
 
     assert_eq!(
         planned_record(&judged, "x.mkv").field("episode"),

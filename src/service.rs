@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use chrono::{DateTime, Utc};
 
 use crate::config::{FOLDER_CONFIG, FolderConfig, MAX_FOLDER_CONFIG_BYTES, Watch};
-use crate::context::{Context, Target};
+use crate::context::Target;
 use crate::effects::{Applied, Done, Roots, SkipReason, apply_effects};
 use crate::engine::{Verdict, plan_batch};
 use crate::record::Record;
@@ -143,7 +143,7 @@ pub fn process_batch(
 
     let pipelines = effective.pipelines();
     let target = FsTarget::new(target_root);
-    let judged = plan_batch(&pipelines, records, &mut Context::new(&target));
+    let judged = plan_batch(&pipelines, records, &target);
     for entry in judged {
         let what = match entry.verdict {
             Verdict::Planned(record) => {
