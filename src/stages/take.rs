@@ -6,6 +6,7 @@ use crate::context::Context;
 use crate::record::{Record, split_extension};
 
 /// What an earlier pipeline made of one file, as far as a take stage needs to know.
+#[derive(Clone)]
 pub(crate) struct Earlier {
     pub pipeline: String,
     pub origin: PathBuf,
@@ -13,13 +14,13 @@ pub(crate) struct Earlier {
 }
 
 /// The files earlier pipelines handled, found by the main file name they begin with.
-pub(crate) struct EarlierFiles {
+struct EarlierFiles {
     files: Vec<Earlier>,
     by_name: HashMap<String, Vec<usize>>,
 }
 
 impl EarlierFiles {
-    pub(crate) fn new(files: Vec<Earlier>) -> EarlierFiles {
+    fn new(files: Vec<Earlier>) -> EarlierFiles {
         let mut by_name: HashMap<String, Vec<usize>> = HashMap::new();
         for (position, file) in files.iter().enumerate() {
             let name = main_name(&file.origin);
@@ -57,8 +58,8 @@ impl Stage for Take {
         "take"
     }
 
-    fn run(&self, batch: &mut Batch, _: &mut Context) {
-        let earlier = batch.earlier();
+    fn run(&self, batch: &mut Batch, context: &mut Context) {
+        let earlier = EarlierFiles::new(context.earlier().to_vec());
         batch.each(|record| self.copy_into(record, &earlier));
     }
 }

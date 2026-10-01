@@ -24,6 +24,7 @@ use crate::template::Template;
 pub use batch::Batch;
 pub use declare::DeclareError;
 pub use effect::Effect;
+pub(crate) use take::Earlier;
 
 /// What a stage answers for one record: the record to go on with, or what stops it.
 pub type Flow = Result<Record, Stop>;
@@ -103,8 +104,8 @@ pub trait Stage {
     /// The name the stage is declared by.
     fn name(&self) -> &'static str;
 
-    /// Runs the stage over the files the running pipeline still holds, with what the batch and the
-    /// target let it know.
+    /// Runs the stage over the batch its pipeline claimed, with what the target and the pipelines before
+    /// let it know.
     fn run(&self, batch: &mut Batch, context: &mut Context);
 }
 
@@ -160,7 +161,7 @@ impl Declared {
         self.as_stage().name()
     }
 
-    /// Runs the stage over the files the running pipeline still holds.
+    /// Runs the stage over the batch its pipeline claimed.
     pub(crate) fn run(&self, batch: &mut Batch, context: &mut Context) {
         self.as_stage().run(batch, context);
     }
@@ -168,7 +169,6 @@ impl Declared {
     /// Runs the stage on one record, which is a batch of one, with what the target lets it know.
     pub fn apply(&self, record: Record, context: &mut Context) -> Flow {
         let mut batch = Batch::new(vec![record]);
-        batch.claim("", |_| true);
         self.run(&mut batch, context);
         batch
             .into_files()

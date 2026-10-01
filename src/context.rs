@@ -1,18 +1,22 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+use crate::stages::Earlier;
+
 /// What the target folder holds, as far as a stage needs to know.
 pub trait Target {
     /// The names of the files in a folder of the target, relative to its root.
     fn files_in(&self, folder: &Path) -> Vec<String>;
 }
 
-/// What a run of stages shares: the target, what it was already asked, and the numbers already handed
-/// out in the batch. Planning changes nothing in the target, so a folder is asked for once.
+/// What a run of stages shares: the target, what it was already asked, the numbers already handed out
+/// in the batch, and what the pipelines before made of their files. Planning changes nothing in the
+/// target, so a folder is asked for once.
 pub struct Context<'a> {
     target: &'a dyn Target,
     listed: BTreeMap<PathBuf, Vec<String>>,
     handed_out: BTreeMap<(PathBuf, String), u64>,
+    earlier: Vec<Earlier>,
 }
 
 impl<'a> Context<'a> {
@@ -22,6 +26,7 @@ impl<'a> Context<'a> {
             target,
             listed: BTreeMap::new(),
             handed_out: BTreeMap::new(),
+            earlier: Vec::new(),
         }
     }
 
@@ -38,5 +43,15 @@ impl<'a> Context<'a> {
 
     pub(crate) fn hand_out(&mut self, key: (PathBuf, String), number: u64) {
         self.handed_out.insert(key, number);
+    }
+
+    /// What the pipelines before the running one made of their files.
+    pub(crate) fn earlier(&self) -> &[Earlier] {
+        &self.earlier
+    }
+
+    /// Keeps what a pipeline made of its files, for the pipelines after it.
+    pub(crate) fn remember(&mut self, files: impl IntoIterator<Item = Earlier>) {
+        self.earlier.extend(files);
     }
 }

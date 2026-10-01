@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::context::Context;
 use crate::pipeline::Pipeline;
 use crate::record::Record;
-use crate::stages::{Batch, Effect, Flow, Rejection, Stop};
+use crate::stages::{Batch, Earlier, Effect, Flow, Rejection, Stop};
 
 /// What a batch made of one file.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -46,29 +46,41 @@ pub fn plan_batch(
     records: Vec<Record>,
     context: &mut Context,
 ) -> Vec<Judged> {
-    let mut batch = Batch::new(records);
+    let mut waiting = records;
+    let mut judged = Vec::new();
 
-    for (name, pipeline) in pipelines {
+    for (index, (name, pipeline)) in pipelines.iter().enumerate() {
         let (filters, rest) = pipeline.split_at_claim();
-        batch.claim(name, |record| {
-            filters.iter().all(|filter| filter.accepts(record))
-        });
+        let (claimed, unclaimed): (Vec<Record>, Vec<Record>) = waiting
+            .into_iter()
+            .partition(|record| filters.iter().all(|filter| filter.accepts(record)));
+        waiting = unclaimed;
+
+        let mut batch = Batch::new(claimed);
         for stage in rest {
             stage.run(&mut batch, context);
         }
+        let files = batch.into_files();
+
+        context.remember(files.iter().map(|file| Earlier {
+            pipeline: name.clone(),
+            origin: file.origin.clone(),
+            planned: file.flow.as_ref().ok().cloned(),
+        }));
+        judged.extend(files.into_iter().map(|file| Judged {
+            origin: file.origin,
+            pipeline: Some(index),
+            verdict: Verdict::of(file.flow),
+            effects: file.effects,
+        }));
     }
 
-    batch
-        .into_files()
-        .into_iter()
-        .map(|file| Judged {
-            origin: file.origin,
-            pipeline: file.pipeline,
-            verdict: match file.pipeline {
-                None => Verdict::Unclaimed,
-                Some(_) => Verdict::of(file.flow),
-            },
-            effects: file.effects,
-        })
-        .collect()
+    judged.extend(waiting.into_iter().map(|record| Judged {
+        origin: record.origin().to_path_buf(),
+        pipeline: None,
+        verdict: Verdict::Unclaimed,
+        effects: Vec::new(),
+    }));
+    judged.sort_by(|a, b| a.origin.cmp(&b.origin));
+    judged
 }
