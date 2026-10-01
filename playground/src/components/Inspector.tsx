@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -85,14 +86,15 @@ export function Inspector({ config, kind, selected, onChange, onSelect }: {
   onChange: (config: Table) => void
   onSelect: (selected: Selected | null) => void
 }) {
+  const { t } = useTranslation()
   const [nameError, setNameError] = useState('')
 
   if (selected === null) {
     const root = kind === 'global' ? ['default'] : []
     const defaults = asTable(root.length ? config.default : config)
     return (
-      <Section title={kind === 'global' ? 'Defaults' : 'Folder configuration'}>
-        <p className="text-xs text-muted-foreground">Select a watch, a pipeline or a stage to edit it.</p>
+      <Section title={kind === 'global' ? t('inspector.defaults') : t('inspector.folder')}>
+        <p className="text-xs text-muted-foreground">{t('inspector.hint')}</p>
         <TomlField key={`vars-${kind}`} label="vars" value={inline(defaults.vars)}
           onApply={(value) => onChange(setIn(config, [...root, 'vars'], value))} />
         {kind === 'global' && (
@@ -109,13 +111,13 @@ export function Inspector({ config, kind, selected, onChange, onSelect }: {
     const path = ['watch', selected.name]
     const watch = asTable(asTable(config.watch)[selected.name])
     return (
-      <Section title={`Watch ${selected.name}`}>
+      <Section title={t('inspector.watch', { name: selected.name })}>
         {['source', 'target', 'unit', 'pipelines', 'vars', 'dry_run'].map((key) => (
           <TomlField key={`${selected.name}-${key}`} label={key} value={inline(watch[key])}
             onApply={(value) => onChange(setIn(config, [...path, key], value))} />
         ))}
         <Button variant="destructive" size="sm" onClick={() => { onChange(setIn(config, path, undefined)); onSelect(null) }}>
-          Remove watch
+          {t('inspector.removeWatch')}
         </Button>
       </Section>
     )
@@ -123,13 +125,13 @@ export function Inspector({ config, kind, selected, onChange, onSelect }: {
 
   if (selected.kind === 'pipeline') {
     return (
-      <Section title={`Pipeline ${selected.name}`}>
-        <Field label="name" error={nameError}>
+      <Section title={t('inspector.pipeline', { name: selected.name })}>
+        <Field label={t('inspector.name')} error={nameError}>
           <Input key={selected.name} className="h-8 font-mono text-xs" defaultValue={selected.name} onBlur={(event) => {
             const name = event.target.value.trim()
             if (name === selected.name) return
             if (name === '' || name in asTable(config.pipeline)) {
-              setNameError(name === '' ? 'A pipeline needs a name' : `A pipeline is already named ${name}`)
+              setNameError(name === '' ? t('inspector.nameMissing') : t('inspector.nameTaken', { name }))
               return
             }
             setNameError('')
@@ -137,16 +139,16 @@ export function Inspector({ config, kind, selected, onChange, onSelect }: {
             onSelect({ kind: 'pipeline', name })
           }} />
         </Field>
-        <Field label="Add a stage">
+        <Field label={t('inspector.addStage')}>
           <select className="h-8 rounded-md border bg-background px-2 text-sm" value="" onChange={(event) => {
             if (event.target.value) onChange(addStage(config, selected.name, newStage(event.target.value, stages(), read)))
           }}>
-            <option value="">choose…</option>
+            <option value="">{t('inspector.choose')}</option>
             {stages().map(({ name }) => <option key={name}>{name}</option>)}
           </select>
         </Field>
         <Button variant="destructive" size="sm" onClick={() => { onChange(removePipeline(config, selected.name)); onSelect(null) }}>
-          Remove pipeline
+          {t('inspector.removePipeline')}
         </Button>
       </Section>
     )
@@ -157,19 +159,19 @@ export function Inspector({ config, kind, selected, onChange, onSelect }: {
   if (stage === undefined) return null
   const at = (index: number) => onSelect({ ...selected, index })
   return (
-    <Section title={`${stageName(stage)} · stage ${selected.index + 1} of ${selected.pipeline}`}>
+    <Section title={t('inspector.stage', { kind: stageName(stage), position: selected.index + 1, pipeline: selected.pipeline })}>
       <StageForm key={`${selected.pipeline}-${selected.index}`} stage={stage}
         declaration={stages().find((declaration) => declaration.name === stageName(stage))!}
         onChange={(next) => onChange(replaceStage(config, selected.pipeline, selected.index, next))} />
       <div className="flex gap-2">
         <Button variant="outline" size="sm" disabled={selected.index === 0} onClick={() => {
           onChange(moveStage(config, selected.pipeline, selected.index, -1)); at(selected.index - 1)
-        }}>Earlier</Button>
+        }}>{t('inspector.earlier')}</Button>
         <Button variant="outline" size="sm" disabled={selected.index === pipelineStages.length - 1} onClick={() => {
           onChange(moveStage(config, selected.pipeline, selected.index, 1)); at(selected.index + 1)
-        }}>Later</Button>
+        }}>{t('inspector.later')}</Button>
         <Button variant="destructive" size="sm" onClick={() => { onChange(removeStage(config, selected.pipeline, selected.index)); onSelect(null) }}>
-          Remove
+          {t('inspector.remove')}
         </Button>
       </div>
     </Section>

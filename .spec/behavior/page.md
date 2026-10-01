@@ -189,3 +189,27 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | a simulation that moved `/downloads/Alpha/x.mkv` to `/video/Alpha/Alpha.mkv` |
 | When | the trees are drawn from it |
 | Then | `/video/Alpha/Alpha.mkv` is marked as moved |
+
+## `PGE-024` A browser preferring Chinese is shown the page in Traditional Chinese
+
+| Step | Statement |
+| --- | --- |
+| Given | a browser whose preferred languages are `zh-CN` and `en` |
+| When | the page chooses its language |
+| Then | it is Traditional Chinese |
+
+## `PGE-025` Any other browser is shown the page in English
+
+| Step | Statement |
+| --- | --- |
+| Given | a browser whose preferred languages are `ja` and `fr` |
+| When | the page chooses its language |
+| Then | it is English |
+
+## `PGE-026` Every text of the page is written in both languages
+
+| Step | Statement |
+| --- | --- |
+| Given | the English and the Traditional Chinese texts of the page |
+| When | they are compared |
+| Then | each names the same texts |

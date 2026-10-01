@@ -1,0 +1,77 @@
+{
+  "title": "auto-renamer playground",
+  "language": "Language",
+  "kind": {
+    "global": "Global configuration",
+    "folder": "Folder configuration"
+  },
+  "import": "Import",
+  "download": "Download",
+  "status": {
+    "valid": "valid",
+    "warnings_one": "{{count}} warning",
+    "warnings_other": "{{count}} warnings",
+    "refused": "refused"
+  },
+  "message": {
+    "imported": "Imported {{name}}",
+    "downloaded": "Downloaded {{name}}",
+    "refused": "Not downloadable: {{reason}}"
+  },
+  "palette": {
+    "addWatch": "Add watch",
+    "addPipeline": "Add pipeline",
+    "stages": "Stages",
+    "hint": "Drag a stage onto a pipeline."
+  },
+  "inspector": {
+    "defaults": "Defaults",
+    "folder": "Folder configuration",
+    "hint": "Select a watch, a pipeline or a stage to edit it.",
+    "watch": "Watch {{name}}",
+    "removeWatch": "Remove watch",
+    "pipeline": "Pipeline {{name}}",
+    "name": "Name",
+    "nameMissing": "A pipeline needs a name",
+    "nameTaken": "A pipeline is already named {{name}}",
+    "addStage": "Add a stage",
+    "choose": "Choose…",
+    "removePipeline": "Remove pipeline",
+    "stage": "{{kind}} · stage {{position}} of {{pipeline}}",
+    "earlier": "Earlier",
+    "later": "Later",
+    "remove": "Remove",
+    "required": "Required",
+    "addValue": "Add a value"
+  },
+  "tree": {
+    "source": "Source",
+    "target": "Target",
+    "addFile": "Add file",
+    "addFolder": "Add folder",
+    "rename": "Double-click to rename",
+    "remove": "Remove {{name}}",
+    "trigger": "Trigger",
+    "keep": "Keep the result",
+    "placeholder": "{{path}} or {{configuration}}"
+  },
+  "output": {
+    "results": "Results",
+    "empty": "Trigger the watch to see where each file goes.",
+    "file": "File",
+    "became": "Became",
+    "to": "To",
+    "why": "Why"
+  },
+  "what": {
+    "moved": "moved",
+    "moved then failed": "moved then failed",
+    "previewed": "previewed",
+    "unchanged": "unchanged",
+    "skipped": "skipped",
+    "refused": "refused",
+    "unclaimed": "unclaimed",
+    "excluded": "excluded",
+    "left too large": "left too large"
+  }
+}

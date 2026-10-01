@@ -1,5 +1,6 @@
 import { File, FileCog, Folder, X } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -18,6 +19,7 @@ function isName(name: string): boolean {
 }
 
 function Row({ node, entries, mark, onEdit }: { node: TreeNode; entries: Entry[]; mark?: string; onEdit: Edit }) {
+  const { t } = useTranslation()
   const [renaming, setRenaming] = useState(false)
   const [open, setOpen] = useState(false)
   const configuration = node.name === FOLDER_CONFIGURATION
@@ -37,14 +39,14 @@ function Row({ node, entries, mark, onEdit }: { node: TreeNode; entries: Entry[]
             }}
             onKeyDown={(event) => event.key === 'Enter' && event.currentTarget.blur()} />
         ) : (
-          <button className="truncate text-left font-mono text-xs" title="Double-click to rename"
+          <button className="truncate text-left font-mono text-xs" title={t('tree.rename')}
             onClick={() => configuration && setOpen(!open)} onDoubleClick={() => setRenaming(true)}>
             {node.name}
           </button>
         )}
-        {mark && <Badge variant={mark.startsWith('moved') || mark === 'previewed' ? 'secondary' : 'outline'}>{mark}</Badge>}
+        {mark && <Badge variant={mark.startsWith('moved') || mark === 'previewed' ? 'secondary' : 'outline'}>{t(`what.${mark}`, mark)}</Badge>}
         <Button variant="ghost" size="icon-xs" className="ml-auto opacity-0 group-hover:opacity-100"
-          aria-label={`Remove ${node.name}`} onClick={() => onEdit((all) => removeEntry(all, node.path))}>
+          aria-label={t('tree.remove', { name: node.name })} onClick={() => onEdit((all) => removeEntry(all, node.path))}>
           <X />
         </Button>
       </div>
@@ -83,6 +85,7 @@ export function TreePanel({ title, root, entries, marks, onEdit }: {
   marks: Record<string, string>
   onEdit: Edit
 }) {
+  const { t } = useTranslation()
   const [path, setPath] = useState('')
   const valid = root !== '' && path.split('/').every(isName)
   const add = (folder: boolean) => {
@@ -98,10 +101,10 @@ export function TreePanel({ title, root, entries, marks, onEdit }: {
         <Branch nodes={treeOf(entries, root)} entries={entries} marks={marks} onEdit={onEdit} />
       </div>
       <div className="flex gap-2">
-        <Input className="h-7 font-mono text-xs" placeholder={`Show/Season 1/file.mkv or Show/${FOLDER_CONFIGURATION}`}
+        <Input className="h-7 font-mono text-xs" placeholder={t('tree.placeholder', { path: 'Show/Season 1/file.mkv', configuration: `Show/${FOLDER_CONFIGURATION}` })}
           value={path} onChange={(event) => setPath(event.target.value)} />
-        <Button size="sm" variant="outline" disabled={!valid} onClick={() => add(false)}>Add file</Button>
-        <Button size="sm" variant="outline" disabled={!valid} onClick={() => add(true)}>Add folder</Button>
+        <Button size="sm" variant="outline" disabled={!valid} onClick={() => add(false)}>{t('tree.addFile')}</Button>
+        <Button size="sm" variant="outline" disabled={!valid} onClick={() => add(true)}>{t('tree.addFolder')}</Button>
       </div>
     </div>
   )

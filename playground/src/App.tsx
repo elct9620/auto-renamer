@@ -1,4 +1,5 @@
 import { type ChangeEvent, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { Canvas } from '@/components/Canvas'
 import { Inspector } from '@/components/Inspector'
@@ -11,6 +12,7 @@ import { errorOf } from '@/lib/utils'
 import { type Table, asTable, download, setIn } from './config'
 import { type Entry, type Kind, type Simulation, check, read, render, simulate } from './core'
 import type { Selected } from './graph'
+import { LANGUAGES } from './i18n'
 import { marksOf, rootsOf } from './tree'
 
 const EXAMPLE = `[default]
@@ -38,6 +40,7 @@ const EXAMPLE_TREE: Entry[] = [
 ]
 
 export default function App() {
+  const { t, i18n } = useTranslation()
   const [kind, setKind] = useState<Kind>('global')
   const [config, setConfig] = useState<Table>(() => read(EXAMPLE))
   const [selected, setSelected] = useState<Selected | null>(null)
@@ -66,7 +69,7 @@ export default function App() {
       setConfig(read(await file.text()))
       setKind(file.name === 'auto-renamer.toml' ? 'folder' : 'global')
       setSelected(null)
-      setMessage(`Imported ${file.name}`)
+      setMessage(t('message.imported', { name: file.name }))
     } catch (error) {
       setMessage(errorOf(error))
     }
@@ -75,7 +78,7 @@ export default function App() {
   const save = () => {
     const offered = download(kind, config, render, check)
     if (!offered.file) {
-      setMessage(`Not downloadable: ${offered.refused}`)
+      setMessage(t('message.refused', { reason: offered.refused }))
       return
     }
     const link = document.createElement('a')
@@ -83,7 +86,7 @@ export default function App() {
     link.download = offered.file.name
     link.click()
     URL.revokeObjectURL(link.href)
-    setMessage(`Downloaded ${offered.file.name}`)
+    setMessage(t('message.downloaded', { name: offered.file.name }))
   }
 
   const add = (table: 'watch' | 'pipeline') => {
@@ -115,20 +118,24 @@ export default function App() {
   return (
     <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto_minmax(0,11rem)] bg-background text-foreground">
       <header className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
-        <h1 className="mr-2 text-sm font-semibold">auto-renamer playground</h1>
+        <h1 className="mr-2 text-sm font-semibold">{t('title')}</h1>
         <select className="h-8 rounded-md border bg-background px-2 text-sm" value={kind}
           onChange={(event) => { setKind(event.target.value as Kind); setSelected(null) }}>
-          <option value="global">Global configuration</option>
-          <option value="folder">Folder configuration</option>
+          <option value="global">{t('kind.global')}</option>
+          <option value="folder">{t('kind.folder')}</option>
         </select>
         <Button variant="outline" size="sm" asChild>
-          <label>Import<input type="file" accept=".toml" onChange={importFile} hidden /></label>
+          <label>{t('import')}<input type="file" accept=".toml" onChange={importFile} hidden /></label>
         </Button>
-        <Button size="sm" onClick={save} disabled={!status.ok}>Download</Button>
+        <Button size="sm" onClick={save} disabled={!status.ok}>{t('download')}</Button>
         <Badge variant={status.ok ? 'secondary' : 'destructive'}>
-          {status.ok ? (status.lines.length ? `${status.lines.length} warning(s)` : 'valid') : 'refused'}
+          {status.ok ? (status.lines.length ? t('status.warnings', { count: status.lines.length }) : t('status.valid')) : t('status.refused')}
         </Badge>
         {message && <span className="text-xs text-muted-foreground">{message}</span>}
+        <select aria-label={t('language')} className="ml-auto h-8 rounded-md border bg-background px-2 text-sm"
+          value={i18n.language} onChange={(event) => i18n.changeLanguage(event.target.value)}>
+          {Object.entries(LANGUAGES).map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+        </select>
       </header>
 
       <main className="grid min-h-0 grid-cols-[11rem_minmax(0,1fr)_20rem] border-b">
@@ -145,18 +152,18 @@ export default function App() {
 
       {kind === 'global' ? (
         <section className="grid h-56 min-h-0 grid-cols-[minmax(0,1fr)_10rem_minmax(0,1fr)] border-b">
-          <TreePanel title="Source" root={roots.source} entries={entries} marks={marks} onEdit={editEntries} />
+          <TreePanel title={t('tree.source')} root={roots.source} entries={entries} marks={marks} onEdit={editEntries} />
           <div className="flex flex-col justify-center gap-2 border-x p-3">
             <select className="h-8 rounded-md border bg-background px-2 text-sm" value={watch}
               onChange={(event) => setWatch(event.target.value)}>
               {watches.map((name) => <option key={name}>{name}</option>)}
             </select>
-            <Button size="sm" onClick={run} disabled={!status.ok || !watches.includes(watch)}>Trigger ▶</Button>
+            <Button size="sm" onClick={run} disabled={!status.ok || !watches.includes(watch)}>{t('tree.trigger')} ▶</Button>
             {simulation && (
-              <Button size="sm" variant="outline" onClick={() => editEntries(() => simulation.entries)}>Keep the result</Button>
+              <Button size="sm" variant="outline" onClick={() => editEntries(() => simulation.entries)}>{t('tree.keep')}</Button>
             )}
           </div>
-          <TreePanel title="Target" root={roots.target} entries={simulation?.entries ?? entries} marks={marks} onEdit={editEntries} />
+          <TreePanel title={t('tree.target')} root={roots.target} entries={simulation?.entries ?? entries} marks={marks} onEdit={editEntries} />
         </section>
       ) : (
         <div />

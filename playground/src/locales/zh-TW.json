@@ -1,0 +1,77 @@
+{
+  "title": "auto-renamer 試用場",
+  "language": "語言",
+  "kind": {
+    "global": "全域設定",
+    "folder": "目錄設定"
+  },
+  "import": "匯入",
+  "download": "下載",
+  "status": {
+    "valid": "有效",
+    "warnings_one": "{{count}} 則警告",
+    "warnings_other": "{{count}} 則警告",
+    "refused": "無效"
+  },
+  "message": {
+    "imported": "已匯入 {{name}}",
+    "downloaded": "已下載 {{name}}",
+    "refused": "無法下載：{{reason}}"
+  },
+  "palette": {
+    "addWatch": "新增 watch",
+    "addPipeline": "新增管線",
+    "stages": "階段",
+    "hint": "把階段拖到管線上。"
+  },
+  "inspector": {
+    "defaults": "預設值",
+    "folder": "目錄設定",
+    "hint": "選取 watch、管線或階段來編輯。",
+    "watch": "Watch {{name}}",
+    "removeWatch": "移除 watch",
+    "pipeline": "管線 {{name}}",
+    "name": "名稱",
+    "nameMissing": "管線需要名稱",
+    "nameTaken": "已經有名為 {{name}} 的管線",
+    "addStage": "新增階段",
+    "choose": "請選擇……",
+    "removePipeline": "移除管線",
+    "stage": "{{kind}} · {{pipeline}} 的第 {{position}} 個階段",
+    "earlier": "往前",
+    "later": "往後",
+    "remove": "移除",
+    "required": "必填",
+    "addValue": "新增一個值"
+  },
+  "tree": {
+    "source": "來源",
+    "target": "目標",
+    "addFile": "新增檔案",
+    "addFolder": "新增資料夾",
+    "rename": "按兩下以重新命名",
+    "remove": "移除 {{name}}",
+    "trigger": "觸發",
+    "keep": "保留結果",
+    "placeholder": "{{path}} 或 {{configuration}}"
+  },
+  "output": {
+    "results": "結果",
+    "empty": "觸發 watch，看每個檔案會到哪裡。",
+    "file": "檔案",
+    "became": "狀態",
+    "to": "目的地",
+    "why": "原因"
+  },
+  "what": {
+    "moved": "已搬移",
+    "moved then failed": "搬移後失敗",
+    "previewed": "預覽",
+    "unchanged": "未變更",
+    "skipped": "略過",
+    "refused": "拒絕",
+    "unclaimed": "未認領",
+    "excluded": "已排除",
+    "left too large": "數量過多未處理"
+  }
+}

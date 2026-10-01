@@ -1,4 +1,5 @@
 import { Plus, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,6 +28,7 @@ function TextField({ label, required, kind, value, onApply }: {
   value: Value | undefined
   onApply: (value: Value | undefined) => void
 }) {
+  const { t } = useTranslation()
   return (
     <div className="grid gap-1.5">
       <Label className="font-mono text-xs">{label}{required && <span className="text-destructive">*</span>}</Label>
@@ -34,7 +36,7 @@ function TextField({ label, required, kind, value, onApply }: {
         inputMode={kind === 'integer' ? 'numeric' : undefined}
         placeholder={kind === 'texts' ? 'a, b, c' : undefined}
         onBlur={(event) => onApply(parsed(kind, event.target.value))} />
-      {required && value === undefined && <p className="text-xs text-destructive">Required</p>}
+      {required && value === undefined && <p className="text-xs text-destructive">{t('inspector.required')}</p>}
     </div>
   )
 }
@@ -44,6 +46,7 @@ function FixedValues({ stage, declaration, onChange }: {
   declaration: Declaration
   onChange: (stage: Stage) => void
 }) {
+  const { t } = useTranslation()
   const values = parametersOf(stage)
   const fixed = (text: string): Value => (/^\d+$/.test(text.trim()) ? Number(text.trim()) : text)
   return (
@@ -65,7 +68,7 @@ function FixedValues({ stage, declaration, onChange }: {
         let name = 'field'
         for (let n = 2; name in values; n += 1) name = `field_${n}`
         onChange(withParameter(stage, declaration, name, ''))
-      }}><Plus />Add a value</Button>
+      }}><Plus />{t('inspector.addValue')}</Button>
     </div>
   )
 }
