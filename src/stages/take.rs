@@ -1,17 +1,9 @@
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use super::{Batch, Flow, Stage, Stop, Take, refused_by, write_field};
-use crate::context::Context;
+use crate::context::{Context, Earlier};
 use crate::record::{Record, split_extension};
-
-/// What an earlier pipeline made of one file, as far as a take stage needs to know.
-#[derive(Clone)]
-pub(crate) struct Earlier {
-    pub pipeline: String,
-    pub origin: PathBuf,
-    pub planned: Option<Record>,
-}
 
 /// The files earlier pipelines handled, found by the main file name they begin with.
 struct EarlierFiles {

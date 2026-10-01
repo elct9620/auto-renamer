@@ -24,7 +24,6 @@ use crate::template::Template;
 pub use batch::Batch;
 pub use declare::DeclareError;
 pub use effect::Effect;
-pub(crate) use take::Earlier;
 
 /// What a stage answers for one record: the record to go on with, or what stops it.
 pub type Flow = Result<Record, Stop>;

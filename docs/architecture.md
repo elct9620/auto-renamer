@@ -23,7 +23,7 @@ auto-renamer 是單一套件：`src/lib.rs` 放全部邏輯，`src/main.rs` 只�
 
 ```
   main ─► runner ─┬─► service ─┬─► engine ──► pipeline ─► stages ─┬─► template ─► record
-                  │            ├─► effects ─► stages               ├─► context
+                  │            ├─► effects ─► stages               ├─► context ──► record
                   │            └─► config ──► pipeline, reader     └─► reader ───► record
                   ├─► watcher ─► config
                   └─► scan ────► watcher
@@ -38,7 +38,7 @@ auto-renamer 是單一套件：`src/lib.rs` 放全部邏輯，`src/main.rs` 只�
 |---|---|---|
 | `record` | 記錄與欄位 | 否 |
 | `template` | 名稱樣板輸出與反推 | 否 |
-| `context` | target 現況與同批已發出的號碼 | 否 |
+| `context` | 同批共用：target、號碼、前面結果 | 否 |
 | `stages` | 階段、宣告解析、批次與 effect 描述 | 否 |
 | `pipeline` | 階段清單與順序驗證 | 否 |
 | `engine` | 認領順序與每個檔案的結論 | 否 |

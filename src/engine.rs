@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
-use crate::context::{Context, Target};
+use crate::context::{Context, Earlier, Target};
 use crate::pipeline::Pipeline;
 use crate::record::Record;
-use crate::stages::{Batch, Earlier, Effect, Flow, Rejection, Stop};
+use crate::stages::{Batch, Effect, Flow, Rejection, Stop};
 
 /// What a batch made of one file.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -1,12 +1,20 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use crate::stages::Earlier;
+use crate::record::Record;
 
 /// What the target folder holds, as far as a stage needs to know.
 pub trait Target {
     /// The names of the files in a folder of the target, relative to its root.
     fn files_in(&self, folder: &Path) -> Vec<String>;
+}
+
+/// What an earlier pipeline made of one file, as far as a later stage needs to know.
+#[derive(Clone)]
+pub(crate) struct Earlier {
+    pub pipeline: String,
+    pub origin: PathBuf,
+    pub planned: Option<Record>,
 }
 
 /// What a run of stages shares: the target, what it was already asked, the numbers already handed out
