@@ -7,6 +7,7 @@ import {
   asTable,
   download,
   folderStart,
+  overridden,
   insertStage,
   joinPipeline,
   moveStage,
@@ -277,5 +278,18 @@ describe('starting a folder configuration', () => {
     const started = read(render(folderStart(config, 'series')))
 
     expect(started).toEqual({ vars: { group: 'Team', show: 'Alpha' } })
+  })
+})
+
+describe('overriding a pipeline in a folder', () => {
+  // @behavior PGE-063
+  it('copies the global pipeline in, keeping what the folder holds', () => {
+    const folder = read('vars = { show = "Alpha" }\n\n[pipeline.subtitle]\nstages = ["move"]\n\n[pipeline.video]\nstages = []\n')
+
+    const result = overridden(folder, read(CONFIG), 'video')
+
+    expect(result.vars).toEqual({ show: 'Alpha' })
+    expect(names(result, 'subtitle')).toEqual(['move'])
+    expect(names(result)).toEqual(names(read(CONFIG)))
   })
 })

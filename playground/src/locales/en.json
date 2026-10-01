@@ -44,7 +44,9 @@
     "followsDefault": "follows the default",
     "list": "Add a pipeline",
     "useDefault": "Follow the default",
-    "notSimulated": "not simulated"
+    "notSimulated": "not simulated",
+    "override": "Override in a folder",
+    "chooseFolder": "Choose a folder"
   },
   "tree": {
     "source": "Source",

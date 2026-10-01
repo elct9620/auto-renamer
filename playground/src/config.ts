@@ -41,6 +41,11 @@ export function folderStart(config: Table, watch: string): Table {
   return Object.keys(vars).length ? { vars } : {}
 }
 
+/** A folder configuration with the global pipeline `name` copied in, replacing its own of that name only. */
+export function overridden(folder: Table, global: Table, name: string): Table {
+  return setIn(folder, ['pipeline', name], asTable(global.pipeline)[name])
+}
+
 function withStages(config: Table, pipeline: string, stages: Stage[]): Table {
   const pipelines = asTable(config.pipeline)
   return {

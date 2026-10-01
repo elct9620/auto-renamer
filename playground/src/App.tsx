@@ -11,7 +11,7 @@ import { TreePanel } from '@/components/TreePanel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { errorOf } from '@/lib/utils'
-import { type Table, asTable, download, folderStart, setIn } from './config'
+import { type Table, asTable, download, folderStart, overridden, setIn } from './config'
 import { type Entry, type Kind, type Simulation, check, read, render, simulate } from './core'
 import { type Example, EXAMPLES, FIRST } from './examples'
 import type { Selected } from './graph'
@@ -133,13 +133,27 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
   // each folder still without one.
   const folderOf = (path: string) => path.slice(0, -FOLDER_CONFIGURATION.length - 1)
   const configurations = entries.filter((entry) => entry.path.startsWith(`${roots.source}/`) && entry.path.endsWith(`/${FOLDER_CONFIGURATION}`))
-  const bare = [roots.source, ...foldersUnder(entries, roots.source).map((folder) => `${roots.source}/${folder.slice(0, -1)}`)]
-    .filter((folder) => !configurations.some((entry) => folderOf(entry.path) === folder))
+  const folders = [roots.source, ...foldersUnder(entries, roots.source).map((folder) => `${roots.source}/${folder.slice(0, -1)}`)]
+  const bare = folders.filter((folder) => !configurations.some((entry) => folderOf(entry.path) === folder))
   const editable = [
     { value: GLOBAL, label: t('editing.global') },
     ...configurations.map((entry) => ({ value: entry.path, label: t('editing.folder', { folder: folderOf(entry.path) }) })),
     ...bare.map((folder) => ({ value: `${ADD}${folder}`, label: t('editing.add', { folder }) })),
   ]
+  // A global pipeline overridden in a folder lands in that folder's configuration, which opens to be changed.
+  const override = (pipeline: string, folder: string) => {
+    const path = `${folder}/${FOLDER_CONFIGURATION}`
+    const existing = entries.find((entry) => entry.path === path)
+    let table: Table
+    try {
+      table = existing ? read(existing.text) : folderStart(config, watch)
+    } catch (error) {
+      setMessage(errorOf(error))
+      return
+    }
+    editEntries((all) => writeFile(all, path, render(overridden(table, config, pipeline))))
+    open(path)
+  }
   const choose = (value: string) => {
     if (value === GLOBAL) return open(null)
     if (value.startsWith(ADD)) {
@@ -189,7 +203,8 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
           <Canvas key={editing ?? ''} config={edited} onChange={edit} onSelect={setSelected} />
         </div>
         <aside className="min-h-0 overflow-auto border-l p-3">
-          <Inspector config={edited} kind={kind} selected={selected} onChange={edit} onSelect={setSelected} />
+          <Inspector config={edited} kind={kind} selected={selected} folders={folders} onChange={edit} onSelect={setSelected}
+            onOverride={folder ? undefined : override} />
         </aside>
       </main>
 

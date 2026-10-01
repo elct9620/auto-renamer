@@ -44,7 +44,9 @@
     "followsDefault": "沿用預設",
     "list": "加入管線",
     "useDefault": "改回沿用預設",
-    "notSimulated": "不模擬"
+    "notSimulated": "不模擬",
+    "override": "在資料夾覆寫",
+    "chooseFolder": "選擇資料夾"
   },
   "tree": {
     "source": "來源",

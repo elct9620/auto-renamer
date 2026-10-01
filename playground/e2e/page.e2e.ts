@@ -315,3 +315,15 @@ test('a folder configuration added from the header is started and opened', async
   await expect(source(page).getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(7)
   await expect(page.getByRole('combobox', { name: 'Configuration being edited' })).toHaveText('Folder configuration of /downloads/Series')
 })
+
+// @behavior PGE-064
+test('overriding a pipeline in a folder opens that folder\'s configuration', async ({ page }) => {
+  await node(page, 'video').click()
+
+  await page.getByRole('combobox', { name: /Override in a folder/ }).click()
+  await page.getByRole('option', { name: '/downloads/Series', exact: true }).click()
+
+  await expect(page.getByRole('combobox', { name: 'Configuration being edited' })).toHaveText('Folder configuration of /downloads/Series')
+  await expect(node(page, 'video')).toBeVisible()
+  await expect(node(page, 'series')).toHaveCount(0)
+})

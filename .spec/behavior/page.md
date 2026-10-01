@@ -505,3 +505,19 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the folder `Series` without a folder configuration |
 | When | adding one for `Series` is chosen in the header |
 | Then | the source holds `Series/auto-renamer.toml`, and it is the one being edited |
+
+## `PGE-063` A pipeline overridden in a folder is copied into its folder configuration
+
+| Step | Statement |
+| --- | --- |
+| Given | a folder configuration holding `vars = { show = "Alpha" }` and a pipeline `subtitle` |
+| When | the global pipeline `video` is overridden in that folder |
+| Then | it holds the same values, its `subtitle`, and a `video` with the global stages |
+
+## `PGE-064` Overriding a pipeline in a folder opens that folder's configuration
+
+| Step | Statement |
+| --- | --- |
+| Given | the pipeline `video` selected in the global configuration |
+| When | it is overridden in the folder `Series` |
+| Then | `Series/auto-renamer.toml` is the one being edited, and its canvas draws `video` |

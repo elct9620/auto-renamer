@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, type LucideIcon, Settings2, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, type LucideIcon, Settings2, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -45,12 +45,15 @@ function Section({ title, icon: Icon, children }: { title: React.ReactNode; icon
   )
 }
 
-export function Inspector({ config, kind, selected, onChange, onSelect }: {
+export function Inspector({ config, kind, selected, folders = [], onChange, onSelect, onOverride }: {
   config: Table
   kind: Kind
   selected: Selected | null
+  /** The source folders a global pipeline can be overridden in. */
+  folders?: string[]
   onChange: (config: Table) => void
   onSelect: (selected: Selected | null) => void
+  onOverride?: (pipeline: string, folder: string) => void
 }) {
   const { t } = useTranslation()
   const [nameError, setNameError] = useState('')
@@ -97,6 +100,12 @@ export function Inspector({ config, kind, selected, onChange, onSelect }: {
           <Choice value="" placeholder={t('inspector.choose')} options={stages().map(({ name }) => ({ value: name, label: name }))}
             onChange={(name) => onChange(addStage(config, selected.name, newStage(name, stages(), read)))} />
         </Field>
+        {onOverride && (
+          <Field label={t('inspector.override')}>
+            <Choice value="" placeholder={t('inspector.chooseFolder')} options={folders.map((folder) => ({ value: folder, label: folder }))}
+              onChange={(folder) => onOverride(selected.name, folder)} />
+          </Field>
+        )}
         <Button variant="destructive" size="sm" onClick={() => { onChange(removePipeline(config, selected.name)); onSelect(null) }}>
           <Trash2 />{t('inspector.removePipeline')}
         </Button>
@@ -118,10 +127,10 @@ export function Inspector({ config, kind, selected, onChange, onSelect }: {
       <div className="flex gap-2">
         <Button variant="outline" size="sm" disabled={selected.index === 0} onClick={() => {
           onChange(moveStage(config, selected.pipeline, selected.index, -1)); at(selected.index - 1)
-        }}><ArrowLeft />{t('inspector.earlier')}</Button>
+        }}><ArrowUp />{t('inspector.earlier')}</Button>
         <Button variant="outline" size="sm" disabled={selected.index === pipelineStages.length - 1} onClick={() => {
           onChange(moveStage(config, selected.pipeline, selected.index, 1)); at(selected.index + 1)
-        }}>{t('inspector.later')}<ArrowRight /></Button>
+        }}><ArrowDown />{t('inspector.later')}</Button>
         <Button variant="destructive" size="sm" onClick={() => { onChange(removeStage(config, selected.pipeline, selected.index)); onSelect(null) }}>
           <Trash2 />{t('inspector.remove')}
         </Button>
