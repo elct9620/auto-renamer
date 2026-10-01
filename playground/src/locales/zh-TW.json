@@ -3,7 +3,8 @@
   "language": "語言",
   "kind": {
     "global": "全域設定",
-    "folder": "目錄設定"
+    "folder": "目錄設定",
+    "label": "設定種類"
   },
   "import": "匯入",
   "download": "下載",
@@ -53,7 +54,8 @@
     "remove": "移除 {{name}}",
     "trigger": "觸發",
     "keep": "保留結果",
-    "placeholder": "{{path}} 或 {{configuration}}"
+    "placeholder": "{{path}} 或 {{configuration}}",
+    "watch": "要觸發的 watch"
   },
   "output": {
     "results": "結果",

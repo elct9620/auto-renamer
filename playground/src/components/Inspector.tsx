@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { errorOf } from '@/lib/utils'
 import {
@@ -27,11 +26,11 @@ import { StageForm } from './StageForm'
 
 function Field({ label, children, error }: { label: string; children: React.ReactNode; error?: string }) {
   return (
-    <div className="grid gap-1.5">
-      <Label className="font-mono text-xs">{label}</Label>
+    <label className="grid gap-1.5">
+      <span className="font-mono text-xs font-medium">{label}</span>
       {children}
       {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
+    </label>
   )
 }
 

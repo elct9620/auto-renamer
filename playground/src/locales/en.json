@@ -3,7 +3,8 @@
   "language": "Language",
   "kind": {
     "global": "Global configuration",
-    "folder": "Folder configuration"
+    "folder": "Folder configuration",
+    "label": "Configuration kind"
   },
   "import": "Import",
   "download": "Download",
@@ -53,7 +54,8 @@
     "remove": "Remove {{name}}",
     "trigger": "Trigger",
     "keep": "Keep the result",
-    "placeholder": "{{path}} or {{configuration}}"
+    "placeholder": "{{path}} or {{configuration}}",
+    "watch": "Watch to trigger"
   },
   "output": {
     "results": "Results",

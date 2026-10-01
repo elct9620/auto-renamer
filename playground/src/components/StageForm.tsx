@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { type Stage, type Value, parametersOf, stageName, withParameter, withValue } from '../config'
 import type { Declaration, ParameterKind } from '../core'
 
@@ -30,14 +29,14 @@ function TextField({ label, required, kind, value, onApply }: {
 }) {
   const { t } = useTranslation()
   return (
-    <div className="grid gap-1.5">
-      <Label className="font-mono text-xs">{label}{required && <span className="text-destructive">*</span>}</Label>
+    <label className="grid gap-1.5">
+      <span className="font-mono text-xs font-medium">{label}{required && <span className="text-destructive">*</span>}</span>
       <Input key={shown(value)} className="h-8 font-mono text-xs" defaultValue={shown(value)}
         inputMode={kind === 'integer' ? 'numeric' : undefined}
         placeholder={kind === 'texts' ? 'a, b, c' : undefined}
         onBlur={(event) => onApply(parsed(kind, event.target.value))} />
       {required && value === undefined && <p className="text-xs text-destructive">{t('inspector.required')}</p>}
-    </div>
+    </label>
   )
 }
 
@@ -102,14 +101,14 @@ export function StageForm({ stage, declaration, onChange }: {
         }
         if (parameter.choices.length > 0) {
           return (
-            <div key={parameter.name} className="grid gap-1.5">
-              <Label className="font-mono text-xs">{parameter.name}{parameter.required && <span className="text-destructive">*</span>}</Label>
+            <label key={parameter.name} className="grid gap-1.5">
+              <span className="font-mono text-xs font-medium">{parameter.name}{parameter.required && <span className="text-destructive">*</span>}</span>
               <select className="h-8 rounded-md border bg-background px-2 font-mono text-xs" value={shown(value)}
                 onChange={(event) => apply(event.target.value || undefined)}>
                 <option value="">—</option>
                 {parameter.choices.map((choice) => <option key={choice}>{choice}</option>)}
               </select>
-            </div>
+            </label>
           )
         }
         return (

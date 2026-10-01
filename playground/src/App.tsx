@@ -82,10 +82,11 @@ export default function App() {
       return
     }
     const link = document.createElement('a')
-    link.href = URL.createObjectURL(new Blob([offered.file.text], { type: 'application/toml' }))
+    const url = URL.createObjectURL(new Blob([offered.file.text], { type: 'application/toml' }))
+    link.href = url
     link.download = offered.file.name
     link.click()
-    URL.revokeObjectURL(link.href)
+    URL.revokeObjectURL(url)
     setMessage(t('message.downloaded', { name: offered.file.name }))
   }
 
@@ -119,7 +120,7 @@ export default function App() {
     <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto_minmax(0,11rem)] bg-background text-foreground">
       <header className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
         <h1 className="mr-2 text-sm font-semibold">{t('title')}</h1>
-        <select className="h-8 rounded-md border bg-background px-2 text-sm" value={kind}
+        <select aria-label={t('kind.label')} className="h-8 rounded-md border bg-background px-2 text-sm" value={kind}
           onChange={(event) => { setKind(event.target.value as Kind); setSelected(null) }}>
           <option value="global">{t('kind.global')}</option>
           <option value="folder">{t('kind.folder')}</option>
@@ -154,7 +155,7 @@ export default function App() {
         <section className="grid h-56 min-h-0 grid-cols-[minmax(0,1fr)_10rem_minmax(0,1fr)] border-b">
           <TreePanel title={t('tree.source')} root={roots.source} entries={entries} marks={marks} onEdit={editEntries} />
           <div className="flex flex-col justify-center gap-2 border-x p-3">
-            <select className="h-8 rounded-md border bg-background px-2 text-sm" value={watch}
+            <select aria-label={t('tree.watch')} className="h-8 rounded-md border bg-background px-2 text-sm" value={watch}
               onChange={(event) => setWatch(event.target.value)}>
               {watches.map((name) => <option key={name}>{name}</option>)}
             </select>
