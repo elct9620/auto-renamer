@@ -5,6 +5,7 @@ The playground page draws a configuration for people who do not read TOML: each 
 ## Includes
 
 - `playground/src/**/*.test.ts`
+- `playground/e2e/*.e2e.ts`
 
 ## `PGE-001` A pipeline is drawn as its stages in order
 
@@ -253,3 +254,117 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | a source holding `Alpha/Season 1/01.mkv` |
 | When | the folders to offer for a new path under it are listed |
 | Then | they are `Alpha/` and `Alpha/Season 1/` |
+
+## `PGE-032` A node moved on the canvas leaves the configuration as it was
+
+| Step | Statement |
+| --- | --- |
+| Given | the example configuration drawn on the canvas |
+| When | the watch is dragged elsewhere |
+| Then | the configuration text is unchanged |
+
+## `PGE-033` A reset layout draws every node where its order places it
+
+| Step | Statement |
+| --- | --- |
+| Given | a canvas whose watch was dragged elsewhere |
+| When | the layout is reset |
+| Then | the watch is drawn where it was first drawn |
+
+## `PGE-034` Restoring the example brings back its configuration and tree
+
+| Step | Statement |
+| --- | --- |
+| Given | the example with a stage removed |
+| Given | a file added to the source |
+| When | the example is restored |
+| Then | the configuration text and the tree are those the page opened with |
+
+## `PGE-035` Adding in a folder starts the new path from that folder
+
+| Step | Statement |
+| --- | --- |
+| Given | a source holding the folder `Alpha/Season 1` |
+| When | adding in that folder is chosen |
+| Then | the new path reads `Alpha/Season 1/` |
+
+## `PGE-036` A parameter limited to some values offers them in a list
+
+| Step | Statement |
+| --- | --- |
+| Given | the move stage selected |
+| When | its `on_conflict` is opened |
+| Then | the choices are `reject` and `suffix` |
+
+## `PGE-037` A required parameter left empty is pointed out
+
+| Step | Statement |
+| --- | --- |
+| Given | a next stage whose `into` is empty |
+| When | its form is shown |
+| Then | `into` is marked as required |
+
+## `PGE-038` A folder configuration shows no virtual tree
+
+| Step | Statement |
+| --- | --- |
+| Given | the global configuration shown |
+| When | the folder configuration is chosen |
+| Then | neither the source nor the target tree is shown |
+
+## `PGE-039` The language chosen in the header is the one the page speaks
+
+| Step | Statement |
+| --- | --- |
+| Given | the page shown in English |
+| When | 繁體中文 is chosen in the header |
+| Then | the page is shown in Traditional Chinese |
+
+## `PGE-040` Settings the simulation ignores are marked as not simulated
+
+| Step | Statement |
+| --- | --- |
+| Given | the watch `series` selected |
+| When | its form is shown |
+| Then | `batch_window` and `batch_max_wait` are marked as not simulated |
+
+## `PGE-041` A watch lists pipelines picked from those defined
+
+| Step | Statement |
+| --- | --- |
+| Given | a configuration defining the pipelines `video` and `new_pipeline` |
+| Given | the watch `series` listing `video` |
+| When | `new_pipeline` is picked in its form |
+| Then | the watch lists `video` and `new_pipeline` |
+
+## `PGE-042` A unit is chosen among its three forms
+
+| Step | Statement |
+| --- | --- |
+| Given | the watch `series` selected |
+| When | its `unit` is opened |
+| Then | the choices are directory, source and root |
+
+## `PGE-043` A yes-or-no setting is a switch
+
+| Step | Statement |
+| --- | --- |
+| Given | the watch `series` selected |
+| When | its form is shown |
+| Then | `dry_run` is a switch |
+
+## `PGE-044` Keys stay as the CLI writes them in any language
+
+| Step | Statement |
+| --- | --- |
+| Given | the page shown in Traditional Chinese |
+| When | the watch `series` is selected |
+| Then | its fields are labelled `source` and `target` |
+
+## `PGE-045` The canvas sits between the palette and the inspector, above the trees
+
+| Step | Statement |
+| --- | --- |
+| Given | the global configuration shown |
+| When | the page is laid out |
+| Then | the palette, canvas and inspector run left to right above the source and target trees |

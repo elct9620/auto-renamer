@@ -21,7 +21,7 @@ Each part has a boundary; what lies past it belongs to the operating system and 
 
 ## Checks
 
-`.claude/hooks/stop.sh` blocks finishing until the checks CI runs pass, and until React Doctor finds no error in `playground/`; only the hook runs React Doctor. Linux-only code (`runner`, and the tests of watching, signals and moves between filesystems) is compiled out on macOS, where the checks pass without running it. The playground's checks need `wasm-bindgen`, so only CI runs them. Run the Linux code in the test container:
+`.claude/hooks/stop.sh` blocks finishing until the checks CI runs pass, and until React Doctor finds no error in `playground/`; only the hook runs React Doctor. Linux-only code (`runner`, and the tests of watching, signals and moves between filesystems) is compiled out on macOS, where the checks pass without running it. The playground's checks need `wasm-bindgen`, so only CI runs them; its E2E tests (`pnpm e2e`) drive the built page in the Google Chrome the machine already has. Run the Linux code in the test container:
 
 ```
 docker compose -f docker-compose.test.yml run --rm sut
@@ -63,7 +63,8 @@ Some tests depend on things outside their own file.
 | kernel overflow in `tests/queue.rs` | a handed-in overflow notice |
 | moves between mounts in `tests/move.rs` | the `mv` on PATH |
 | MV-028 in `tests/move.rs` | the 1 MiB tmpfs at `/small` of the test container |
-| `playground/src/config.test.ts`, `tree.test.ts` | the module `pnpm wasm` builds, whose `stages()` lists the stages `declare.rs` reads |
+| `playground/src/config.test.ts`, `tree.test.ts`, `i18n.test.ts`, `settings.test.ts` | the module `pnpm wasm` builds, whose `stages()` lists the stages `declare.rs` reads |
+| `playground/e2e/page.e2e.ts` | the example the page opens with in `App.tsx`, and `pnpm build` having run |
 | DEC-035 in `tests/declaration.rs` | debug assertions, which a release build drops |
 
 Editing a design example can break a test, and the image build leaves out `docs/`, so `tests/examples.rs` runs only on the host or in the mounted container. OrbStack queues 1,048,576 kernel events, so an overflow cannot be caused by volume there. CI runs the tests with the runner's GNU `mv`; only the test container uses the busybox `mv` the image ships.
