@@ -217,3 +217,13 @@ test('an imported folder configuration lands at the source root while the global
   await expect(page.getByText('Folder configuration of /downloads', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'auto-renamer.toml', exact: true })).toBeVisible()
 })
+
+// @behavior PGE-051
+test('a folder configuration added in a folder is opened', async ({ page }) => {
+  await page.getByText('Alpha', { exact: true }).first().hover()
+
+  await page.getByRole('button', { name: 'Add a folder configuration in Alpha' }).click()
+
+  await expect(page.getByRole('button', { name: 'auto-renamer.toml', exact: true })).toBeVisible()
+  await expect(page.getByText('Folder configuration of /downloads/Alpha', { exact: true })).toBeVisible()
+})

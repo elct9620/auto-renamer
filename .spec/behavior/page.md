@@ -409,3 +409,11 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the global configuration being edited |
 | When | a file named `auto-renamer.toml` is imported |
 | Then | the source holds `auto-renamer.toml` at its root, and it is the one being edited |
+
+## `PGE-051` A folder configuration added in a folder is opened
+
+| Step | Statement |
+| --- | --- |
+| Given | a source holding the folder `Alpha` |
+| When | a folder configuration is added in `Alpha` |
+| Then | the source holds `Alpha/auto-renamer.toml`, and it is the one being edited |

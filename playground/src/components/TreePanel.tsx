@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import type { Entry } from '../core'
-import { FOLDER_CONFIGURATION, type TreeNode, addEntry, foldersUnder, removeEntry, renameEntry, treeOf } from '../tree'
+import { FOLDER_CONFIGURATION, type TreeNode, addEntry, foldersUnder, removeEntry, renameEntry, treeOf, writeFile } from '../tree'
 
 type Edit = (change: (entries: Entry[]) => Entry[]) => void
 
@@ -29,6 +29,11 @@ function Row({ node, mark, actions }: { node: TreeNode; mark?: string; actions: 
   const [renaming, setRenaming] = useState(false)
   const configuration = node.name === FOLDER_CONFIGURATION
   const Icon = node.folder ? Folder : configuration ? FileCog : File
+  const configure = (folder: string) => {
+    const path = `${folder}/${FOLDER_CONFIGURATION}`
+    actions.onEdit((all) => (all.some((entry) => entry.path === path) ? all : writeFile(all, path, '')))
+    actions.onOpen?.(path)
+  }
   return (
     <div className={cn('group flex items-center gap-1.5 rounded px-1 hover:bg-muted', actions.editing === node.path && 'bg-muted font-semibold')}>
       <Icon className="size-3.5 shrink-0 text-muted-foreground" />
@@ -52,6 +57,11 @@ function Row({ node, mark, actions }: { node: TreeNode; mark?: string; actions: 
         {node.folder && (
           <Button variant="ghost" size="icon-xs" aria-label={t('tree.addHere', { name: node.name })} onClick={() => actions.onStart(node.path)}>
             <Plus />
+          </Button>
+        )}
+        {node.folder && actions.onOpen && (
+          <Button variant="ghost" size="icon-xs" aria-label={t('tree.configure', { name: node.name })} onClick={() => configure(node.path)}>
+            <FileCog />
           </Button>
         )}
         <Button variant="ghost" size="icon-xs" aria-label={t('tree.remove', { name: node.name })}

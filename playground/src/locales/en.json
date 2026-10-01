@@ -59,7 +59,8 @@
     "watch": "Watch to trigger",
     "addHere": "Add in {{name}}",
     "path": "Path of a new file or folder",
-    "open": "Edit this folder configuration"
+    "open": "Edit this folder configuration",
+    "configure": "Add a folder configuration in {{name}}"
   },
   "output": {
     "results": "Results",
