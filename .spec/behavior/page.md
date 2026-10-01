@@ -425,3 +425,19 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the page shown in Traditional Chinese |
 | When | the palette is shown |
 | Then | the filter stage reads 篩選 with `filter` beside it |
+
+## `PGE-053` An imported folder configuration replaces the one being edited
+
+| Step | Statement |
+| --- | --- |
+| Given | `Alpha/auto-renamer.toml` opened from the tree |
+| When | a file named `auto-renamer.toml` is imported |
+| Then | the imported text is what `Alpha/auto-renamer.toml` holds, and no other folder configuration is added |
+
+## `PGE-054` A download is the configuration being edited
+
+| Step | Statement |
+| --- | --- |
+| Given | `Alpha/auto-renamer.toml` opened from the tree |
+| When | the download is chosen |
+| Then | the file offered is named `auto-renamer.toml` |

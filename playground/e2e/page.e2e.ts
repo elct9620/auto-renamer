@@ -4,8 +4,9 @@ function node(page: Page, name: string) {
   return page.locator('.react-flow__node').filter({ has: page.getByText(name, { exact: true }) })
 }
 
+// The configuration tab is named after whatever is being edited, so it is found by its place.
 async function configText(page: Page): Promise<string> {
-  await page.getByRole('tab', { name: 'config.toml' }).click()
+  await page.getByRole('tab').nth(1).click()
   return (await page.getByRole('tabpanel').textContent()) ?? ''
 }
 
@@ -236,4 +237,30 @@ test('a stage is shown by its name beside the CLI\'s name', async ({ page }) => 
   const filter = page.locator('aside').first().locator('span', { has: page.locator('code', { hasText: /^filter$/ }) })
 
   await expect(filter).toHaveText('篩選filter')
+})
+
+// @behavior PGE-053
+test('an imported folder configuration replaces the one being edited', async ({ page }) => {
+  await addFolderConfiguration(page, 'Alpha')
+  await page.getByRole('button', { name: 'auto-renamer.toml', exact: true }).click()
+
+  await page.locator('input[type=file]').setInputFiles({
+    name: 'auto-renamer.toml',
+    mimeType: 'application/toml',
+    buffer: Buffer.from('[vars]\nshow = "Beta"\n'),
+  })
+
+  await expect(page.getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(1)
+  expect(await configText(page)).toContain('show = "Beta"')
+})
+
+// @behavior PGE-054
+test('a download is the configuration being edited', async ({ page }) => {
+  await addFolderConfiguration(page, 'Alpha')
+  await page.getByRole('button', { name: 'auto-renamer.toml', exact: true }).click()
+
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download' }).click()
+
+  expect((await download).suggestedFilename()).toBe('auto-renamer.toml')
 })
