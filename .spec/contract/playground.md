@@ -69,3 +69,11 @@ Run a watch of a configuration over a virtual tree: each unit of its source is p
 ```rust
 pub fn simulate(config: &str, watch: &str, entries: Vec<Entry>) -> Result<Simulation, String> {}
 ```
+
+## `stages`
+
+How each stage is declared, for the page to offer the stages and make their forms.
+
+```rust
+pub fn stages() -> &'static [Declaration] {}
+```

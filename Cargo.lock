@@ -30,6 +30,7 @@ dependencies = [
  "chrono",
  "globset",
  "regex",
+ "serde",
  "toml",
 ]
 

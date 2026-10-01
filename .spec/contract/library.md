@@ -191,6 +191,56 @@ One stage as a pipeline declares it, with its parameters: the closed list of the
 pub enum Declared {}
 ```
 
+## `Declaration`
+
+How one stage is declared, for a form to be made from: its name, whether a bare name declares it, the single value it may take, its named parameters, whether it takes fixed values named by the user, and an example it accepts.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct Declaration {}
+```
+
+## `Parameter`
+
+One named parameter of a stage: its name, the kind of value it takes, whether the stage needs it, and the choices it is limited to.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct Parameter {}
+```
+
+## `ParameterKind`
+
+The kind of value a parameter takes: text, a list of text, a whole number, or a yes or no.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub enum ParameterKind {}
+```
+
+## `Declared::declarations`
+
+How each stage there is is declared, from the same list a declaration is read by.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Declared {
+    pub fn declarations() -> &'static [Declaration] {}
+}
+```
+
 ## `Declared::read`
 
 Read one stage from its declaration, refusing a mistaken one.

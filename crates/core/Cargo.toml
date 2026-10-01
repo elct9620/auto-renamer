@@ -9,4 +9,9 @@ publish = false
 chrono.workspace = true
 globset = "0.4.20"
 regex = "1.13.1"
+serde = { version = "1.0.229", features = ["derive"], optional = true }
 toml.workspace = true
+
+[features]
+# Lets the playground hand the stage declarations to the page.
+serde = ["dep:serde"]

@@ -237,3 +237,43 @@ A pipeline is declared as a list of stages, each a bare name or a table with one
 | Given | a stage list of 65 stages |
 | When | the pipeline is read |
 | Then | the pipeline is refused |
+
+## `DEC-033` Every stage is described with an example it accepts
+
+| Step | Statement |
+| --- | --- |
+| Given | the description of each stage there is |
+| When | each stage is declared with its example |
+| Then | every declaration is accepted |
+
+## `DEC-034` A described parameter is one the stage accepts
+
+| Step | Statement |
+| --- | --- |
+| Given | each named parameter a stage's description lists |
+| When | the stage is declared with its example and that parameter |
+| Then | none is refused as not a parameter of the stage |
+
+## `DEC-035` A parameter a stage reads is described
+
+| Step | Statement |
+| --- | --- |
+| Given | declarations reaching every parameter each stage reads |
+| When | they are read |
+| Then | every parameter read is one the stage's description lists |
+
+## `DEC-036` A required parameter left out is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | each parameter a stage's description marks as required |
+| When | the stage is declared with its example without that parameter |
+| Then | the declaration is refused |
+
+## `DEC-037` A parameter limited to choices accepts each of them
+
+| Step | Statement |
+| --- | --- |
+| Given | each choice a stage's description lists for a parameter |
+| When | the stage is declared with its example and that choice |
+| Then | the declaration is accepted |

@@ -42,6 +42,10 @@ One small function from a batch to a batch. A pipeline is a stack of stages, and
 - `Step` - Stage is what the design calls it.
 - `Processor` - Stage is what the design calls it.
 
+### Parameter
+
+What a stage is declared with: a single value, or named values in its table. The core describes each stage's parameters so the playground's forms offer what the parser reads.
+
 ### Pipeline
 
 The ordered stages a watch applies to the files it claims.

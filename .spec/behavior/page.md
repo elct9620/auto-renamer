@@ -54,20 +54,20 @@ The playground page draws a configuration for people who do not read TOML: each 
 | When | the format stage is removed |
 | Then | its stages are filter and move |
 
-## `PGE-007` A stage's settings are written as its value
+## `PGE-007` A stage's parameters are written as its value
 
 | Step | Statement |
 | --- | --- |
 | Given | a pipeline whose first stage is a filter on `mkv` |
-| When | its settings are set to a filter on `mp4` |
+| When | its parameters are set to a filter on `mp4` |
 | Then | the first stage is a filter on `mp4` and the other stages are unchanged |
 
-## `PGE-008` A stage without settings is written as its name
+## `PGE-008` A stage without parameters is written as its name
 
 | Step | Statement |
 | --- | --- |
 | Given | a pipeline |
-| When | a move stage is added with no settings |
+| When | a move stage is added with no parameters |
 | Then | the stage is written as the text `move` |
 
 ## `PGE-009` A configuration that is refused cannot be downloaded

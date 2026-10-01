@@ -1,4 +1,6 @@
-use auto_renamer_wasm::{Configuration, Entry, Outcome, Simulation, check, read, render, simulate};
+use auto_renamer_wasm::{
+    Configuration, Entry, Outcome, Simulation, check, read, render, simulate, stages,
+};
 
 const MOVE_AS_SHOW: &str = r#"[{ format = "{show}" }, "move"]"#;
 
@@ -184,4 +186,19 @@ fn should_take_the_time_field_from_the_modification_time_of_a_virtual_file() {
     );
 
     assert!(holds(&simulation, "/dst/Show/2024.mkv"));
+}
+
+// @behavior PLG-013
+#[test]
+fn should_accept_every_stage_offered_as_its_example() {
+    for stage in stages() {
+        let declared = match stage.example {
+            "" => format!("[\"{}\"]", stage.name),
+            example => format!("[{{ {} = {example} }}]", stage.name),
+        };
+
+        let checked = check(Configuration::Global, &config(&declared, ""));
+
+        assert!(checked.is_ok(), "{}: {checked:?}", stage.name);
+    }
 }

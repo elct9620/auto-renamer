@@ -34,6 +34,11 @@ pub fn render_js(table: JsValue) -> Result<String, JsError> {
     Ok(crate::render(&table))
 }
 
+#[wasm_bindgen(js_name = stages)]
+pub fn stages_js() -> Result<JsValue, JsError> {
+    to_js(&crate::stages())
+}
+
 #[wasm_bindgen(js_name = simulate)]
 pub fn simulate_js(config: &str, watch: &str, entries: JsValue) -> Result<JsValue, JsError> {
     let entries: Vec<Entry> = from_js(entries)?;

@@ -9,7 +9,7 @@ publish = false
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-auto-renamer-core = { path = "../core" }
+auto-renamer-core = { path = "../core", features = ["serde"] }
 chrono.workspace = true
 serde = { version = "1.0.229", features = ["derive"] }
 toml.workspace = true

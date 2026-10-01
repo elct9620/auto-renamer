@@ -17,6 +17,212 @@ const REGEX_SIZE_LIMIT: usize = 1 << 20;
 const DEFAULT_FIELD: &str = "name";
 const DEFAULT_SUFFIX: &str = "_v2";
 
+/// How one stage is declared, for a form to be made from, and the reading of its declaration.
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct Declaration {
+    pub name: &'static str,
+    /// The name alone declares the stage.
+    pub bare: bool,
+    /// The kind of the single value the stage may be declared with, as `{ format = "..." }`.
+    pub value: Option<ParameterKind>,
+    /// The parameters the stage's table may hold.
+    pub parameters: &'static [Parameter],
+    /// The table holds fixed values under names of the user's choosing.
+    pub values: bool,
+    /// A declaration the stage accepts, written as its inline TOML value; empty for the bare name.
+    pub example: &'static str,
+    #[cfg_attr(feature = "serde", serde(skip))]
+    read: fn(Option<&Toml>) -> Result<Declared, DeclareError>,
+}
+
+/// One named parameter of a stage.
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct Parameter {
+    pub name: &'static str,
+    pub kind: ParameterKind,
+    pub required: bool,
+    /// The only values the parameter takes; empty when it is not limited.
+    pub choices: &'static [&'static str],
+}
+
+/// The kind of value a parameter takes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "lowercase"))]
+pub enum ParameterKind {
+    Text,
+    Texts,
+    Integer,
+    Boolean,
+}
+
+const fn may(name: &'static str, kind: ParameterKind) -> Parameter {
+    Parameter {
+        name,
+        kind,
+        required: false,
+        choices: &[],
+    }
+}
+
+const fn must(name: &'static str, kind: ParameterKind) -> Parameter {
+    Parameter {
+        name,
+        kind,
+        required: true,
+        choices: &[],
+    }
+}
+
+const fn stage(
+    name: &'static str,
+    parameters: &'static [Parameter],
+    example: &'static str,
+    read: fn(Option<&Toml>) -> Result<Declared, DeclareError>,
+) -> Declaration {
+    Declaration {
+        name,
+        bare: false,
+        value: None,
+        parameters,
+        values: false,
+        example,
+        read,
+    }
+}
+
+use ParameterKind::{Boolean, Integer, Text, Texts};
+
+/// Every stage there is; a declaration is read by this list.
+static DECLARATIONS: &[Declaration] = &[
+    stage(
+        "filter",
+        &[may("ext", Texts), may("glob", Text), may("invert", Boolean)],
+        r#"{ ext = ["mkv", "mp4"] }"#,
+        filter,
+    ),
+    stage(
+        "number",
+        &[
+            may("from", Text),
+            must("into", Text),
+            may("nth", Integer),
+            may("prefix", Text),
+            may("exclude", Texts),
+        ],
+        r#"{ from = "path", into = "season", prefix = "Season" }"#,
+        number,
+    ),
+    stage(
+        "regex",
+        &[
+            must("pattern", Text),
+            may("from", Text),
+            may("into", Text),
+            may("replace", Text),
+        ],
+        r#"{ pattern = '(\d+)', into = "episode" }"#,
+        regex,
+    ),
+    Declaration {
+        values: true,
+        ..stage("set", &[], r#"{ kind = "video" }"#, set)
+    },
+    Declaration {
+        values: true,
+        ..stage("default", &[], "{ season = 1 }", default)
+    },
+    stage(
+        "replace",
+        &[must("find", Text), must("with", Text), may("field", Text)],
+        r#"{ find = "_", with = " " }"#,
+        replace,
+    ),
+    stage(
+        "case",
+        &[
+            Parameter {
+                choices: &["lower", "upper", "title"],
+                ..must("to", Text)
+            },
+            may("field", Text),
+        ],
+        r#"{ to = "lower" }"#,
+        case,
+    ),
+    Declaration {
+        bare: true,
+        ..stage(
+            "strip",
+            &[may("groups", Texts), may("field", Text)],
+            "",
+            strip,
+        )
+    },
+    Declaration {
+        value: Some(Text),
+        ..stage(
+            "format",
+            &[],
+            r#""{show} s{season:02}e{episode:02}""#,
+            format,
+        )
+    },
+    Declaration {
+        value: Some(Text),
+        ..stage("folder", &[], r#""{show}""#, folder)
+    },
+    Declaration {
+        value: Some(Integer),
+        ..stage("lift", &[must("to", Text)], "1", lift)
+    },
+    stage(
+        "next",
+        &[must("into", Text), must("like", Text)],
+        r#"{ into = "episode", like = "{show} s{season:02}e{episode:02}" }"#,
+        next,
+    ),
+    stage(
+        "rank",
+        &[must("into", Text), must("by", Texts), may("prefer", Texts)],
+        r#"{ into = "episode", by = ["season"] }"#,
+        rank,
+    ),
+    stage(
+        "take",
+        &[must("fields", Texts), may("from", Text)],
+        r#"{ fields = ["episode"] }"#,
+        take,
+    ),
+    Declaration {
+        bare: true,
+        ..stage(
+            "move",
+            &[
+                Parameter {
+                    choices: &["reject", "suffix"],
+                    ..may("on_conflict", Text)
+                },
+                may("suffix", Text),
+            ],
+            "",
+            move_stage,
+        )
+    },
+    Declaration {
+        bare: true,
+        ..stage("cleanup", &[may("keep", Texts)], "", cleanup)
+    },
+];
+
+fn declaration(name: &str) -> Option<&'static Declaration> {
+    DECLARATIONS
+        .iter()
+        .find(|declaration| declaration.name == name)
+}
+
 /// Why one stage declaration was refused.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DeclareError {
@@ -57,6 +263,11 @@ impl fmt::Display for DeclareError {
 impl std::error::Error for DeclareError {}
 
 impl Declared {
+    /// How each stage there is is declared, from the list a declaration is read by.
+    pub fn declarations() -> &'static [Declaration] {
+        DECLARATIONS
+    }
+
     /// Reads one stage from its declaration, refusing a mistaken one.
     pub fn read(value: &Toml) -> Result<Declared, DeclareError> {
         match value {
@@ -74,41 +285,50 @@ impl Declared {
 }
 
 fn declare_named(name: &str, value: Option<&Toml>) -> Result<Declared, DeclareError> {
-    match name {
-        "filter" => filter(value),
-        "number" => number(value),
-        "regex" => regex(value),
-        "set" => fields("set", value).map(|fields| Declared::Set(SetFields(fields))),
-        "default" => {
-            fields("default", value).map(|fields| Declared::Default(DefaultFields(fields)))
-        }
-        "replace" => replace(value),
-        "case" => case(value),
-        "strip" => strip(value),
-        "format" => template("format", value).map(|template| Declared::Format(Format(template))),
-        "folder" => template("folder", value).map(|template| Declared::Folder(Folder(template))),
-        "lift" => lift(value),
-        "next" => next(value),
-        "rank" => rank(value),
-        "take" => take(value),
-        "move" => move_stage(value),
-        "cleanup" => cleanup(value),
-        other => Err(DeclareError::UnknownStage(other.to_string())),
+    match declaration(name) {
+        Some(declaration) => (declaration.read)(value),
+        None => Err(DeclareError::UnknownStage(name.to_string())),
     }
 }
 
-/// The parameters of one stage, read with the stage's name as their scope.
-type Args = Reader<&'static str>;
+fn set(value: Option<&Toml>) -> Result<Declared, DeclareError> {
+    fields("set", value).map(|fields| Declared::Set(SetFields(fields)))
+}
 
-impl Scope for &'static str {
+fn default(value: Option<&Toml>) -> Result<Declared, DeclareError> {
+    fields("default", value).map(|fields| Declared::Default(DefaultFields(fields)))
+}
+
+fn format(value: Option<&Toml>) -> Result<Declared, DeclareError> {
+    template("format", value).map(|template| Declared::Format(Format(template)))
+}
+
+fn folder(value: Option<&Toml>) -> Result<Declared, DeclareError> {
+    template("folder", value).map(|template| Declared::Folder(Folder(template)))
+}
+
+/// The parameters of one stage, read with the stage's name as their scope.
+type Args = Reader<&'static Declaration>;
+
+impl Scope for &'static Declaration {
     type Error = DeclareError;
 
     fn invalid(&self, parameter: &str, reason: String) -> DeclareError {
-        invalid(self, Some(parameter), reason)
+        invalid(self.name, Some(parameter), reason)
     }
 
     fn unknown(&self, parameter: &str) -> DeclareError {
-        invalid(self, Some(parameter), "is not a parameter of this stage")
+        invalid(
+            self.name,
+            Some(parameter),
+            "is not a parameter of this stage",
+        )
+    }
+
+    fn describes(&self, parameter: &str) -> bool {
+        self.parameters
+            .iter()
+            .any(|described| described.name == parameter)
     }
 }
 
@@ -123,14 +343,18 @@ fn required(stage: &'static str, value: Option<&Toml>) -> Result<Args, DeclareEr
 /// Parameters a stage has defaults for; a bare name declares all of them at once.
 fn optional(stage: &'static str, value: Option<&Toml>) -> Result<Args, DeclareError> {
     match value {
-        None => Ok(Reader::new(stage, toml::Table::new())),
+        None => Ok(Reader::new(described(stage), toml::Table::new())),
         Some(value) => parameters(stage, value),
     }
 }
 
+fn described(stage: &str) -> &'static Declaration {
+    declaration(stage).expect("every stage read is in the list of declarations")
+}
+
 fn parameters(stage: &'static str, value: &Toml) -> Result<Args, DeclareError> {
     match value {
-        Toml::Table(table) => Ok(Reader::new(stage, table.clone())),
+        Toml::Table(table) => Ok(Reader::new(described(stage), table.clone())),
         _ => Err(invalid(stage, None, "expects a table of parameters")),
     }
 }

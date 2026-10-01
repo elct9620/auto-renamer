@@ -1,5 +1,6 @@
 use auto_renamer::stages::OnConflict;
-use auto_renamer::{DeclareError, Declared, Pipeline, PipelineError};
+use auto_renamer::{Declaration, DeclareError, Declared, ParameterKind, Pipeline, PipelineError};
+use toml::{Table, Value};
 
 fn read(stages: &str) -> Result<Pipeline, PipelineError> {
     Pipeline::from_toml(&format!("stages = {stages}"))
@@ -284,4 +285,127 @@ fn should_refuse_a_pipeline_of_too_many_stages() {
         refused(&format!("[{stages}]")),
         PipelineError::TooManyStages
     );
+}
+
+/// The stage declared from its example, with the example's table changed by `change`.
+fn declare(stage: &Declaration, change: impl FnOnce(&mut Table)) -> Result<Declared, DeclareError> {
+    let example: Value = format!(
+        "value = {}",
+        if stage.example.is_empty() {
+            "{}"
+        } else {
+            stage.example
+        }
+    )
+    .parse::<Table>()
+    .expect("an example is inline TOML")
+    .remove("value")
+    .expect("the example is read as a value");
+    let parameters = match example {
+        Value::Table(mut table) => {
+            change(&mut table);
+            Value::Table(table)
+        }
+        other => other,
+    };
+    let declaration = match (stage.example.is_empty(), &parameters) {
+        (true, Value::Table(table)) if table.is_empty() => Value::String(stage.name.to_string()),
+        _ => Value::Table(Table::from_iter([(stage.name.to_string(), parameters)])),
+    };
+    Declared::read(&declaration)
+}
+
+fn sample(kind: ParameterKind) -> Value {
+    match kind {
+        ParameterKind::Text => Value::String("x".to_string()),
+        ParameterKind::Texts => Value::Array(vec![Value::String("x".to_string())]),
+        ParameterKind::Integer => Value::Integer(1),
+        ParameterKind::Boolean => Value::Boolean(true),
+    }
+}
+
+// @behavior DEC-033
+#[test]
+fn should_accept_every_stage_declared_with_its_example() {
+    for stage in Declared::declarations() {
+        let declared = declare(stage, |_| {});
+
+        assert!(declared.is_ok(), "{}: {declared:?}", stage.name);
+    }
+}
+
+// @behavior DEC-034
+#[test]
+fn should_accept_every_described_parameter_as_a_parameter_of_its_stage() {
+    for stage in Declared::declarations() {
+        for parameter in stage.parameters {
+            let declared = declare(stage, |table| {
+                table.insert(parameter.name.to_string(), sample(parameter.kind));
+            });
+
+            if let Err(DeclareError::Invalid { reason, .. }) = &declared {
+                assert_ne!(
+                    reason, "is not a parameter of this stage",
+                    "{}.{}",
+                    stage.name, parameter.name
+                );
+            }
+        }
+    }
+}
+
+// @behavior DEC-035
+#[test]
+fn should_read_only_described_parameters() {
+    let lift_to: Value = r#"lift = { to = "Season *" }"#.parse::<Table>().unwrap().into();
+
+    for stage in Declared::declarations() {
+        declare(stage, |_| {}).expect("the example is accepted");
+    }
+    Declared::read(&lift_to).expect("a lift to a pattern is accepted");
+}
+
+// @behavior DEC-036
+#[test]
+fn should_refuse_a_stage_without_a_required_parameter() {
+    for stage in Declared::declarations() {
+        for parameter in stage
+            .parameters
+            .iter()
+            .filter(|parameter| parameter.required)
+        {
+            if stage.value.is_some() {
+                continue;
+            }
+            let declared = declare(stage, |table| {
+                table.remove(parameter.name);
+            });
+
+            assert!(declared.is_err(), "{}.{}", stage.name, parameter.name);
+        }
+    }
+}
+
+// @behavior DEC-037
+#[test]
+fn should_accept_each_choice_of_a_parameter() {
+    for stage in Declared::declarations() {
+        for parameter in stage.parameters {
+            for choice in parameter.choices {
+                let declared = declare(stage, |table| {
+                    table.insert(
+                        parameter.name.to_string(),
+                        Value::String(choice.to_string()),
+                    );
+                });
+
+                assert!(
+                    declared.is_ok(),
+                    "{}.{} = {choice}: {declared:?}",
+                    stage.name,
+                    parameter.name
+                );
+            }
+        }
+    }
 }

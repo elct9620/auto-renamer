@@ -17,6 +17,11 @@ pub(crate) trait Scope {
 
     /// A key the table may not hold.
     fn unknown(&self, key: &str) -> Self::Error;
+
+    /// Whether a key read from the table is one the scope's description lists.
+    fn describes(&self, _key: &str) -> bool {
+        true
+    }
 }
 
 /// The keys of one table, taken out one by one so that whatever is left over is a mistake.
@@ -35,6 +40,10 @@ impl<S: Scope> Reader<S> {
     }
 
     pub(crate) fn take(&mut self, key: &str) -> Option<Toml> {
+        debug_assert!(
+            self.scope.describes(key),
+            "`{key}` is read but not described"
+        );
         self.table.remove(key)
     }
 

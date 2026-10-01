@@ -22,7 +22,7 @@ use crate::record::{Record, Value, is_usable_file_name};
 use crate::template::Template;
 
 pub use batch::Batch;
-pub use declare::DeclareError;
+pub use declare::{Declaration, DeclareError, Parameter, ParameterKind};
 pub use effect::Effect;
 
 /// What a stage answers for one record: the record to go on with, or what stops it.

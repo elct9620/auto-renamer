@@ -22,5 +22,7 @@ pub use engine::{Judged, Verdict, plan_batch};
 pub use pipeline::{Pipeline, PipelineError};
 pub use record::{NotUtf8, Record, Value};
 pub use service::{Processed, Renames, What, process_batch};
-pub use stages::{DeclareError, Declared, Effect, Flow, Rejection, Stop};
+pub use stages::{
+    Declaration, DeclareError, Declared, Effect, Flow, Parameter, ParameterKind, Rejection, Stop,
+};
 pub use template::{RenderError, Template, TemplateError};

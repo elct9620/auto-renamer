@@ -101,3 +101,11 @@ The playground checks, reads and writes a configuration, and simulates a watch o
 | Given | a configuration whose watch formats the name as `{mtime:%Y}` and moves, and a virtual source holding `Show/x.mkv` modified in 2024 |
 | When | the watch is simulated |
 | Then | the virtual target holds `Show/2024.mkv` |
+
+## `PLG-013` A stage the page is offered starts out accepted
+
+| Step | Statement |
+| --- | --- |
+| Given | each stage the page is offered |
+| When | a global configuration whose pipeline holds its example is checked |
+| Then | it is accepted |

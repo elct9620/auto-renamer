@@ -9,7 +9,8 @@ mod tree;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use auto_renamer_core::{Config, FolderConfig, Processed, Renames, What, process_batch};
+pub use auto_renamer_core::Declaration;
+use auto_renamer_core::{Config, Declared, FolderConfig, Processed, Renames, What, process_batch};
 use serde::{Deserialize, Serialize};
 pub use toml::Table;
 
@@ -41,6 +42,11 @@ pub fn read(text: &str) -> Result<Table, String> {
 /// The configuration text of a table, without comments or the layout it was read with.
 pub fn render(table: &Table) -> String {
     table.to_string()
+}
+
+/// How each stage is declared, for the page to offer the stages and make their forms.
+pub fn stages() -> &'static [Declaration] {
+    Declared::declarations()
 }
 
 /// One file or folder of the virtual tree. A file carries its modification time, in milliseconds since
