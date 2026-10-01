@@ -245,3 +245,11 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the stages the core declares, with their parameters and single values |
 | When | the page's texts in Traditional Chinese and English are read |
 | Then | each stage, parameter and single value has a description in both |
+
+## `PGE-031` A new path is offered the folders already in the tree
+
+| Step | Statement |
+| --- | --- |
+| Given | a source holding `Alpha/Season 1/01.mkv` |
+| When | the folders to offer for a new path under it are listed |
+| Then | they are `Alpha/` and `Alpha/Season 1/` |

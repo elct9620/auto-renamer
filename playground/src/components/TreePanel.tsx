@@ -1,5 +1,5 @@
-import { File, FileCog, FilePlus, Folder, FolderPlus, X } from 'lucide-react'
-import { useState } from 'react'
+import { File, FileCog, FilePlus, Folder, FolderPlus, Plus, X } from 'lucide-react'
+import { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Badge } from '@/components/ui/badge'
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import type { Entry } from '../core'
-import { type TreeNode, addEntry, removeEntry, renameEntry, treeOf } from '../tree'
+import { type TreeNode, addEntry, foldersUnder, removeEntry, renameEntry, treeOf } from '../tree'
 
 const FOLDER_CONFIGURATION = 'auto-renamer.toml'
 
@@ -18,7 +18,13 @@ function isName(name: string): boolean {
   return name.trim() !== '' && !name.includes('/')
 }
 
-function Row({ node, entries, mark, onEdit }: { node: TreeNode; entries: Entry[]; mark?: string; onEdit: Edit }) {
+function Row({ node, entries, mark, onEdit, onStart }: {
+  node: TreeNode
+  entries: Entry[]
+  mark?: string
+  onEdit: Edit
+  onStart: (folder: string) => void
+}) {
   const { t } = useTranslation()
   const [renaming, setRenaming] = useState(false)
   const [open, setOpen] = useState(false)
@@ -45,10 +51,17 @@ function Row({ node, entries, mark, onEdit }: { node: TreeNode; entries: Entry[]
           </button>
         )}
         {mark && <Badge variant={mark.startsWith('moved') || mark === 'previewed' ? 'secondary' : 'outline'}>{t(`what.${mark}`, mark)}</Badge>}
-        <Button variant="ghost" size="icon-xs" className="ml-auto opacity-0 group-hover:opacity-100"
-          aria-label={t('tree.remove', { name: node.name })} onClick={() => onEdit((all) => removeEntry(all, node.path))}>
-          <X />
-        </Button>
+        <span className="ml-auto flex opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+          {node.folder && (
+            <Button variant="ghost" size="icon-xs" aria-label={t('tree.addHere', { name: node.name })} onClick={() => onStart(node.path)}>
+              <Plus />
+            </Button>
+          )}
+          <Button variant="ghost" size="icon-xs" aria-label={t('tree.remove', { name: node.name })}
+            onClick={() => onEdit((all) => removeEntry(all, node.path))}>
+            <X />
+          </Button>
+        </span>
       </div>
       {configuration && open && (
         <Textarea className="my-1 font-mono text-xs" rows={3} defaultValue={text} placeholder={'[vars]\nshow = "Beta"'}
@@ -59,18 +72,19 @@ function Row({ node, entries, mark, onEdit }: { node: TreeNode; entries: Entry[]
   )
 }
 
-function Branch({ nodes, entries, marks, onEdit }: {
+function Branch({ nodes, entries, marks, onEdit, onStart }: {
   nodes: TreeNode[]
   entries: Entry[]
   marks: Record<string, string>
   onEdit: Edit
+  onStart: (folder: string) => void
 }) {
   return (
     <ul className="grid gap-0.5 pl-3">
       {nodes.map((node) => (
         <li key={node.path}>
-          <Row node={node} entries={entries} mark={marks[node.path]} onEdit={onEdit} />
-          {node.children.length > 0 && <Branch nodes={node.children} entries={entries} marks={marks} onEdit={onEdit} />}
+          <Row node={node} entries={entries} mark={marks[node.path]} onEdit={onEdit} onStart={onStart} />
+          {node.children.length > 0 && <Branch nodes={node.children} entries={entries} marks={marks} onEdit={onEdit} onStart={onStart} />}
         </li>
       ))}
     </ul>
@@ -87,6 +101,12 @@ export function TreePanel({ title, root, entries, marks, onEdit }: {
 }) {
   const { t } = useTranslation()
   const [path, setPath] = useState('')
+  const input = useRef<HTMLInputElement>(null)
+  const folders = useId()
+  const start = (folder: string) => {
+    setPath(`${folder.slice(root.length + 1)}/`)
+    input.current?.focus()
+  }
   const valid = root !== '' && path.split('/').every(isName)
   const add = (folder: boolean) => {
     onEdit((all) => addEntry(all, `${root}/${path.trim()}`, folder))
@@ -98,11 +118,14 @@ export function TreePanel({ title, root, entries, marks, onEdit }: {
         {title} <span className="font-mono normal-case">{root}</span>
       </h2>
       <div className="min-h-0 flex-1 overflow-auto">
-        <Branch nodes={treeOf(entries, root)} entries={entries} marks={marks} onEdit={onEdit} />
+        <Branch nodes={treeOf(entries, root)} entries={entries} marks={marks} onEdit={onEdit} onStart={start} />
       </div>
       <div className="flex gap-2">
-        <Input className="h-7 font-mono text-xs" placeholder={t('tree.placeholder', { path: 'Show/Season 1/file.mkv', configuration: `Show/${FOLDER_CONFIGURATION}` })}
+        <Input ref={input} list={folders} aria-label={t('tree.path')} className="h-7 font-mono text-xs" placeholder={t('tree.placeholder', { path: 'Show/Season 1/file.mkv', configuration: `Show/${FOLDER_CONFIGURATION}` })}
           value={path} onChange={(event) => setPath(event.target.value)} />
+        <datalist id={folders}>
+          {foldersUnder(entries, root).map((folder) => <option key={folder} value={folder} />)}
+        </datalist>
         <Button size="sm" variant="outline" disabled={!valid} onClick={() => add(false)}><FilePlus />{t('tree.addFile')}</Button>
         <Button size="sm" variant="outline" disabled={!valid} onClick={() => add(true)}><FolderPlus />{t('tree.addFolder')}</Button>
       </div>

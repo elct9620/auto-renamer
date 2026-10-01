@@ -61,7 +61,9 @@
     "trigger": "觸發",
     "keep": "保留結果",
     "placeholder": "{{path}} 或 {{configuration}}",
-    "watch": "要觸發的 watch"
+    "watch": "要觸發的 watch",
+    "addHere": "在 {{name}} 裡新增",
+    "path": "新檔案或資料夾的路徑"
   },
   "output": {
     "results": "結果",

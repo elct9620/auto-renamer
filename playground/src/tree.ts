@@ -53,6 +53,17 @@ export function treeOf(entries: Entry[], root: string): TreeNode[] {
   return sort(top)
 }
 
+/** The folders under a root, written relative to it and ending in `/`, for a new path to start from. */
+export function foldersUnder(entries: Entry[], root: string): string[] {
+  const folders = new Set<string>()
+  for (const entry of entries.filter((entry) => within(entry.path, root))) {
+    const parts = entry.path.slice(root.length + 1).split('/')
+    const depth = entry.folder ? parts.length : parts.length - 1
+    for (let end = 1; end <= depth; end += 1) folders.add(`${parts.slice(0, end).join('/')}/`)
+  }
+  return [...folders].sort()
+}
+
 /** Adds a file or a folder, replacing whatever was at its path. */
 export function addEntry(entries: Entry[], path: string, folder: boolean): Entry[] {
   return [...entries.filter((entry) => entry.path !== path), { path, folder, modified: Date.now(), text: '' }]

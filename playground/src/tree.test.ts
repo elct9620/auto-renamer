@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import './setup.test-helper'
 import type { Entry } from './core'
 import { read, simulate } from './core'
-import { marksOf, removeEntry, renameEntry, rootsOf, treeOf } from './tree'
+import { foldersUnder, marksOf, removeEntry, renameEntry, rootsOf, treeOf } from './tree'
 
 function file(path: string): Entry {
   return { path, folder: false, modified: 0, text: '' }
@@ -57,5 +57,14 @@ describe('marking a simulation', () => {
     const marks = marksOf(simulate(config, 'w', [file('/downloads/Alpha/x.mkv')]))
 
     expect(marks['/video/Alpha/Alpha.mkv']).toBe('moved')
+  })
+})
+
+describe('adding to the tree', () => {
+  // @behavior PGE-031
+  it('offers the folders already in the tree for a new path', () => {
+    const entries = [file('/downloads/Alpha/Season 1/01.mkv'), file('/video/Beta/02.mkv')]
+
+    expect(foldersUnder(entries, '/downloads')).toEqual(['Alpha/', 'Alpha/Season 1/'])
   })
 })

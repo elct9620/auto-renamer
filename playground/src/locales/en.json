@@ -61,7 +61,9 @@
     "trigger": "Trigger",
     "keep": "Keep the result",
     "placeholder": "{{path}} or {{configuration}}",
-    "watch": "Watch to trigger"
+    "watch": "Watch to trigger",
+    "addHere": "Add in {{name}}",
+    "path": "Path of a new file or folder"
   },
   "output": {
     "results": "Results",
