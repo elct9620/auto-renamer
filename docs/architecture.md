@@ -60,11 +60,12 @@ auto-renamer 是單一套件：`src/lib.rs` 放全部邏輯，`src/main.rs` 只�
 ### 階段 trait
 
 ```
-  trait Stage { name; run(batch, context) }
+  trait Stage { name; run(batch, context) -> batch }
   Declared (enum) ── one match ──► &dyn Stage
+  engine   partition by claim ─► fold stages over each pipeline's Batch
 ```
 
-每個階段實作 `Stage`，是一個作用在批次上的函式。`Declared` enum 只是可宣告的封閉清單，全 crate 只有一處把它轉成 `&dyn Stage`，新增階段時編譯器會在那裡要求補上。
+每個階段實作 `Stage`，是「批次 → 批次」的函式，只看得到自己管線認領的檔案；認領由 `engine` 做，前面管線的結果經 `Context` 唯讀提供。`Declared` enum 只是可宣告的封閉清單，全 crate 只有一處把它轉成 `&dyn Stage`，新增階段時編譯器會在那裡要求補上。
 
 ### 批次組合
 
@@ -72,7 +73,7 @@ auto-renamer 是單一套件：`src/lib.rs` 放全部邏輯，`src/main.rs` 只�
 |---|---|---|
 | filter、map | `each` | `filter`、`number` |
 | scan | `each` 加 `Context` | `next` |
-| group | `live` 或 `earlier`，再 `each` | `rank`、`take` |
+| group | `live` 或 `Context` 的 `earlier`，再 `each` | `rank`、`take` |
 | effect | `schedule` | `move`、`cleanup` |
 
 形狀是階段向 `Batch` 要的東西，不是階段的分類。`each` 是唯一決定檔案能否繼續的地方：階段回 `Err(Stop)`，之後的階段就看不到那個檔案。
