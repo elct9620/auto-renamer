@@ -44,7 +44,6 @@
     "followsDefault": "follows the default",
     "list": "Add a pipeline",
     "useDefault": "Follow the default",
-    "notSimulated": "not simulated",
     "override": "Override in a folder",
     "chooseFolder": "Choose a folder",
     "after": "Files after this stage",
@@ -106,7 +105,6 @@
     "next": "Counting on",
     "lifted": "Counting on after lifting",
     "clash": "A name already taken",
-    "large": "A batch too large",
     "movie": "Movies",
     "music": "Music",
     "photo": "Photos",
@@ -346,9 +344,6 @@
     "pipelines": "Pipelines",
     "vars": "Variables",
     "dry_run": "Dry run",
-    "batch_max": "Batch limit",
-    "batch_window": "Batch window",
-    "batch_max_wait": "Longest wait",
     "root": "Unit patterns"
   },
   "editing": {

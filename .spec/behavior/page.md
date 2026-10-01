@@ -320,13 +320,13 @@ The playground page draws a configuration for people who do not read TOML: each 
 | When | 繁體中文 is chosen in the header |
 | Then | the page is shown in Traditional Chinese |
 
-## `PGE-040` Settings the simulation ignores are marked as not simulated
+## `PGE-040` Batch settings are not offered while they wait for a redesign
 
 | Step | Statement |
 | --- | --- |
 | Given | the watch `series` selected |
 | When | its form is shown |
-| Then | `batch_window` and `batch_max_wait` are marked as not simulated |
+| Then | no `batch_max`, `batch_window` or `batch_max_wait` is offered |
 
 ## `PGE-041` A watch lists pipelines picked from those defined
 

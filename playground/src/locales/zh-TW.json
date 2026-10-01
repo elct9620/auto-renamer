@@ -44,7 +44,6 @@
     "followsDefault": "沿用預設",
     "list": "加入管線",
     "useDefault": "改回沿用預設",
-    "notSimulated": "不模擬",
     "override": "在資料夾覆寫",
     "chooseFolder": "選擇資料夾",
     "after": "跑完這個階段的檔案",
@@ -106,7 +105,6 @@
     "next": "遞增序號",
     "lifted": "提出後遞增",
     "clash": "撞名",
-    "large": "太大的批次",
     "movie": "電影",
     "music": "音樂",
     "photo": "照片",
@@ -346,9 +344,6 @@
     "pipelines": "管線",
     "vars": "變數",
     "dry_run": "試運行",
-    "batch_max": "批次上限",
-    "batch_window": "批次時間窗",
-    "batch_max_wait": "最長等待",
     "root": "單元樣式"
   },
   "editing": {

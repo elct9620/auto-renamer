@@ -68,8 +68,8 @@ const SUFFIX_AI = '{ move = { on_conflict = "suffix", suffix = "_ai" } }'
 
 // Every series scenario at once, with the source and the target apart: shows named by their folders,
 // seasons by theirs, episodes found among noise or counted on, a release folder with its subtitles, a
-// release too large, a clash, and folder configurations only where a folder is an exception: a season
-// that bears another name, and a folder that always counts on.
+// clash, and folder configurations only where a folder is an exception: a season that bears another
+// name, and a folder that always counts on.
 const FULL: Example = {
   id: 'full',
   watch: 'series',
@@ -78,7 +78,6 @@ ${subtitle(SUFFIX_AI, SHOW_FROM_PATH)}`)}
 [watch.series]
 source = "/downloads"
 target = "/video"
-batch_max = 5
 `,
   entries: [
     file('/downloads/Series/Alpha/Season 01/[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv'),
@@ -91,8 +90,6 @@ batch_max = 5
     file('/downloads/Series/Theta_Show/Season 01/[Team][Theta_Show][27][1080p]/[Team][Theta_Show][27][1080p].mkv'),
     file('/downloads/Series/Theta_Show/Season 01/[Team][Theta_Show][27][1080p]/[Team][Theta_Show][27][1080p].cht.ass'),
     file('/downloads/Series/Theta_Show/Season 01/[Team][Theta_Show][27][1080p]/[Team][Theta_Show][27][1080p].ass'),
-    ...[1, 2, 3, 4, 5, 6].map((n) =>
-      file(`/downloads/Series/Theta_Show/Season 01/[Team][Theta_Show][Batch]/[Team][Theta_Show][0${n}][1080p].mkv`)),
     file('/downloads/Series/Kappa/Season 01/auto-renamer.toml', video({ episode: '', named: SHOW_FROM_PATH })),
     file('/downloads/Series/Kappa/Season 01/[Group] Kappa - 07 [1080p].mkv'),
     file('/video/Series/Kappa/Season 01/Kappa s01e01.mkv'),
@@ -202,13 +199,6 @@ const CLASH: Example = {
   ],
 }
 
-const TOO_LARGE: Example = {
-  id: 'large',
-  watch: 'series',
-  config: season('"video"', '"directory"').replace('vars = {', 'batch_max = 5\nvars = {'),
-  entries: [1, 2, 3, 4, 5, 6].map((n) => file(`/downloads/Series/Show/Season 01/Show 0${n}.mkv`)),
-}
-
 // The other pipelines of `design.md` 5.14, each alone with the files of its case.
 function other(name: string, stages: string, entries: Entry[]): Example {
   return {
@@ -257,7 +247,7 @@ const CLEANUP: Example = {
   ],
 }
 
-export const EXAMPLES: Example[] = [FULL, SINGLE, UNSURE, SUBTITLES, RELEASE, SUBS, NEXT, LIFTED, CLASH, TOO_LARGE, MOVIE, MUSIC, PHOTO, CLEANUP]
+export const EXAMPLES: Example[] = [FULL, SINGLE, UNSURE, SUBTITLES, RELEASE, SUBS, NEXT, LIFTED, CLASH, MOVIE, MUSIC, PHOTO, CLEANUP]
 
 /** The example the page opens with. */
 export const FIRST = SINGLE

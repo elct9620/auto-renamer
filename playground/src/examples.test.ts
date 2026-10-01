@@ -15,7 +15,6 @@ const EXPECTED: Record<string, Record<string, string | null>> = {
     'Series/Theta_Show/Season 01/[Team][Theta_Show][27][1080p]/[Team][Theta_Show][27][1080p].mkv': '/video/Series/Theta_Show/Season 01/Theta_Show s01e27.mkv',
     'Series/Theta_Show/Season 01/[Team][Theta_Show][27][1080p]/[Team][Theta_Show][27][1080p].cht.ass': '/video/Series/Theta_Show/Season 01/Theta_Show s01e27.zh.01.ass',
     'Series/Theta_Show/Season 01/[Team][Theta_Show][27][1080p]/[Team][Theta_Show][27][1080p].ass': '/video/Series/Theta_Show/Season 01/Theta_Show s01e27.zh.02.ass',
-    ...Object.fromEntries([1, 2, 3, 4, 5, 6].map((n) => [`Series/Theta_Show/Season 01/[Team][Theta_Show][Batch]/[Team][Theta_Show][0${n}][1080p].mkv`, null])),
     'Series/Kappa/Season 01/[Group] Kappa - 07 [1080p].mkv': '/video/Series/Kappa/Season 01/Kappa s01e03.mkv',
   },
   single: {
@@ -57,7 +56,6 @@ const EXPECTED: Record<string, Record<string, string | null>> = {
   clash: {
     'Series/Show/Season 01/Show 12.mkv': '/video/Series/Show/Season 01/Show s01e12_v2.mkv',
   },
-  large: Object.fromEntries([1, 2, 3, 4, 5, 6].map((n) => [`Series/Show/Season 01/Show 0${n}.mkv`, null])),
   movie: {
     'Movies/XXX/[Group] XXX [1080p].mkv': '/downloads/Movies/XXX/XXX.mkv',
     'Movies/Movie (2026)/[Group] Movie (2026).mkv': '/downloads/Movies/Movie (2026)/Movie (2026).mkv',

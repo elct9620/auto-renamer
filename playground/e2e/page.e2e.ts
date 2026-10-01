@@ -126,12 +126,12 @@ test('the language chosen in the header is the one the page speaks', async ({ pa
 })
 
 // @behavior PGE-040
-test('settings the simulation ignores are marked as not simulated', async ({ page }) => {
+test('batch settings are not offered while they wait for a redesign', async ({ page }) => {
   await node(page, 'series').click()
 
-  const marked = page.getByText('not simulated')
+  await expect(page.getByRole('switch', { name: 'Dry run dry_run' })).toBeVisible()
 
-  await expect(marked).toHaveCount(2)
+  await expect(page.getByText(/^batch_/)).toHaveCount(0)
 })
 
 // @behavior PGE-041

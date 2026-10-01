@@ -72,17 +72,12 @@ function Field({ setting, value, inherited, defined, onApply }: {
 }) {
   const { t } = useTranslation()
   const caption = (
-    <Caption name={t(`settings.${setting.key}`)} code={setting.key} required={setting.required}>
-      {!setting.simulated && <Badge variant="outline">{t('inspector.notSimulated')}</Badge>}
-    </Caption>
+    <Caption name={t(`settings.${setting.key}`)} code={setting.key} required={setting.required} />
   )
   switch (setting.kind) {
     case 'path':
-    case 'duration':
       return <TextField caption={caption} required={setting.required} kind="text" value={value} placeholder={String(setting.example)}
         onApply={onApply} />
-    case 'count':
-      return <TextField caption={caption} kind="integer" value={value} placeholder={String(setting.example)} onApply={onApply} />
     case 'boolean':
       return (
         <label className="flex items-center gap-2">

@@ -176,7 +176,7 @@ target 已有 `Show s01e12.mkv`，輸入 `Show 12.mkv`。
 
 ## 6 完整組合
 
-Playground 的完整組合把影集情境疊在一起。source 為 `/Downloads`、target 為 `/Video`，管線是 5.13 的兩條加上從 `Series/` 下的資料夾擷取 `show`，`move` 撞名時加 `_ai`，`batch_max = 5`。只有例外的資料夾放目錄設定。
+Playground 的完整組合把影集情境疊在一起。source 為 `/Downloads`、target 為 `/Video`，管線是 5.13 的兩條加上從 `Series/` 下的資料夾擷取 `show`，`move` 撞名時加 `_ai`。只有例外的資料夾放目錄設定。
 
 | 情境 | 輸入 | 輸出 |
 |---|---|---|
@@ -186,7 +186,6 @@ Playground 的完整組合把影集情境疊在一起。source 為 `/Downloads`�
 | 單一字幕 | 同上，副檔名 `.ass` | `Series/Beta Show/Beta Show s01e12.zh.ass` |
 | 分不出集數 | `Series/Eta Show/Season 17/[Team-7][Eta Show 17][03][x264 1080p][TC].mp4` | `Series/Eta Show/Season 17/Eta Show s17e01.mp4` |
 | 整包資料夾 | 2.2 的三個檔案 | 2.2 的輸出，整包資料夾刪除 |
-| 太大的批次 | `Series/Theta_Show/Season 01/[Team][Theta_Show][Batch]/` 的 6 個檔案 | 整批留在 source |
 | 一律遞增 | `Series/Kappa/Season 01/[Group] Kappa - 07 [1080p].mkv` | `Series/Kappa/Season 01/Kappa s01e03.mkv` |
 
 target 原有 `Beta Show s01e12.mp4` 與 `Kappa s01e01.mkv`、`Kappa s01e02.mkv`。Kappa 的目錄設定把全域的 `video` 換成不擷取集數的一條，檔名中的 07 因此不採用。

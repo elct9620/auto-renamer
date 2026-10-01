@@ -14,18 +14,16 @@ export function Hint({ children }: { children: React.ReactNode }) {
 }
 
 /** A field's name in the page's language, with the key the configuration writes beside it. */
-export function Caption({ name, code, required, children }: {
+export function Caption({ name, code, required }: {
   name: string
   code: string
   required?: boolean
-  children?: React.ReactNode
 }) {
   return (
     <span className="flex items-center gap-1.5 text-xs font-medium">
       {name}
       <code className="font-mono font-normal text-muted-foreground">{code}</code>
       {required && <span className="text-destructive">*</span>}
-      {children}
     </span>
   )
 }
