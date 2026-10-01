@@ -294,7 +294,7 @@ pub struct Rejection {}
 
 ## `Declared::apply`
 
-Run the stage on one record, with what the batch and the target let it know.
+Run the stage on one record, which is a batch of one, with what the target lets it know.
 
 | Attribute | Value |
 | --- | --- |

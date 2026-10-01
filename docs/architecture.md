@@ -76,7 +76,7 @@ auto-renamer 是單一套件：`src/lib.rs` 放全部邏輯，`src/main.rs` 只�
 | group | `live` 或 `Context` 的 `earlier`，再 `each` | `rank`、`take` |
 | effect | `schedule` | `move`、`cleanup` |
 
-形狀是階段向 `Batch` 要的東西，不是階段的分類。`each` 是唯一決定檔案能否繼續的地方：階段回 `Err(Stop)`，之後的階段就看不到那個檔案。
+形狀是階段向 `Batch` 與 `Context` 要的東西，不是階段的分類。`each` 是唯一決定檔案能否繼續的地方：階段回 `Err(Stop)`，之後的階段就看不到那個檔案。
 
 ### 輸入樣式
 
