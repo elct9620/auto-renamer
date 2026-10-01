@@ -1,10 +1,5 @@
 {
   "language": "語言",
-  "kind": {
-    "global": "全域設定",
-    "folder": "目錄設定",
-    "label": "設定種類"
-  },
   "import": "匯入",
   "download": "下載",
   "status": {
@@ -63,7 +58,8 @@
     "placeholder": "{{path}} 或 {{configuration}}",
     "watch": "要觸發的監控",
     "addHere": "在 {{name}} 裡新增",
-    "path": "新檔案或資料夾的路徑"
+    "path": "新檔案或資料夾的路徑",
+    "open": "編輯這份目錄設定"
   },
   "output": {
     "results": "結果",
@@ -310,5 +306,10 @@
     "batch_window": "批次時間窗",
     "batch_max_wait": "最長等待",
     "root": "單元樣式"
+  },
+  "editing": {
+    "global": "全域設定",
+    "folder": "{{folder}} 的目錄設定",
+    "back": "回到全域設定"
   }
 }

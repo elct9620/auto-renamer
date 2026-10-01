@@ -17,6 +17,11 @@ async function dragBy(page: Page, name: string, dy: number) {
   await page.mouse.up()
 }
 
+async function addFolderConfiguration(page: Page, folder: string) {
+  await page.getByRole('combobox', { name: 'Path of a new file or folder' }).first().fill(`${folder}/auto-renamer.toml`)
+  await page.getByRole('button', { name: 'Add file' }).first().click()
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
   await expect(node(page, 'series')).toBeVisible()
@@ -89,13 +94,14 @@ test('a required parameter left empty is pointed out', async ({ page }) => {
 })
 
 // @behavior PGE-038
-test('a folder configuration shows no virtual tree', async ({ page }) => {
-  await page.getByRole('combobox', { name: 'Configuration kind' }).click()
+test('a folder configuration chosen in the tree is edited with the trees still shown', async ({ page }) => {
+  await addFolderConfiguration(page, 'Alpha')
 
-  await page.getByRole('option', { name: 'Folder configuration' }).click()
+  await page.getByRole('button', { name: 'auto-renamer.toml', exact: true }).click()
 
-  await expect(page.getByRole('heading', { name: /^Source/ })).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: /^Target/ })).toHaveCount(0)
+  await expect(page.getByText('Folder configuration of /downloads/Alpha')).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Source/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Target/ })).toBeVisible()
 })
 
 // @behavior PGE-039
@@ -170,4 +176,44 @@ test('the canvas sits between the palette and the inspector, above the trees', a
   expect(canvas.x + canvas.width).toBeLessThanOrEqual(inspector.x)
   expect(source.y).toBeGreaterThan(canvas.y + canvas.height - 1)
   expect(source.x).toBeLessThan(target.x)
+})
+
+// @behavior PGE-048
+test('a folder configuration edited in the form applies in the next simulation', async ({ page }) => {
+  await addFolderConfiguration(page, 'Alpha')
+  await page.getByRole('button', { name: 'auto-renamer.toml', exact: true }).click()
+  await page.getByRole('button', { name: 'Add a value' }).click()
+  const name = page.getByRole('textbox', { name: 'Name' })
+  await name.fill('show')
+  await name.blur()
+  const value = page.getByRole('textbox', { name: 'Value of show' })
+  await value.fill('Beta')
+  await value.blur()
+
+  await page.getByRole('button', { name: 'Trigger' }).click()
+
+  await expect(page.getByText('Beta s01e01.mkv', { exact: true })).toBeVisible()
+})
+
+// @behavior PGE-049
+test('going back to the global configuration edits it again', async ({ page }) => {
+  await addFolderConfiguration(page, 'Alpha')
+  await page.getByRole('button', { name: 'auto-renamer.toml', exact: true }).click()
+  await expect(node(page, 'series')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Back to the global configuration' }).click()
+
+  await expect(node(page, 'series')).toBeVisible()
+})
+
+// @behavior PGE-050
+test('an imported folder configuration lands at the source root while the global one is edited', async ({ page }) => {
+  await page.locator('input[type=file]').setInputFiles({
+    name: 'auto-renamer.toml',
+    mimeType: 'application/toml',
+    buffer: Buffer.from('[vars]\nshow = "Beta"\n'),
+  })
+
+  await expect(page.getByText('Folder configuration of /downloads', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'auto-renamer.toml', exact: true })).toBeVisible()
 })

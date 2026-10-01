@@ -304,13 +304,13 @@ The playground page draws a configuration for people who do not read TOML: each 
 | When | its form is shown |
 | Then | `into` is marked as required |
 
-## `PGE-038` A folder configuration shows no virtual tree
+## `PGE-038` A folder configuration chosen in the tree is edited with the trees still shown
 
 | Step | Statement |
 | --- | --- |
-| Given | the global configuration shown |
-| When | the folder configuration is chosen |
-| Then | neither the source nor the target tree is shown |
+| Given | a source holding `Alpha/auto-renamer.toml` |
+| When | it is chosen in the tree |
+| Then | the header says the folder configuration of `Alpha` is being edited, and the source and target trees are still shown |
 
 ## `PGE-039` The language chosen in the header is the one the page speaks
 
@@ -384,3 +384,28 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the stages the core declares |
 | When | the page looks up the icon of each |
 | Then | every stage has one |
+
+## `PGE-048` A folder configuration edited in the form applies in the next simulation
+
+| Step | Statement |
+| --- | --- |
+| Given | `Alpha/auto-renamer.toml` opened from the tree |
+| Given | its variable `show` set to `Beta` in its form |
+| When | the watch is triggered |
+| Then | the target holds `Beta s01e01.mkv` |
+
+## `PGE-049` Going back to the global configuration edits it again
+
+| Step | Statement |
+| --- | --- |
+| Given | `Alpha/auto-renamer.toml` opened from the tree |
+| When | the global configuration is chosen in the header |
+| Then | the canvas draws the watch `series` again |
+
+## `PGE-050` An imported folder configuration lands at the source root while the global one is edited
+
+| Step | Statement |
+| --- | --- |
+| Given | the global configuration being edited |
+| When | a file named `auto-renamer.toml` is imported |
+| Then | the source holds `auto-renamer.toml` at its root, and it is the one being edited |

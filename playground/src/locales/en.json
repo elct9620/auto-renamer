@@ -1,10 +1,5 @@
 {
   "language": "Language",
-  "kind": {
-    "global": "Global configuration",
-    "folder": "Folder configuration",
-    "label": "Configuration kind"
-  },
   "import": "Import",
   "download": "Download",
   "status": {
@@ -63,7 +58,8 @@
     "placeholder": "{{path}} or {{configuration}}",
     "watch": "Watch to trigger",
     "addHere": "Add in {{name}}",
-    "path": "Path of a new file or folder"
+    "path": "Path of a new file or folder",
+    "open": "Edit this folder configuration"
   },
   "output": {
     "results": "Results",
@@ -310,5 +306,10 @@
     "batch_window": "Batch window",
     "batch_max_wait": "Longest wait",
     "root": "Unit patterns"
+  },
+  "editing": {
+    "global": "Global configuration",
+    "folder": "Folder configuration of {{folder}}",
+    "back": "Back to the global configuration"
   }
 }

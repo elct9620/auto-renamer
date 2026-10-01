@@ -4,6 +4,9 @@
 import { type Table, asTable } from './config'
 import type { Entry, Simulation } from './core'
 
+/** The name a folder configuration goes by in the tree, as the CLI looks for it. */
+export const FOLDER_CONFIGURATION = 'auto-renamer.toml'
+
 export interface TreeNode {
   name: string
   path: string
@@ -67,6 +70,15 @@ export function foldersUnder(entries: Entry[], root: string): string[] {
 /** Adds a file or a folder, replacing whatever was at its path. */
 export function addEntry(entries: Entry[], path: string, folder: boolean): Entry[] {
   return [...entries.filter((entry) => entry.path !== path), { path, folder, modified: Date.now(), text: '' }]
+}
+
+/** Writes a file's text, adding the file when nothing is at its path yet. */
+export function writeFile(entries: Entry[], path: string, text: string): Entry[] {
+  const existing = entries.find((entry) => entry.path === path)
+  return [
+    ...entries.filter((entry) => entry.path !== path),
+    { path, folder: false, modified: existing?.modified ?? Date.now(), text },
+  ]
 }
 
 /** Removes a file, or a folder with everything it holds. */
