@@ -82,7 +82,8 @@
     "left too large": "left too large"
   },
   "canvas": {
-    "resetLayout": "Reset layout"
+    "resetLayout": "Reset layout",
+    "part": "Remove {{pipeline}} from {{watch}}"
   },
   "examples": {
     "label": "Examples",

@@ -69,6 +69,8 @@ describe('drawing', () => {
 
     expect(edgeBetween(config, watchId('series'), pipelineId('video'))?.label).toBe('1')
     expect(edgeBetween(config, watchId('series'), pipelineId('subtitle'))?.label).toBe('2')
+    const x = (id: string) => toGraph(config).nodes.find((node) => node.id === id)!.position.x
+    expect(x(pipelineId('video'))).toBeLessThan(x(pipelineId('subtitle')))
   })
 
   // @behavior PGE-003

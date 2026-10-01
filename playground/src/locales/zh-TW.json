@@ -82,7 +82,8 @@
     "left too large": "數量過多未處理"
   },
   "canvas": {
-    "resetLayout": "重設版面"
+    "resetLayout": "重設版面",
+    "part": "從 {{watch}} 移除 {{pipeline}}"
   },
   "examples": {
     "label": "範例",

@@ -465,3 +465,11 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | an example the page offers |
 | When | its watch is triggered |
 | Then | each of its files goes where `docs/cases.md` says, or stays where the cases leave it |
+
+## `PGE-058` A joint's remove button drops the pipeline from the watch
+
+| Step | Statement |
+| --- | --- |
+| Given | the watch `series` joined to the pipeline `video` |
+| When | the remove button on that joint is pressed |
+| Then | the joint is gone and the configuration text lists no `video` for the watch |

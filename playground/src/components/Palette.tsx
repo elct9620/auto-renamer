@@ -9,7 +9,7 @@ import { stages } from '../core'
 
 function StageIcon({ name }: { name: string }) {
   const Icon = stageIcon(name)
-  return <Icon className="size-3.5 text-muted-foreground" />
+  return <Icon className="size-4 text-muted-foreground" />
 }
 
 export function Palette({ global, onAdd }: { global: boolean; onAdd: (table: 'watch' | 'pipeline') => void }) {
@@ -26,7 +26,7 @@ export function Palette({ global, onAdd }: { global: boolean; onAdd: (table: 'wa
         {stages().map(({ name }) => (
           <Tooltip key={name}>
             <TooltipTrigger asChild>
-              <div draggable className="flex cursor-grab items-center gap-1.5 rounded-md border bg-card px-2 py-1 text-xs active:cursor-grabbing"
+              <div draggable className="flex cursor-grab items-center gap-1.5 rounded-md border bg-card px-2 py-1.5 text-sm active:cursor-grabbing"
                 onDragStart={(event) => {
                   event.dataTransfer.setData(STAGE_DRAG, name)
                   event.dataTransfer.effectAllowed = 'copy'

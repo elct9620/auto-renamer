@@ -275,3 +275,11 @@ test('the page opens on the single-episode example', async ({ page }) => {
   await expect(tree.getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(6)
   await expect(tree.getByText('[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv', { exact: true })).toBeVisible()
 })
+
+// @behavior PGE-058
+test('a joint\'s remove button drops the pipeline from the watch', async ({ page }) => {
+  await page.getByRole('button', { name: 'Remove video from series' }).click()
+
+  await expect(page.getByRole('button', { name: 'Remove video from series' })).toHaveCount(0)
+  expect(await configText(page)).toContain('pipelines = []')
+})

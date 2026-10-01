@@ -1,26 +1,31 @@
 import {
   Background,
+  BaseEdge,
   type Connection,
   ControlButton,
   Controls,
   type Edge,
+  EdgeLabelRenderer,
+  type EdgeProps,
   Handle,
   type Node,
   type NodeProps,
   Position,
   ReactFlow,
   ReactFlowProvider,
+  getBezierPath,
   useEdgesState,
   useNodesState,
   useReactFlow,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { LayoutGrid } from 'lucide-react'
+import { LayoutGrid, X } from 'lucide-react'
 import { type DragEvent, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { BaseNode, BaseNodeContent, BaseNodeHeader, BaseNodeHeaderTitle } from '@/components/base-node'
 import { StageName } from '@/components/Fields'
+import { Button } from '@/components/ui/button'
 import { KIND_ICONS, stageIcon } from '@/components/kinds'
 import { cn } from '@/lib/utils'
 import {
@@ -35,7 +40,7 @@ import {
   setIn,
 } from '../config'
 import { read, stages } from '../core'
-import { type Joint, type Layout, type NodeData, type Selected, dropAt, laidOut, relaid, toGraph } from '../graph'
+import { type Joint, type Layout, type NodeData, type Selected, dropAt, head, laidOut, relaid, toGraph } from '../graph'
 
 /** The type a stage dragged from the palette carries its name under. */
 export const STAGE_DRAG = 'application/x-auto-renamer-stage'
@@ -71,6 +76,31 @@ const nodeTypes = {
   pipeline: ({ data }: NodeProps<Node<NodeData>>) => <ConfigNode data={data} kind="pipeline" joins="target" />,
   stage: ({ data }: NodeProps<Node<NodeData>>) => <ConfigNode data={data} kind="stage" joins={null} />,
 }
+
+/** A joint shows its place in the watch's list and a button removing it, the way deleting the edge would. */
+function JointEdge({ id, label, data, ...path }: EdgeProps<Edge<Joint>>) {
+  const { t } = useTranslation()
+  const { deleteElements } = useReactFlow()
+  const [line, x, y] = getBezierPath(path)
+  return (
+    <>
+      <BaseEdge id={id} path={line} style={path.style} />
+      <EdgeLabelRenderer>
+        <div className="nodrag nopan pointer-events-auto absolute flex items-center gap-0.5 rounded-full border bg-background pl-2 text-xs"
+          style={{ transform: `translate(-50%, -50%) translate(${x}px, ${y}px)` }}>
+          {label}
+          <Button variant="ghost" size="icon-xs" className="rounded-full"
+            aria-label={t('canvas.part', { watch: data?.watch, pipeline: data?.pipeline })}
+            onClick={() => deleteElements({ edges: [{ id }] })}>
+            <X />
+          </Button>
+        </div>
+      </EdgeLabelRenderer>
+    </>
+  )
+}
+
+const edgeTypes = { joint: JointEdge }
 
 function isJoint(connection: Connection | Edge): boolean {
   return connection.source.startsWith('watch:') && connection.target.startsWith('pipeline:')
@@ -120,7 +150,8 @@ function Flow({ config, onChange, onSelect }: {
   }
 
   return (
-    <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} colorMode="system" fitView
+    <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} colorMode="system" fitView
+      fitViewOptions={{ nodes: head(shown), maxZoom: 1 }}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onNodeDragStop={(_, node) => {

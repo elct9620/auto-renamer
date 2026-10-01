@@ -66,8 +66,11 @@ function stageDetail(stage: Stage): string | undefined {
 export function toGraph(config: Table): { nodes: Node<NodeData>[]; edges: Edge[] } {
   const nodes: Node<NodeData>[] = []
   const edges: Edge[] = []
-  const pipelines = Object.keys(asTable(config.pipeline))
   const watches = Object.keys(asTable(config.watch))
+  // Pipelines stand in the order the watches run them, so joints do not cross; unlisted ones come last.
+  const listed = watches.flatMap((name) => pipelinesOf(config, name))
+  const pipelines = [...new Set([...listed, ...Object.keys(asTable(config.pipeline))])]
+    .filter((name) => name in asTable(config.pipeline))
 
   watches.forEach((name, column) => {
     const watch = asTable(asTable(config.watch)[name])
@@ -85,6 +88,7 @@ export function toGraph(config: Table): { nodes: Node<NodeData>[]; edges: Edge[]
     pipelinesOf(config, name).forEach((pipeline, order) => {
       edges.push({
         id: `${watchId(name)}->${pipelineId(pipeline)}`,
+        type: 'joint',
         source: watchId(name),
         target: pipelineId(pipeline),
         label: String(order + 1),
@@ -121,6 +125,12 @@ export function toGraph(config: Table): { nodes: Node<NodeData>[]; edges: Edge[]
   })
 
   return { nodes, edges }
+}
+
+/** The nodes the view opens on: the watches, the pipelines and their first stages, at full scale. A longer
+ * pipeline goes on below, reached by panning, rather than shrinking every node to fit. */
+export function head(nodes: Node<NodeData>[]): Node<NodeData>[] {
+  return nodes.filter((node) => node.position.y < ROW + STEP * 5)
 }
 
 /** Where nodes were left by hand, by id; the configuration's order places every other node. */
