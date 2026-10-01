@@ -6,13 +6,13 @@ use crate::context::{Context, Earlier};
 use crate::record::{Record, split_extension};
 
 /// The files earlier pipelines handled, found by the main file name they begin with.
-struct EarlierFiles {
-    files: Vec<Earlier>,
+struct EarlierFiles<'a> {
+    files: &'a [Earlier],
     by_name: HashMap<String, Vec<usize>>,
 }
 
-impl EarlierFiles {
-    fn new(files: Vec<Earlier>) -> EarlierFiles {
+impl<'a> EarlierFiles<'a> {
+    fn new(files: &'a [Earlier]) -> EarlierFiles<'a> {
         let mut by_name: HashMap<String, Vec<usize>> = HashMap::new();
         for (position, file) in files.iter().enumerate() {
             let name = main_name(&file.origin);
@@ -51,7 +51,7 @@ impl Stage for Take {
     }
 
     fn run(&self, batch: Batch, context: &mut Context) -> Batch {
-        let earlier = EarlierFiles::new(context.earlier().to_vec());
+        let earlier = EarlierFiles::new(context.earlier());
         batch.each(|record| self.copy_into(record, &earlier))
     }
 }

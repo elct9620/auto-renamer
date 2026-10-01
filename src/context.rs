@@ -10,7 +10,6 @@ pub trait Target {
 }
 
 /// What an earlier pipeline made of one file, as far as a later stage needs to know.
-#[derive(Clone)]
 pub(crate) struct Earlier {
     pub pipeline: String,
     pub origin: PathBuf,
@@ -58,8 +57,13 @@ impl<'a> Context<'a> {
         &self.earlier
     }
 
-    /// Keeps what a pipeline made of its files, for the pipelines after it.
-    pub(crate) fn remember(&mut self, files: impl IntoIterator<Item = Earlier>) {
-        self.earlier.extend(files);
+    /// Keeps what a pipeline made of one of its files, for the pipelines after it.
+    pub(crate) fn remember(&mut self, file: Earlier) {
+        self.earlier.push(file);
+    }
+
+    /// What the pipelines made of their files, once no stage is left to ask.
+    pub(crate) fn into_earlier(self) -> Vec<Earlier> {
+        self.earlier
     }
 }

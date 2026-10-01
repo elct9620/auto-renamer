@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use crate::context::{Context, Earlier, Target};
@@ -36,6 +37,14 @@ pub struct Judged {
     pub effects: Vec<Effect>,
 }
 
+/// What a pipeline decided for one file it claimed, apart from the record the file left with the context.
+struct Outcome {
+    origin: PathBuf,
+    pipeline: usize,
+    stopped: Result<(), Stop>,
+    effects: Vec<Effect>,
+}
+
 /// Plans a whole batch through the pipelines of a watch, in the order they are listed.
 ///
 /// Files are taken in the order of their paths. Each is claimed by the first pipeline whose leading filters
@@ -51,7 +60,7 @@ pub fn plan_batch(
 ) -> Vec<Judged> {
     let mut context = Context::new(target);
     let mut waiting = records;
-    let mut judged = Vec::new();
+    let mut outcomes = Vec::new();
 
     for (index, (name, pipeline)) in pipelines.iter().enumerate() {
         let (filters, rest) = pipeline.split_at_claim();
@@ -67,18 +76,47 @@ pub fn plan_batch(
             })
             .into_files();
 
-        context.remember(files.iter().map(|file| Earlier {
-            pipeline: name.clone(),
-            origin: file.origin.clone(),
-            planned: file.flow.as_ref().ok().cloned(),
-        }));
-        judged.extend(files.into_iter().map(|file| Judged {
-            origin: file.origin,
-            pipeline: Some(index),
-            verdict: Verdict::of(file.flow),
-            effects: file.effects,
-        }));
+        for file in files {
+            let (planned, stopped) = match file.flow {
+                Ok(record) => (Some(record), Ok(())),
+                Err(stop) => (None, Err(stop)),
+            };
+            outcomes.push(Outcome {
+                origin: file.origin.clone(),
+                pipeline: index,
+                stopped,
+                effects: file.effects,
+            });
+            context.remember(Earlier {
+                pipeline: name.clone(),
+                origin: file.origin,
+                planned,
+            });
+        }
     }
+
+    // The records planned went on to the context for the pipelines after theirs; they come back by origin.
+    let mut planned: HashMap<PathBuf, Record> = context
+        .into_earlier()
+        .into_iter()
+        .filter_map(|earlier| Some((earlier.origin, earlier.planned?)))
+        .collect();
+    let mut judged: Vec<Judged> = outcomes
+        .into_iter()
+        .map(|outcome| {
+            let flow = outcome.stopped.map(|()| {
+                planned
+                    .remove(&outcome.origin)
+                    .expect("a planned file leaves its record with the context")
+            });
+            Judged {
+                origin: outcome.origin,
+                pipeline: Some(outcome.pipeline),
+                verdict: Verdict::of(flow),
+                effects: outcome.effects,
+            }
+        })
+        .collect();
 
     judged.extend(waiting.into_iter().map(|record| Judged {
         origin: record.origin().to_path_buf(),
