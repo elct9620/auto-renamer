@@ -123,6 +123,10 @@ The notifications that say something changed, waiting for the runner. It holds a
 - `Inbox` - Queue is what the design calls it.
 - `Backlog` - Queue is what the design calls it.
 
+### Tree
+
+The files of the source and the target as processing a batch reads them and its effects change them. The filesystem stands behind it for the CLI and a virtual tree for the playground, so both run the same rules.
+
 ### Playground
 
 The page on GitHub Pages where a configuration is edited, simulated, and downloaded as a global or folder configuration. Only the core runs there for real.

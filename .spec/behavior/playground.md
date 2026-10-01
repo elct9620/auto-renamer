@@ -93,3 +93,11 @@ The playground checks, reads and writes a configuration, and simulates a watch o
 | Given | a global configuration with a comment |
 | When | it is read and written again |
 | Then | the text written holds no comment |
+
+## `PLG-012` A virtual file's modification time is its time field
+
+| Step | Statement |
+| --- | --- |
+| Given | a configuration whose watch formats the name as `{mtime:%Y}` and moves, and a virtual source holding `Show/x.mkv` modified in 2024 |
+| When | the watch is simulated |
+| Then | the virtual target holds `Show/2024.mkv` |

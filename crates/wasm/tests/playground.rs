@@ -171,3 +171,17 @@ fn should_drop_comments_when_written_again() {
 
     assert!(!written.contains('#'), "{written}");
 }
+
+// @behavior PLG-012
+#[test]
+fn should_take_the_time_field_from_the_modification_time_of_a_virtual_file() {
+    let mut entry = file("/src/Show/x.mkv");
+    entry.modified = 1_704_153_600_000; // 2024-01-02T00:00:00Z
+
+    let simulation = run(
+        &config(r#"[{ format = "{mtime:%Y}" }, "move"]"#, ""),
+        vec![entry],
+    );
+
+    assert!(holds(&simulation, "/dst/Show/2024.mkv"));
+}
