@@ -36,9 +36,10 @@ export interface AtStage {
  * The files the stage at `index` of `pipeline` ran on, as that stage left them. `folder` is the folder whose
  * configuration is being edited, relative to the source, or null for the global configuration: a stage of the
  * global configuration runs on the files no folder configuration took from it, and lists those taken apart; a
- * stage of a folder configuration runs on the files under that folder whose pipeline it replaced.
+ * stage of a folder configuration runs on the files under that folder whose pipeline it replaced. A leading
+ * filter claims rather than runs, so with `claims` the stage stands for the claim and lists the files claimed.
  */
-export function afterStage(outcomes: Outcome[], pipeline: string, index: number, folder: string | null): {
+export function afterStage(outcomes: Outcome[], pipeline: string, index: number, folder: string | null, claims = false): {
   ran: AtStage[]
   taken: string[]
 } {
@@ -46,7 +47,7 @@ export function afterStage(outcomes: Outcome[], pipeline: string, index: number,
   const taken: string[] = []
   const under = folder ? `${folder}/` : ''
   for (const outcome of outcomes) {
-    const at = outcome.steps.findIndex((step) => step.pipeline === pipeline && step.stage === index)
+    const at = outcome.steps.findIndex((step) => step.pipeline === pipeline && step.stage === (claims ? null : index))
     if (at < 0) continue
     const ours = folder === null ? !outcome.replaced : outcome.replaced && outcome.origin.startsWith(under)
     if (ours) ran.push({ origin: outcome.origin, step: outcome.steps[at], changes: changes(outcome.steps[at - 1], outcome.steps[at]) })

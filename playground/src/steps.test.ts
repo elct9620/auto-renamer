@@ -41,3 +41,22 @@ describe('the files after a stage', () => {
     expect(afterStage(outcomes, 'video', 1, 'B').ran.map(({ origin }) => origin)).toEqual(['B/Show 08.mkv'])
   })
 })
+
+describe('the files a leading filter claimed', () => {
+  // @behavior PGE-070
+  it('lists the files it claimed', () => {
+    const config = `[pipeline.video]
+stages = [{ filter = { ext = ["mkv"] } }, { format = "Show" }]
+
+[watch.series]
+source = "/downloads"
+pipelines = ["video"]
+`
+    const file = (path: string) => ({ path, folder: false, modified: 0, text: '' })
+    const { outcomes } = simulate(config, 'series', [file('/downloads/a.mkv'), file('/downloads/a.ass')])
+
+    const { ran } = afterStage(outcomes, 'video', 0, null, true)
+
+    expect(ran.map(({ origin }) => origin)).toEqual(['a.mkv'])
+  })
+})

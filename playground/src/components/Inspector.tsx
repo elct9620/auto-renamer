@@ -47,14 +47,15 @@ function Section({ title, icon: Icon, children }: { title: React.ReactNode; icon
 }
 
 /** The files a triggered simulation ran through a stage, each as the stage left it. */
-function FilesAfter({ simulation, pipeline, index, folder }: {
+function FilesAfter({ simulation, pipeline, index, folder, claims }: {
   simulation: Simulation
   pipeline: string
   index: number
   folder: string | null
+  claims: boolean
 }) {
   const { t } = useTranslation()
-  const { ran, taken } = afterStage(simulation.outcomes, pipeline, index, folder)
+  const { ran, taken } = afterStage(simulation.outcomes, pipeline, index, folder, claims)
   return (
     <section aria-label={t('inspector.after')} className="grid gap-1.5 border-t pt-3">
       <h3 className="text-xs font-semibold">{t('inspector.after')}</h3>
@@ -171,7 +172,8 @@ export function Inspector({ config, kind, selected, folders = [], simulation = n
           <Trash2 />{t('inspector.remove')}
         </Button>
       </div>
-      {simulation && <FilesAfter simulation={simulation} pipeline={selected.pipeline} index={selected.index} folder={folder} />}
+      {simulation && <FilesAfter simulation={simulation} pipeline={selected.pipeline} index={selected.index} folder={folder}
+        claims={pipelineStages.slice(0, selected.index + 1).every((one) => stageName(one) === 'filter')} />}
     </Section>
   )
 }

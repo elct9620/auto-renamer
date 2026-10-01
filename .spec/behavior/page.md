@@ -561,3 +561,11 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the opening example triggered |
 | When | a stage is removed |
 | Then | no result is shown until the watch is triggered again |
+
+## `PGE-070` A leading filter lists the files it claimed
+
+| Step | Statement |
+| --- | --- |
+| Given | a simulation where the leading filter of `video` claimed a video and left a subtitle |
+| When | the files after that filter are asked for |
+| Then | the video is listed and the subtitle is not |
