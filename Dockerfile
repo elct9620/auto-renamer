@@ -9,10 +9,13 @@ FROM rust:${RUST_VERSION}-alpine AS builder
 RUN apk add --no-cache musl-dev
 WORKDIR /app
 
-# Build dependencies first so they stay cached until a manifest changes.
+# Build dependencies first so they stay cached until a manifest changes. Every member of the workspace
+# needs its manifest for the lock file to hold; the playground's crate stays an empty shell, unbuilt.
 COPY Cargo.toml Cargo.lock ./
 COPY crates/core/Cargo.toml crates/core/
-RUN mkdir src crates/core/src && echo 'fn main() {}' > src/main.rs && touch crates/core/src/lib.rs \
+COPY crates/wasm/Cargo.toml crates/wasm/
+RUN mkdir -p src crates/core/src crates/wasm/src && echo 'fn main() {}' > src/main.rs \
+    && touch crates/core/src/lib.rs crates/wasm/src/lib.rs \
     && cargo build --release --locked \
     && rm -rf src crates/core/src target/release/auto-renamer target/release/deps/auto_renamer* \
        target/release/.fingerprint/auto-renamer*

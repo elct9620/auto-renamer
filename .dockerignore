@@ -4,3 +4,4 @@
 !Cargo.lock
 !src
 !crates/core
+!crates/wasm/Cargo.toml

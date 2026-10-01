@@ -1,9 +1,10 @@
 # 架構
 
-auto-renamer 是一個 workspace：`crates/core` 決定檔案的名稱與去向，根套件把它接上 Linux 的檔案系統與通知。
+auto-renamer 是一個 workspace：`crates/core` 決定檔案的名稱與去向，根套件把它接上 Linux 的檔案系統與通知，`crates/wasm` 把它接上 playground 的虛擬目錄。
 
 ```
   crates/core   auto-renamer-core: pipeline, config, effects through a Tree
+  crates/wasm   auto-renamer-wasm: check, read, render, simulate on a virtual tree
   src/lib.rs    auto-renamer: filesystem, watcher, runner; re-exports core
   src/main.rs   wiring only
 ```
@@ -20,7 +21,7 @@ core 不碰檔案系統與通知，所以能編成 WASM 給 playground 用。
 | 外圍 | `filesystem`、`scan`、`runner` 與 `main` |
 | 平台 | `runner` 以 `cfg(target_os = "linux")` 隔開，其他平台的 `main` 直接拒絕 |
 
-根套件以 `pub use auto_renamer_core::*` 轉出 core，測試與 `main` 只看 `auto_renamer`。release-please 的 rust 策略把每個成員升到同一版本；`Dockerfile` 先以空殼編譯兩個套件的依賴，`.dockerignore` 的白名單含 `crates/core`。
+根套件以 `pub use auto_renamer_core::*` 轉出 core，測試與 `main` 只看 `auto_renamer`。`crates/wasm` 的 binding 只在 wasm32 編譯，其餘以原生測試驗證。release-please 的 rust 策略把每個成員升到同一版本；`Dockerfile` 先以空殼編譯依賴，wasm 套件只帶 manifest 讓 lock 檔成立。
 
 ## 模組地圖
 
