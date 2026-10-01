@@ -1,11 +1,15 @@
-import { GripVertical } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { STAGE_DRAG } from '@/components/Canvas'
-import { KIND_ICONS } from '@/components/kinds'
+import { KIND_ICONS, stageIcon } from '@/components/kinds'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { stages } from '../core'
+
+function StageIcon({ name }: { name: string }) {
+  const Icon = stageIcon(name)
+  return <Icon className="size-3.5 text-muted-foreground" />
+}
 
 export function Palette({ global, onAdd }: { global: boolean; onAdd: (table: 'watch' | 'pipeline') => void }) {
   const { t } = useTranslation()
@@ -25,7 +29,7 @@ export function Palette({ global, onAdd }: { global: boolean; onAdd: (table: 'wa
                 onDragStart={(event) => {
                   event.dataTransfer.setData(STAGE_DRAG, name)
                   event.dataTransfer.effectAllowed = 'copy'
-                }}><GripVertical className="size-3.5 text-muted-foreground" />{name}</div>
+                }}><StageIcon name={name} />{name}</div>
             </TooltipTrigger>
             <TooltipContent side="right" className="max-w-64">{t(`stages.${name}.about`)}</TooltipContent>
           </Tooltip>

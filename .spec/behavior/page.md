@@ -376,3 +376,11 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the parameters and single values the core declares, and the settings the page offers |
 | When | the page's texts in Traditional Chinese and English are read |
 | Then | each has a name in both |
+
+## `PGE-047` Every stage the core declares has an icon
+
+| Step | Statement |
+| --- | --- |
+| Given | the stages the core declares |
+| When | the page looks up the icon of each |
+| Then | every stage has one |

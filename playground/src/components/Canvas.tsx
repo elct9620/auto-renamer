@@ -20,7 +20,7 @@ import { type DragEvent, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { BaseNode, BaseNodeContent, BaseNodeHeader, BaseNodeHeaderTitle } from '@/components/base-node'
-import { KIND_ICONS } from '@/components/kinds'
+import { KIND_ICONS, stageIcon } from '@/components/kinds'
 import { cn } from '@/lib/utils'
 import {
   type Table,
@@ -46,7 +46,7 @@ const tones = {
 }
 
 function ConfigNode({ data, kind, joins }: { data: NodeData; kind: keyof typeof tones; joins: 'source' | 'target' | null }) {
-  const Icon = KIND_ICONS[kind]
+  const Icon = kind === 'stage' ? stageIcon(data.label) : KIND_ICONS[kind]
   return (
     <BaseNode className={cn('min-w-36 text-sm', tones[kind])}>
       <Handle type="target" position={Position.Left} isConnectable={joins === 'target'} />

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 
 import { Choice } from '@/components/Choice'
 import { SettingsForm } from '@/components/SettingsForm'
-import { KIND_ICONS } from '@/components/kinds'
+import { KIND_ICONS, stageIcon } from '@/components/kinds'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -108,7 +108,7 @@ export function Inspector({ config, kind, selected, onChange, onSelect }: {
   if (stage === undefined) return null
   const at = (index: number) => onSelect({ ...selected, index })
   return (
-    <Section icon={KIND_ICONS.stage} title={t('inspector.stage', { kind: stageName(stage), position: selected.index + 1, pipeline: selected.pipeline })}>
+    <Section icon={stageIcon(stageName(stage))} title={t('inspector.stage', { kind: stageName(stage), position: selected.index + 1, pipeline: selected.pipeline })}>
       <StageForm key={`${selected.pipeline}-${selected.index}`} stage={stage}
         declaration={stages().find((declaration) => declaration.name === stageName(stage))!}
         onChange={(next) => onChange(replaceStage(config, selected.pipeline, selected.index, next))} />
