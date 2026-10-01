@@ -1,5 +1,5 @@
-use std::collections::HashMap;
-use std::path::PathBuf;
+use std::collections::{HashMap, HashSet};
+use std::path::{Path, PathBuf};
 
 use crate::context::{Context, Earlier, Target};
 use crate::pipeline::Pipeline;
@@ -37,6 +37,16 @@ pub struct Judged {
     pub effects: Vec<Effect>,
 }
 
+/// What one file holds at one point of its planning.
+#[derive(Debug)]
+pub struct Step<'a> {
+    pub origin: &'a Path,
+    pub pipeline: &'a str,
+    /// The stage just run, by its place among the pipeline's stages; none for the claim by its leading filters.
+    pub stage: Option<usize>,
+    pub flow: &'a Flow,
+}
+
 /// What a pipeline decided for one file it claimed, apart from the record the file left with the context.
 struct Outcome {
     origin: PathBuf,
@@ -59,6 +69,28 @@ pub fn plan_batch(
     records: Vec<Record>,
     target: &dyn Target,
 ) -> Vec<Judged> {
+    plan(pipelines, records, target, None)
+}
+
+/// Plans a batch as [`plan_batch`] does, telling `observe` each step of every file as it happens: the claim,
+/// then every stage the file reaches.
+pub fn plan_batch_observed(
+    pipelines: &[(String, Pipeline)],
+    records: Vec<Record>,
+    target: &dyn Target,
+    observe: &mut dyn FnMut(Step),
+) -> Vec<Judged> {
+    plan(pipelines, records, target, Some(observe))
+}
+
+/// Plans a batch, telling the steps only when someone observes them, so planning without an observer keeps
+/// nothing for them.
+pub(crate) fn plan(
+    pipelines: &[(String, Pipeline)],
+    records: Vec<Record>,
+    target: &dyn Target,
+    mut observe: Option<&mut dyn FnMut(Step)>,
+) -> Vec<Judged> {
     let mut context = Context::new(target);
     let mut waiting = records;
     let mut outcomes = Vec::new();
@@ -70,10 +102,35 @@ pub fn plan_batch(
             .partition(|record| filters.iter().all(|filter| filter.accepts(record)));
         waiting = unclaimed;
 
+        // A file is told up to the step that stopped it, and no more after.
+        let mut stopped = HashSet::new();
+        let mut tell =
+            |batch: &Batch, stage: Option<usize>, observe: &mut Option<&mut dyn FnMut(Step)>| {
+                let Some(observe) = observe else { return };
+                for (origin, flow) in batch.files() {
+                    if stopped.contains(origin) {
+                        continue;
+                    }
+                    observe(Step {
+                        origin,
+                        pipeline: name,
+                        stage,
+                        flow,
+                    });
+                    if flow.is_err() {
+                        stopped.insert(origin.to_path_buf());
+                    }
+                }
+            };
+        let claimed = Batch::new(claimed);
+        tell(&claimed, None, &mut observe);
         let files = rest
             .iter()
-            .fold(Batch::new(claimed), |batch, stage| {
-                stage.run(batch, &mut context)
+            .enumerate()
+            .fold(claimed, |batch, (index, stage)| {
+                let batch = stage.run(batch, &mut context);
+                tell(&batch, Some(filters.len() + index), &mut observe);
+                batch
             })
             .into_files();
 

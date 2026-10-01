@@ -18,10 +18,12 @@ pub use effects::{
     Applied, Done, EffectError, EffectsRun, Kind, Roots, SkipReason, Tree, apply_effects,
     cleanup_folders, move_file,
 };
-pub use engine::{Judged, Verdict, plan_batch};
+pub use engine::{Judged, Step, Verdict, plan_batch, plan_batch_observed};
 pub use pipeline::{Pipeline, PipelineError};
 pub use record::{NotUtf8, Record, Value};
-pub use service::{Processed, Renames, What, process_batch};
+pub use service::{
+    Processed, Renames, What, process_batch, process_batch_observed, replaced_pipelines,
+};
 pub use stages::{
     Declaration, DeclareError, Declared, Effect, Flow, Parameter, ParameterKind, Rejection, Stop,
 };

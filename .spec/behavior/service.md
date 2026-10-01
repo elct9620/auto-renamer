@@ -158,3 +158,11 @@ Processing a batch is what a ready batch of settled files turns into: the files 
 | Given | a watch whose pipeline numbers `episode` like `e{episode}`, formats the name as `e{episode}` and moves, the file `Show/x.mkv`, and in the target the file `Show/e1.mkv` and the folder `Show/e7` |
 | When | the batch is processed |
 | Then | the target holds `Show/e2.mkv` |
+
+## `SVC-021` The pipelines a folder configuration replaces for a unit are named
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch running `video` and `subtitle`, and a folder configuration in the unit declaring `video` |
+| When | the pipelines it replaces are asked for that unit |
+| Then | only `video` is named |

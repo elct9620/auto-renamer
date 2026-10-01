@@ -212,6 +212,11 @@ impl Watch {
 }
 
 impl FolderConfig {
+    /// Whether the folder configuration declares a pipeline of this name, replacing the watch's own.
+    pub(crate) fn declares(&self, pipeline: &str) -> bool {
+        self.pipelines.contains_key(pipeline)
+    }
+
     /// Reads a folder configuration, refusing what a folder may not decide or what is too large.
     pub fn parse(source: &str) -> Result<FolderConfig, ConfigError> {
         if source.len() > MAX_FOLDER_CONFIG_BYTES {

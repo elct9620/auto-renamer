@@ -2,7 +2,9 @@ mod common;
 
 use std::path::{Path, PathBuf};
 
-use auto_renamer::{Config, FsTree, Processed, Renames, SkipReason, What, process_batch};
+use auto_renamer::{
+    Config, FsTree, Processed, Renames, SkipReason, What, process_batch, replaced_pipelines,
+};
 use common::Sandbox;
 
 const MOVE_AS_SHOW: &str = r#"[{ format = "{show}" }, "move"]"#;
@@ -437,4 +439,24 @@ fn should_not_count_a_folder_in_the_target_as_a_numbered_file() {
     run.process("Show", &["Show/x.mkv"]);
 
     assert!(run.sandbox.exists("target/Show/e2.mkv"));
+}
+
+// @behavior SVC-021
+#[test]
+fn should_name_the_pipelines_a_folder_configuration_replaces() {
+    let sandbox = Sandbox::new();
+    sandbox.make_dir("source/Show");
+    sandbox.write(
+        "source/Show/auto-renamer.toml",
+        "[pipeline.video]\nstages = [\"move\"]\n",
+    );
+    let text = format!(
+        "[pipeline.video]\nstages = []\n\n[pipeline.subtitle]\nstages = []\n\n[watch.w]\nsource = \"{}\"\npipelines = [\"video\", \"subtitle\"]\n",
+        sandbox.path("source").display(),
+    );
+    let config = Config::parse(&text).expect("the configuration should be accepted");
+
+    let replaced = replaced_pipelines(&FsTree, &config.watches()[0], Path::new("Show"));
+
+    assert_eq!(replaced, ["video"]);
 }

@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use crate::config::{FOLDER_CONFIG, FolderConfig, MAX_FOLDER_CONFIG_BYTES, Watch};
 use crate::context::Target;
 use crate::effects::{Applied, Done, Kind, Roots, SkipReason, Tree, apply_effects};
-use crate::engine::{Verdict, plan_batch};
+use crate::engine::{Step, Verdict, plan};
 use crate::record::Record;
 use crate::stages::Effect;
 
@@ -95,6 +95,29 @@ pub fn process_batch(
     files: &[PathBuf],
     renames: &mut Renames,
 ) -> Vec<Processed> {
+    process(tree, watch, unit, files, renames, None)
+}
+
+/// Processes a ready batch as [`process_batch`] does, telling `observe` every step of its planning.
+pub fn process_batch_observed(
+    tree: &dyn Tree,
+    watch: &Watch,
+    unit: &Path,
+    files: &[PathBuf],
+    renames: &mut Renames,
+    observe: &mut dyn FnMut(Step),
+) -> Vec<Processed> {
+    process(tree, watch, unit, files, renames, Some(observe))
+}
+
+fn process(
+    tree: &dyn Tree,
+    watch: &Watch,
+    unit: &Path,
+    files: &[PathBuf],
+    renames: &mut Renames,
+    observe: Option<&mut dyn FnMut(Step)>,
+) -> Vec<Processed> {
     let mut processed = Vec::new();
     let layers = folder_configs(tree, &watch.source, unit, &mut processed);
     let effective = watch.under(&layers);
@@ -131,7 +154,7 @@ pub fn process_batch(
         tree,
         root: &target_root,
     };
-    let judged = plan_batch(&pipelines, records, &target);
+    let judged = plan(&pipelines, records, &target, observe);
     for entry in judged {
         let what = match entry.verdict {
             Verdict::Planned(record) => apply_planned(
@@ -245,6 +268,18 @@ fn effects_of(
 
 /// The folder configurations from the source down to the unit, from the farthest to the nearest.
 /// One that cannot be read or used is left out and reported.
+/// The pipelines of a watch that the folder configurations applying to a unit replace, in the watch's order.
+/// A folder configuration that cannot be read replaces nothing; processing the batch reports it.
+pub fn replaced_pipelines(tree: &dyn Tree, watch: &Watch, unit: &Path) -> Vec<String> {
+    let layers = folder_configs(tree, &watch.source, unit, &mut Vec::new());
+    watch
+        .pipelines()
+        .into_iter()
+        .map(|(name, _)| name)
+        .filter(|name| layers.iter().any(|layer| layer.declares(name)))
+        .collect()
+}
+
 fn folder_configs(
     tree: &dyn Tree,
     source: &Path,

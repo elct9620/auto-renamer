@@ -110,6 +110,14 @@ What a stage answers for one record: the record to go on with, or the stop that 
 
 - `Outcome` - Flow is a result, so a stage passes a stop on instead of matching on it.
 
+### Step
+
+What one file holds at one point of its planning: once a pipeline claims it, and after each stage it reaches, until a stage stops it. Only the playground asks for steps; the CLI plans without keeping any.
+
+#### Rejected
+
+- `Snapshot` - Step is what the playground shows one at a time.
+
 ### Effect
 
 What an effect stage asks to be done to a planned file: a move or a cleanup. Planning only notes it, and it is carried out once the whole batch is planned.

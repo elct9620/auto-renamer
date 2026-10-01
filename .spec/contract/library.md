@@ -511,6 +511,30 @@ Plan a whole batch, each path at most once, through the pipelines of a watch, in
 pub fn plan_batch(pipelines: &[(String, Pipeline)], records: Vec<Record>, target: &dyn Target) -> Vec<Judged> {}
 ```
 
+## `Step`
+
+What one file holds at one point of planning: the pipeline that claimed it, the stage just run by its place in that pipeline or none for the claim, and the flow it goes on with.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct Step<'a> {}
+```
+
+## `plan_batch_observed`
+
+Plan a batch as `plan_batch` does, telling `observe` every step of every file as it happens.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub fn plan_batch_observed(pipelines: &[(String, Pipeline)], records: Vec<Record>, target: &dyn Target, observe: &mut dyn FnMut(Step)) -> Vec<Judged> {}
+```
+
 ## `Config`
 
 What the operator configured: the watches, each with its pipelines and settings.
@@ -993,6 +1017,30 @@ Plan a ready batch through the pipelines of its watch, with the folder configura
 
 ```rust
 pub fn process_batch(tree: &dyn Tree, watch: &Watch, unit: &Path, files: &[PathBuf], renames: &mut Renames) -> Vec<Processed> {}
+```
+
+## `process_batch_observed`
+
+Process a ready batch as `process_batch` does, telling `observe` every step of its planning.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub fn process_batch_observed(tree: &dyn Tree, watch: &Watch, unit: &Path, files: &[PathBuf], renames: &mut Renames, observe: &mut dyn FnMut(Step)) -> Vec<Processed> {}
+```
+
+## `replaced_pipelines`
+
+The pipelines of a watch that the folder configurations applying to a unit replace.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub fn replaced_pipelines(tree: &dyn Tree, watch: &Watch, unit: &Path) -> Vec<String> {}
 ```
 
 ## `Tree`

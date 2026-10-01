@@ -85,3 +85,19 @@ A batch is planned as a whole: files are put in name order, each is claimed by t
 | Given | a pipeline that reads the episode and then formats the name, and the file `Show - 12.mkv` alone |
 | When | the batch is planned |
 | Then | `Show - 12.mkv` is planned as `e12.mkv` |
+
+## `BAT-012` Planning tells each step of every file
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline of a filter, a number and a format, and a file it claims |
+| When | the batch is planned and its steps are asked for |
+| Then | the file is told once claimed, then after the number with its episode, then after the format with its name |
+
+## `BAT-013` A stopped file is told no further than the stage that stopped it
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline whose format refuses a file missing a field |
+| When | the batch is planned and its steps are asked for |
+| Then | the last step told for the file is the format, holding the refusal |

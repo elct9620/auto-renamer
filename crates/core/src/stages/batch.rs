@@ -1,6 +1,6 @@
 //! The files a pipeline claimed, as its stages take them in turn.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use super::{Effect, Flow, Stop};
 use crate::record::Record;
@@ -54,6 +54,13 @@ impl Batch {
     /// The records still going on, in the order of their paths.
     pub(crate) fn live(&self) -> impl Iterator<Item = &Record> {
         self.files.iter().filter_map(|file| file.flow.as_ref().ok())
+    }
+
+    /// Every file with the flow it holds now, in the order of their paths.
+    pub(crate) fn files(&self) -> impl Iterator<Item = (&Path, &Flow)> {
+        self.files
+            .iter()
+            .map(|file| (file.origin.as_path(), &file.flow))
     }
 
     /// The files as they ended, in the order of their paths.
