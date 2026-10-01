@@ -308,7 +308,7 @@ impl Declared {
 
 ## `Stage`
 
-One small function over a batch, which every stage there is implements.
+One small function from a batch to a batch, which every stage there is implements.
 
 | Attribute | Value |
 | --- | --- |
@@ -334,7 +334,7 @@ pub trait Stage {
 
 ## `Stage::run`
 
-Run the stage over the files the running pipeline still holds, with what the batch and the target let it know.
+Run the stage over the batch its pipeline claimed, with what the target and the pipelines before let it know, and hand on the batch it made.
 
 | Attribute | Value |
 | --- | --- |
@@ -342,13 +342,13 @@ Run the stage over the files the running pipeline still holds, with what the bat
 
 ```rust
 pub trait Stage {
-    fn run(&self, batch: &mut Batch, context: &mut Context);
+    fn run(&self, batch: Batch, context: &mut Context) -> Batch;
 }
 ```
 
 ## `Batch`
 
-The files of a batch in the order of their paths, each waiting for a pipeline, held by the one that claimed it, or stopped by one of its stages.
+The files a pipeline claimed in the order of their paths, each going on with its record or stopped by one of the stages.
 
 | Attribute | Value |
 | --- | --- |
@@ -386,7 +386,7 @@ pub trait Target {
 
 ## `Context`
 
-What a run of stages shares: the target, what it was already asked, and the numbers already handed out in the batch.
+What a run of stages shares: the target, what it was already asked, the numbers already handed out in the batch, and what the pipelines before made of their files.
 
 | Attribute | Value |
 | --- | --- |

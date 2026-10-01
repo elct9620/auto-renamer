@@ -18,7 +18,7 @@ The set of files that may relate to one another, such as a video and its subtitl
 
 ### Batch
 
-The settled files of one unit, collected until the unit has been quiet long enough, or has waited long enough, to be processed together.
+The settled files of one unit, collected until the unit has been quiet long enough, or has waited long enough, to be processed together. The part of a batch a pipeline claims is a batch of its own, which each of its stages takes and hands on.
 
 #### Rejected
 
@@ -34,7 +34,7 @@ The files of one batch whose fields agree, such as one episode's video and its s
 
 ### Stage
 
-One small function over a batch. A pipeline is a stack of stages, and each stage does one thing.
+One small function from a batch to a batch. A pipeline is a stack of stages, and each stage does one thing.
 
 #### Rejected
 

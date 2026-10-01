@@ -48,7 +48,7 @@ auto-renamer 監看資料夾的檔案事件，依管線改寫檔案的名稱與�
   /Downloads/Movies/XXX/XXX.mp4         download finishes
     └ watcher    close-write, file settles
     └ pipeline   XXX.mp4 → XXX-s1e1.mp4
-    └ move       copy to temp name, then rename
+    └ move       rename, or mv across mounts
   /Video/Movies/XXX/XXX-s1e1.mp4        ready for the media server
 ```
 
@@ -62,7 +62,7 @@ source 與 target 分離，媒體伺服器只掃描 target，它產生的 `.nfo`
 | 批次 | 何時處理 | 單元的一次收集 |
 | 群組 | 批次內誰是一組 | 階段算出的欄位 |
 
-批次是單元在視窗內收集到的檔案。群組由欄位相同的檔案組成，與批次和資料夾無關，例如同一集的影片與字幕。
+批次是單元在視窗內收集到的檔案，管線認領的那部分也是一個批次。群組由欄位相同的檔案組成，與批次和資料夾無關，例如同一集的影片與字幕。
 
 ### 0.5 進度
 
@@ -197,7 +197,7 @@ source 與 target 分離，媒體伺服器只掃描 target，它產生的 `.nfo`
   unclaimed stay in source                    planned batch ─► foreach effects
 ```
 
-一批檔案是依名稱排序的有序集合，每個階段是「集合 → 集合」的函式，逐檔階段是 map 的簡寫。單一檔案就是只有一個檔案的批次，適用同一套模型。
+一批檔案是依名稱排序的有序集合。認領把批次分給各條管線，每個階段是「批次 → 批次」的函式，逐檔階段是 map 的簡寫。單一檔案就是只有一個檔案的批次，適用同一套模型。
 
 ### 2.2 記錄
 
