@@ -11,7 +11,6 @@ import '@xyflow/react/dist/style.css'
 import { type ChangeEvent, useMemo, useState } from 'react'
 
 import {
-  STAGE_TEMPLATES,
   type Table,
   type Value,
   addStage,
@@ -26,7 +25,7 @@ import {
   stagesOf,
   stageText,
 } from './config'
-import { type Entry, type Kind, type Simulation, check, read, render, simulate } from './core'
+import { type Entry, type Kind, type Simulation, check, read, render, simulate, stages } from './core'
 import { type NodeData, type Selected, toGraph } from './graph'
 
 const EXAMPLE = `[default]
@@ -160,10 +159,10 @@ function Inspector({ config, kind, selected, onChange, onSelect }: {
         <label>
           Add a stage
           <select value="" onChange={(event) => {
-            if (event.target.value) onChange(addStage(config, selected.name, newStage(event.target.value, read)))
+            if (event.target.value) onChange(addStage(config, selected.name, newStage(event.target.value, stages(), read)))
           }}>
             <option value="">choose…</option>
-            {Object.keys(STAGE_TEMPLATES).map((kind) => <option key={kind}>{kind}</option>)}
+            {stages().map(({ name }) => <option key={name}>{name}</option>)}
           </select>
         </label>
         <button onClick={() => { onChange(setIn(config, ['pipeline', selected.name], undefined)); onSelect(null) }}>
@@ -173,8 +172,8 @@ function Inspector({ config, kind, selected, onChange, onSelect }: {
     )
   }
 
-  const stages = stagesOf(config, selected.pipeline)
-  const stage = stages[selected.index]
+  const pipelineStages = stagesOf(config, selected.pipeline)
+  const stage = pipelineStages[selected.index]
   if (stage === undefined) return null
   const at = (index: number) => onSelect({ ...selected, index })
   return (
@@ -198,7 +197,7 @@ function Inspector({ config, kind, selected, onChange, onSelect }: {
         <button disabled={selected.index === 0} onClick={() => {
           onChange(moveStage(config, selected.pipeline, selected.index, -1)); at(selected.index - 1)
         }}>Earlier</button>
-        <button disabled={selected.index === stages.length - 1} onClick={() => {
+        <button disabled={selected.index === pipelineStages.length - 1} onClick={() => {
           onChange(moveStage(config, selected.pipeline, selected.index, 1)); at(selected.index + 1)
         }}>Later</button>
         <button onClick={() => { onChange(removeStage(config, selected.pipeline, selected.index)); onSelect(null) }}>

@@ -13,6 +13,25 @@ export interface Entry {
   text: string
 }
 
+export type ParameterKind = 'text' | 'texts' | 'integer' | 'boolean'
+
+export interface Parameter {
+  name: string
+  kind: ParameterKind
+  required: boolean
+  choices: string[]
+}
+
+/** How a stage is declared, as the core describes it. `example` is inline TOML; empty for the bare name. */
+export interface Declaration {
+  name: string
+  bare: boolean
+  value: ParameterKind | null
+  parameters: Parameter[]
+  values: boolean
+  example: string
+}
+
 export interface Outcome {
   origin: string
   what: string
@@ -38,6 +57,10 @@ export function read(text: string): Table {
 
 export function render(table: Table): string {
   return wasm.render(table)
+}
+
+export function stages(): Declaration[] {
+  return wasm.stages()
 }
 
 export function simulate(config: string, watch: string, entries: Entry[]): Simulation {

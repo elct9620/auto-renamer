@@ -1,33 +1,15 @@
 // The configuration as the core reads it: a TOML table. It is the page's only state; the drawing and
 // every edit are made from it and back into it.
 
+import type { Declaration } from './core'
+
 export type Value = string | number | boolean | Value[] | Table
 export interface Table {
   [key: string]: Value
 }
 
-/** A stage as written in `stages`: its name alone, or a one-key table of its name and settings. */
+/** A stage as written in `stages`: its name alone, or a one-key table of its name and parameters. */
 export type Stage = string | Table
-
-/** Each stage the core declares, with settings it accepts, so a new stage starts out valid. */
-export const STAGE_TEMPLATES: Record<string, string> = {
-  filter: '{ ext = ["mkv", "mp4"] }',
-  number: '{ from = "path", into = "season", prefix = "Season" }',
-  regex: `{ pattern = '(\\d+)', into = "episode" }`,
-  set: '{ kind = "video" }',
-  default: '{ season = 1 }',
-  replace: '{ find = "_", with = " " }',
-  case: '{ to = "lower" }',
-  strip: '{}',
-  format: '"{show} s{season:02}e{episode:02}"',
-  lift: '1',
-  folder: '"{show}"',
-  next: '{ into = "episode", like = "{show} s{season:02}e{episode:02}" }',
-  rank: '{ into = "episode", by = ["season"] }',
-  take: '{ fields = ["episode"] }',
-  move: '',
-  cleanup: '',
-}
 
 export function asTable(value: Value | undefined): Table {
   return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : {}
@@ -61,7 +43,14 @@ function withStages(config: Table, pipeline: string, stages: Stage[]): Table {
 }
 
 export function addStage(config: Table, pipeline: string, stage: Stage): Table {
-  return withStages(config, pipeline, [...stagesOf(config, pipeline), stage])
+  return insertStage(config, pipeline, stagesOf(config, pipeline).length, stage)
+}
+
+/** Places a stage at `index`, before the stage that was there. */
+export function insertStage(config: Table, pipeline: string, index: number, stage: Stage): Table {
+  const stages = [...stagesOf(config, pipeline)]
+  stages.splice(index, 0, stage)
+  return withStages(config, pipeline, stages)
 }
 
 export function removeStage(config: Table, pipeline: string, index: number): Table {
@@ -87,6 +76,45 @@ export function replaceStage(config: Table, pipeline: string, index: number, sta
     pipeline,
     stagesOf(config, pipeline).map((current, at) => (at === index ? stage : current)),
   )
+}
+
+/** Lists the pipelines of a watch as its own, starting from the default it followed. */
+function withPipelines(config: Table, watch: string, change: (pipelines: string[]) => string[]): Table {
+  return setIn(config, ['watch', watch, 'pipelines'], change(pipelinesOf(config, watch)))
+}
+
+export function joinPipeline(config: Table, watch: string, pipeline: string): Table {
+  return withPipelines(config, watch, (pipelines) =>
+    pipelines.includes(pipeline) ? pipelines : [...pipelines, pipeline])
+}
+
+export function partPipeline(config: Table, watch: string, pipeline: string): Table {
+  return withPipelines(config, watch, (pipelines) => pipelines.filter((name) => name !== pipeline))
+}
+
+/** Rewrites every list naming a pipeline: the default's and each watch's own. */
+function rewriteListed(config: Table, change: (names: string[]) => string[]): Table {
+  let next = config
+  const defaults = asTable(config.default).pipelines
+  if (defaults !== undefined) next = setIn(next, ['default', 'pipelines'], change(asNames(defaults)))
+  for (const [watch, value] of Object.entries(asTable(config.watch))) {
+    const own = asTable(value).pipelines
+    if (own !== undefined) next = setIn(next, ['watch', watch, 'pipelines'], change(asNames(own)))
+  }
+  return next
+}
+
+/** Renames a pipeline and every list naming it. */
+export function renamePipeline(config: Table, from: string, to: string): Table {
+  const pipeline = asTable(config.pipeline)[from]
+  return rewriteListed(
+    setIn(setIn(config, ['pipeline', from], undefined), ['pipeline', to], pipeline),
+    (names) => names.map((name) => (name === from ? to : name)),
+  )
+}
+
+export function removePipeline(config: Table, name: string): Table {
+  return rewriteListed(setIn(config, ['pipeline', name], undefined), (names) => names.filter((listed) => listed !== name))
 }
 
 export function setIn(config: Table, path: string[], value: Value | undefined): Table {
@@ -119,10 +147,10 @@ export function readStage(text: string, read: (text: string) => Table): Stage {
   return stages[0] as Stage
 }
 
-/** A new stage of a kind, with the settings its template gives. */
-export function newStage(kind: string, read: (text: string) => Table): Stage {
-  const settings = STAGE_TEMPLATES[kind] ?? ''
-  return settings === '' ? kind : readStage(`{ ${kind} = ${settings} }`, read)
+/** A new stage of a kind, declared as the core's example of it. */
+export function newStage(kind: string, stages: Declaration[], read: (text: string) => Table): Stage {
+  const example = stages.find((stage) => stage.name === kind)?.example ?? ''
+  return example === '' ? kind : readStage(`{ ${kind} = ${example} }`, read)
 }
 
 export interface Download {

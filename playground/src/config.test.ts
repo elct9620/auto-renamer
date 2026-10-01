@@ -3,18 +3,24 @@ import { describe, expect, it } from 'vitest'
 import './setup.test-helper'
 import {
   type Table,
-  STAGE_TEMPLATES,
   addStage,
+  asTable,
   download,
+  insertStage,
+  joinPipeline,
   moveStage,
   newStage,
+  partPipeline,
+  pipelinesOf,
   readStage,
+  removePipeline,
   removeStage,
+  renamePipeline,
   replaceStage,
   stageName,
   stagesOf,
 } from './config'
-import { check, read, render } from './core'
+import { check, read, render, stages } from './core'
 import { pipelineId, stageId, toGraph, watchId } from './graph'
 
 const CONFIG = `
@@ -78,7 +84,7 @@ describe('editing', () => {
 
   // @behavior PGE-004
   it('adds a stage after the others', () => {
-    const config = addStage(pipeline('[{ filter = { ext = ["mkv"] } }, "move"]'), 'video', newStage('format', read))
+    const config = addStage(pipeline('[{ filter = { ext = ["mkv"] } }, "move"]'), 'video', newStage('format', stages(), read))
 
     expect(names(config)).toEqual(['filter', 'move', 'format'])
   })
@@ -98,7 +104,7 @@ describe('editing', () => {
   })
 
   // @behavior PGE-007
-  it('writes edited settings as the value of the stage', () => {
+  it('writes edited parameters as the value of the stage', () => {
     const before = pipeline('[{ filter = { ext = ["mkv"] } }, "move"]')
 
     const config = replaceStage(before, 'video', 0, readStage('{ filter = { ext = ["mp4"] } }', read))
@@ -107,19 +113,68 @@ describe('editing', () => {
   })
 
   // @behavior PGE-008
-  it('writes a stage without settings as its name', () => {
-    const config = addStage(pipeline('[]'), 'video', newStage('move', read))
+  it('writes a stage without parameters as its name', () => {
+    const config = addStage(pipeline('[]'), 'video', newStage('move', stages(), read))
 
     expect(render(config)).toContain('stages = ["move"]')
   })
 
-  it('starts every kind of stage with settings the core accepts', () => {
-    for (const kind of Object.keys(STAGE_TEMPLATES)) {
-      const config = addStage(read('[pipeline.p]\nstages = []'), 'p', newStage(kind, read))
-      const text = `${render(config)}\n[watch.w]\nsource = "/src"\npipelines = ["p"]\n`
+  // @behavior PGE-010
+  it('writes a stage dropped between two stages between them', () => {
+    const config = insertStage(pipeline('[{ filter = { ext = ["mkv"] } }, "move"]'), 'video', 1, newStage('format', stages(), read))
 
-      expect(() => check('global', text), kind).not.toThrow()
-    }
+    expect(names(config)).toEqual(['filter', 'format', 'move'])
+  })
+
+  // @behavior PGE-016
+  it('starts a new stage with the example the core describes', () => {
+    const example = stages().find((stage) => stage.name === 'regex')?.example
+
+    const config = addStage(pipeline('[]'), 'video', newStage('regex', stages(), read))
+
+    expect(stagesOf(config, 'video')).toEqual(stagesOf(read(`[pipeline.video]\nstages = [{ regex = ${example} }]`), 'video'))
+  })
+})
+
+describe('joining', () => {
+  // @behavior PGE-011
+  it('lists a pipeline a watch is joined to last', () => {
+    const config = joinPipeline(read(CONFIG), 'series', 'extra')
+
+    expect(pipelinesOf(config, 'series')).toEqual(['video', 'subtitle', 'extra'])
+  })
+
+  // @behavior PGE-012
+  it('gives a watch following the default its own list once joined', () => {
+    const config = joinPipeline(read(CONFIG), 'movies', 'subtitle')
+
+    expect(asTable(asTable(config.watch).movies).pipelines).toEqual(['video', 'subtitle'])
+  })
+
+  // @behavior PGE-013
+  it('drops the pipeline of a removed joint from the watch', () => {
+    const config = partPipeline(read(CONFIG), 'series', 'video')
+
+    expect(pipelinesOf(config, 'series')).toEqual(['subtitle'])
+  })
+})
+
+describe('pipelines', () => {
+  // @behavior PGE-014
+  it('renames a pipeline where it is listed', () => {
+    const config = renamePipeline(read(CONFIG), 'video', 'episode')
+
+    expect(asTable(config.default).pipelines).toEqual(['episode'])
+    expect(pipelinesOf(config, 'series')).toEqual(['episode', 'subtitle'])
+  })
+
+  // @behavior PGE-015
+  it('lists a removed pipeline nowhere', () => {
+    const config = removePipeline(read(CONFIG), 'video')
+
+    expect(asTable(config.default).pipelines).toEqual([])
+    expect(pipelinesOf(config, 'series')).toEqual(['subtitle'])
+    expect(asTable(config.pipeline).video).toBeUndefined()
   })
 })
 

@@ -77,3 +77,59 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | a configuration the core refuses |
 | When | a download is asked for |
 | Then | no file is offered and the reason is shown |
+
+## `PGE-010` A stage dropped between two stages is written between them
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline with the stages filter and move |
+| When | a format stage is dropped between them |
+| Then | its stages are filter, format and move |
+
+## `PGE-011` A watch joined to a pipeline lists it last
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch listing the pipeline `video` |
+| When | it is joined to `subtitle` |
+| Then | it lists `video` and `subtitle` |
+
+## `PGE-012` A watch following the default lists its own pipelines once joined
+
+| Step | Statement |
+| --- | --- |
+| Given | a default listing `video` and a watch listing none |
+| When | the watch is joined to `subtitle` |
+| Then | the watch lists `video` and `subtitle` |
+
+## `PGE-013` A joint removed drops the pipeline from the watch
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch listing `video` and `subtitle` |
+| When | its joint to `video` is removed |
+| Then | it lists `subtitle` |
+
+## `PGE-014` A renamed pipeline is renamed where it is listed
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline `video` listed by the default and by a watch |
+| When | it is renamed `episode` |
+| Then | the default and the watch list `episode` and not `video` |
+
+## `PGE-015` A removed pipeline is listed nowhere
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline `video` listed by the default and by a watch |
+| When | it is removed |
+| Then | neither the default nor the watch lists `video` |
+
+## `PGE-016` A new stage starts with the example the core describes
+
+| Step | Statement |
+| --- | --- |
+| Given | the stages the core describes |
+| When | a regex stage is added |
+| Then | the stage is written with the regex example |
