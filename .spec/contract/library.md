@@ -47,7 +47,7 @@ impl Record {
 
 ## `Record::with_vars`
 
-Add variables as fields, never replacing a built-in field.
+Add variables as fields, each an answer detection never overwrites, never replacing a built-in field.
 
 | Attribute | Value |
 | --- | --- |

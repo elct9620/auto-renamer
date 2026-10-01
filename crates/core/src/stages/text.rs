@@ -1,6 +1,6 @@
 use super::{
     Batch, Case, CaseKind, DefaultFields, Fields, Flow, Replace, SetFields, Stage, Strip,
-    text_field, write_field,
+    fill_field, text_field, write_field,
 };
 use crate::context::Context;
 use crate::record::{Record, Value};
@@ -87,7 +87,7 @@ fn write_all(
 ) -> Flow {
     for (name, value) in fields {
         if wanted(&record, name) {
-            write_field(stage, &mut record, name, value.clone())?;
+            fill_field(stage, &mut record, name, value.clone())?;
         }
     }
     Ok(record)

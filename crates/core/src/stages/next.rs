@@ -2,7 +2,7 @@ use std::path::Path;
 
 use regex::Regex;
 
-use super::{Batch, Flow, Next, Stage, Stop, refused_by, write_field};
+use super::{Batch, Flow, Next, Stage, Stop, fill_field, refused_by};
 use crate::context::Context;
 use crate::record::{Record, Value, split_extension};
 
@@ -43,7 +43,7 @@ fn apply(next: &Next, mut record: Record, context: &mut Context) -> Flow {
     };
     context.hand_out(key, number);
 
-    write_field("next", &mut record, &next.into, Value::Number(number))?;
+    fill_field("next", &mut record, &next.into, Value::Number(number))?;
     Ok(record)
 }
 

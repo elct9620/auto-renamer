@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use super::{Batch, Rank, Stage, Stop, unfit, write_field};
+use super::{Batch, Rank, Stage, Stop, fill_field, unfit};
 use crate::context::Context;
 use crate::record::{Record, Value};
 
@@ -17,7 +17,7 @@ impl Stage for Rank {
                 .next()
                 .expect("a rank answers once for each record")?;
             if let Some(number) = number {
-                write_field("rank", &mut record, &self.into, Value::Number(number))?;
+                fill_field("rank", &mut record, &self.into, Value::Number(number))?;
             }
             Ok(record)
         })

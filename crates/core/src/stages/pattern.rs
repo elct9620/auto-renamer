@@ -1,4 +1,4 @@
-use super::{Batch, Flow, Pattern, Stage, Stop, write_field, written_field};
+use super::{Batch, Flow, Pattern, Stage, Stop, fill_field, write_field, written_field};
 use crate::context::Context;
 use crate::record::{Record, Value};
 
@@ -44,7 +44,7 @@ fn extract_into(
         return Ok(());
     };
     match captures.get(1).or_else(|| captures.get(0)) {
-        Some(found) => write_field("regex", record, into, typed(found.as_str())),
+        Some(found) => fill_field("regex", record, into, typed(found.as_str())),
         None => Ok(()),
     }
 }
@@ -55,7 +55,7 @@ fn extract_named(pattern: &Pattern, text: &str, record: &mut Record) -> Result<(
     };
     for name in pattern.pattern.capture_names().flatten() {
         if let Some(found) = captures.name(name) {
-            write_field("regex", record, name, typed(found.as_str()))?;
+            fill_field("regex", record, name, typed(found.as_str()))?;
         }
     }
     Ok(())

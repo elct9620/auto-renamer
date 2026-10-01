@@ -110,6 +110,14 @@ What a stage answers for one record: the record to go on with, or the stop that 
 
 - `Outcome` - Flow is a result, so a stage passes a stop on instead of matching on it.
 
+### Answer
+
+A field the `vars` of a configuration gave a file, the nearest folder configuration first. Detecting stages and the values a pipeline fixes never overwrite an answer; stages that rework a value still apply to it.
+
+#### Rejected
+
+- `Override` - Answer is what the design calls it; overriding is what folder configurations do to whole pipelines.
+
 ### Step
 
 What one file holds at one point of its planning: once a pipeline claims it, and after each stage it reaches, until a stage stops it. Only the playground asks for steps; the CLI plans without keeping any.

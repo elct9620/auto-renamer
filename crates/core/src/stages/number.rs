@@ -3,7 +3,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use super::{Batch, Flow, Number, Prefix, Stage, write_field, written_field};
+use super::{Batch, Flow, Number, Prefix, Stage, fill_field, written_field};
 use crate::context::Context;
 use crate::record::{Record, Value};
 
@@ -79,7 +79,7 @@ fn apply(number: &Number, mut record: Record) -> Flow {
     };
 
     if let Some(found) = found {
-        write_field("number", &mut record, &number.into, Value::Number(found))?;
+        fill_field("number", &mut record, &number.into, Value::Number(found))?;
     }
     Ok(record)
 }

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use super::{Batch, Flow, Stage, Stop, Take, refused_by, write_field};
+use super::{Batch, Flow, Stage, Stop, Take, fill_field, refused_by};
 use crate::context::{Context, Earlier};
 use crate::record::{Record, split_extension};
 
@@ -77,7 +77,7 @@ impl Take {
             let value = sibling.field(field).ok_or_else(|| {
                 Stop::rejected("take", format!("the file it takes from has no `{field}`"))
             })?;
-            write_field("take", &mut record, field, value.clone())?;
+            fill_field("take", &mut record, field, value.clone())?;
         }
         Ok(record)
     }

@@ -70,6 +70,15 @@ fn write_field(stage: &str, record: &mut Record, field: &str, value: Value) -> R
     Ok(())
 }
 
+/// Writes a field a stage detected or a pipeline fixed, unless `vars` answered it: an answer is what the
+/// user gave for what detection cannot find, so it stands.
+fn fill_field(stage: &str, record: &mut Record, field: &str, value: Value) -> Result<(), Stop> {
+    if record.is_answer(field) {
+        return Ok(());
+    }
+    write_field(stage, record, field, value)
+}
+
 /// The refusal of a stage that could not go on, for the reason it met.
 fn refused_by<E: ToString>(stage: &str) -> impl Fn(E) -> Stop + '_ {
     move |reason| Stop::rejected(stage, reason.to_string())

@@ -1,4 +1,5 @@
-use std::collections::BTreeMap;
+use std::collections::btree_map::Entry;
+use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsStr;
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -42,6 +43,8 @@ pub struct Record {
     origin: PathBuf,
     plan: PathBuf,
     fields: BTreeMap<String, Value>,
+    /// The fields `vars` gave, which detection never overwrites.
+    answers: BTreeSet<String>,
 }
 
 impl Record {
@@ -71,15 +74,24 @@ impl Record {
             origin: path.to_path_buf(),
             plan: path.to_path_buf(),
             fields,
+            answers: BTreeSet::new(),
         })
     }
 
-    /// Adds variables as fields; a built-in field is never replaced.
+    /// Adds variables as fields, each an answer; a built-in field is never replaced.
     pub fn with_vars(mut self, vars: BTreeMap<String, Value>) -> Record {
         for (name, value) in vars {
-            self.fields.entry(name).or_insert(value);
+            if let Entry::Vacant(field) = self.fields.entry(name.clone()) {
+                field.insert(value);
+                self.answers.insert(name);
+            }
         }
         self
+    }
+
+    /// Whether `vars` gave this field.
+    pub(crate) fn is_answer(&self, name: &str) -> bool {
+        self.answers.contains(name)
     }
 
     /// The path the record was made from, which no stage rewrites.
