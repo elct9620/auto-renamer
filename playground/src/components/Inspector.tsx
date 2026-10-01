@@ -3,14 +3,12 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Choice } from '@/components/Choice'
+import { SettingsForm } from '@/components/SettingsForm'
 import { KIND_ICONS } from '@/components/kinds'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { errorOf } from '@/lib/utils'
 import {
   type Table,
-  type Value,
   addStage,
   asTable,
   moveStage,
@@ -23,7 +21,7 @@ import {
   stageName,
   stagesOf,
 } from '../config'
-import { type Kind, read, render, stages } from '../core'
+import { type Kind, read, stages } from '../core'
 import type { Selected } from '../graph'
 import { StageForm } from './StageForm'
 
@@ -35,41 +33,6 @@ function Field({ label, children, error }: { label: string; children: React.Reac
       {error && <p className="text-xs text-destructive">{error}</p>}
     </label>
   )
-}
-
-/** A text field whose value is read as an inline TOML value, applied once it reads. It starts over from
- * the configuration whenever the configuration's value changes, as after an import. */
-function TomlField(props: { label: string; value: string; onApply: (value: Value | undefined) => void }) {
-  return <EditedTomlField key={props.value} {...props} />
-}
-
-function EditedTomlField({ label, value, onApply }: { label: string; value: string; onApply: (value: Value | undefined) => void }) {
-  const [text, setText] = useState(value)
-  const [error, setError] = useState('')
-  const apply = () => {
-    if (text.trim() === '') {
-      setError('')
-      onApply(undefined)
-      return
-    }
-    try {
-      onApply(read(`value = ${text}`).value)
-      setError('')
-    } catch (failure) {
-      setError(errorOf(failure))
-    }
-  }
-  return (
-    <Field label={label} error={error}>
-      <Textarea className="min-h-9 font-mono text-xs" value={text} rows={1}
-        onChange={(event) => setText(event.target.value)} onBlur={apply} />
-    </Field>
-  )
-}
-
-function inline(value: Value | undefined): string {
-  if (value === undefined) return ''
-  return render({ value: [value] }).trim().replace(/^value = \[/, '').replace(/\]$/, '')
 }
 
 function Section({ title, icon: Icon, children }: { title: string; icon: LucideIcon; children: React.ReactNode }) {
@@ -92,32 +55,20 @@ export function Inspector({ config, kind, selected, onChange, onSelect }: {
   const [nameError, setNameError] = useState('')
 
   if (selected === null) {
-    const root = kind === 'global' ? ['default'] : []
-    const defaults = asTable(root.length ? config.default : config)
     return (
       <Section icon={Settings2} title={kind === 'global' ? t('inspector.defaults') : t('inspector.folder')}>
         <p className="text-xs text-muted-foreground">{t('inspector.hint')}</p>
-        <TomlField key={`vars-${kind}`} label="vars" value={inline(defaults.vars)}
-          onApply={(value) => onChange(setIn(config, [...root, 'vars'], value))} />
-        {kind === 'global' && (
-          <TomlField key="default-pipelines" label="pipelines" value={inline(defaults.pipelines)}
-            onApply={(value) => onChange(setIn(config, ['default', 'pipelines'], value))} />
-        )}
-        <TomlField key={`batch-${kind}`} label="batch_max" value={inline(defaults.batch_max)}
-          onApply={(value) => onChange(setIn(config, [...root, 'batch_max'], value))} />
+        <SettingsForm config={config} scope={kind === 'global' ? 'default' : 'folder'} path={kind === 'global' ? ['default'] : []}
+          onChange={onChange} />
       </Section>
     )
   }
 
   if (selected.kind === 'watch') {
     const path = ['watch', selected.name]
-    const watch = asTable(asTable(config.watch)[selected.name])
     return (
       <Section icon={KIND_ICONS.watch} title={t('inspector.watch', { name: selected.name })}>
-        {['source', 'target', 'unit', 'pipelines', 'vars', 'dry_run'].map((key) => (
-          <TomlField key={`${selected.name}-${key}`} label={key} value={inline(watch[key])}
-            onApply={(value) => onChange(setIn(config, [...path, key], value))} />
-        ))}
+        <SettingsForm config={config} scope="watch" path={path} onChange={onChange} />
         <Button variant="destructive" size="sm" onClick={() => { onChange(setIn(config, path, undefined)); onSelect(null) }}>
           <Trash2 />{t('inspector.removeWatch')}
         </Button>

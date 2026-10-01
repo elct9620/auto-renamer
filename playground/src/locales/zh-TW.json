@@ -42,7 +42,14 @@
     "later": "往後",
     "remove": "移除",
     "required": "必填",
-    "addValue": "新增一個值"
+    "addValue": "新增一個值",
+    "valueName": "名稱",
+    "valueOf": "{{name}} 的值",
+    "unlist": "從清單移除 {{name}}",
+    "followsDefault": "沿用預設",
+    "list": "加入管線",
+    "useDefault": "改回沿用預設",
+    "notSimulated": "不模擬"
   },
   "tree": {
     "source": "來源",
@@ -78,5 +85,10 @@
   "canvas": {
     "resetLayout": "重設版面"
   },
-  "restore": "恢復範例"
+  "restore": "恢復範例",
+  "unit": {
+    "directory": "directory（父資料夾）",
+    "source": "source（整個來源）",
+    "root": "root（依樣式）"
+  }
 }

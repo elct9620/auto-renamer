@@ -229,3 +229,11 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | a pipeline whose format stage was moved by hand |
 | When | its stages are put in another order |
 | Then | each of its stages is drawn where its order places it |
+
+## `PGE-029` Every setting the page offers is one the CLI reads
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch, the default or a folder configuration holding a setting its form offers, at the setting's example |
+| When | the configuration is checked |
+| Then | it is not refused |

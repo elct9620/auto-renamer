@@ -42,7 +42,14 @@
     "later": "Later",
     "remove": "Remove",
     "required": "Required",
-    "addValue": "Add a value"
+    "addValue": "Add a value",
+    "valueName": "Name",
+    "valueOf": "Value of {{name}}",
+    "unlist": "Remove {{name}} from the list",
+    "followsDefault": "follows the default",
+    "list": "Add a pipeline",
+    "useDefault": "Follow the default",
+    "notSimulated": "not simulated"
   },
   "tree": {
     "source": "Source",
@@ -78,5 +85,10 @@
   "canvas": {
     "resetLayout": "Reset layout"
   },
-  "restore": "Restore example"
+  "restore": "Restore example",
+  "unit": {
+    "directory": "directory (parent folder)",
+    "source": "source (whole source)",
+    "root": "root (by pattern)"
+  }
 }
