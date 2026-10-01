@@ -271,13 +271,13 @@ The playground page draws a configuration for people who do not read TOML: each 
 | When | the layout is reset |
 | Then | the watch is drawn where it was first drawn |
 
-## `PGE-034` Restoring the example brings back its configuration and tree
+## `PGE-034` Choosing an example brings in its configuration and tree
 
 | Step | Statement |
 | --- | --- |
-| Given | the example with a stage removed |
+| Given | the example the page opened with, with a stage removed |
 | Given | a file added to the source |
-| When | the example is restored |
+| When | that example is chosen from the examples |
 | Then | the configuration text and the tree are those the page opened with |
 
 ## `PGE-035` Adding in a folder starts the new path from that folder
@@ -441,6 +441,14 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | `Alpha/auto-renamer.toml` opened from the tree |
 | When | the download is chosen |
 | Then | the file offered is named `auto-renamer.toml` |
+
+## `PGE-055` The page opens on the single-episode example
+
+| Step | Statement |
+| --- | --- |
+| Given | the page just opened |
+| When | the trees are shown |
+| Then | the source holds the single-episode files of each show, each show folder with its folder configuration |
 
 ## `PGE-056` A pipeline's stages are stacked below it in order
 

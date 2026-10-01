@@ -84,7 +84,10 @@
   "canvas": {
     "resetLayout": "重設版面"
   },
-  "restore": "恢復範例",
+  "examples": {
+    "label": "範例",
+    "single": "單檔集數"
+  },
   "unit": {
     "directory": "directory（父資料夾）",
     "source": "source（整個來源）",

@@ -84,7 +84,10 @@
   "canvas": {
     "resetLayout": "Reset layout"
   },
-  "restore": "Restore example",
+  "examples": {
+    "label": "Examples",
+    "single": "Single episodes"
+  },
   "unit": {
     "directory": "directory (parent folder)",
     "source": "source (whole source)",

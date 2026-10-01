@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, Download, FileCog, Play, RotateCcw, Settings2, Upload } from 'lucide-react'
+import { ArrowLeft, Check, Download, FileCog, Play, Settings2, Upload } from 'lucide-react'
 import { type ChangeEvent, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -13,35 +13,11 @@ import { Button } from '@/components/ui/button'
 import { errorOf } from '@/lib/utils'
 import { type Table, asTable, download, setIn } from './config'
 import { type Entry, type Kind, type Simulation, check, read, render, simulate } from './core'
+import { type Example, EXAMPLES, FIRST } from './examples'
 import type { Selected } from './graph'
 import { LANGUAGES } from './i18n'
 import { FOLDER_CONFIGURATION, marksOf, rootsOf, writeFile } from './tree'
 
-const EXAMPLE = `[default]
-pipelines = ["video"]
-
-[pipeline.video]
-stages = [
-  { filter = { ext = ["mkv", "mp4"] } },
-  { number = { from = "path", into = "season", prefix = "Season" } },
-  { regex = { pattern = '(\\d+)', into = "episode" } },
-  { format = "{show} s{season:02}e{episode:02}" },
-  "move",
-]
-
-[watch.series]
-source = "/downloads"
-target = "/video"
-unit = { root = ["*/*"] }
-vars = { show = "Alpha" }
-`
-
-const EXAMPLE_TREE: Entry[] = [
-  { path: '/downloads/Alpha/Season 1/[Team] Alpha 01 [1080p].mkv', folder: false, modified: Date.now(), text: '' },
-  { path: '/downloads/Alpha/Season 1/[Team] Alpha 02 [1080p].mkv', folder: false, modified: Date.now(), text: '' },
-]
-
-/** Everything the page holds starts from the example, so restoring it is starting the page over. */
 function checked(kind: Kind, text: string): { ok: boolean; lines: string[] } {
   try {
     return { ok: true, lines: check(kind, text) }
@@ -50,20 +26,22 @@ function checked(kind: Kind, text: string): { ok: boolean; lines: string[] } {
   }
 }
 
+/** Everything the page holds starts from an example, so choosing one, even the same again, starts the page over. */
 export default function App() {
-  const [restored, setRestored] = useState(0)
-  return <Playground key={restored} onRestore={() => setRestored(restored + 1)} />
+  const [chosen, setChosen] = useState({ example: FIRST, times: 0 })
+  return <Playground key={chosen.times} example={chosen.example}
+    onChoose={(example) => setChosen({ example, times: chosen.times + 1 })} />
 }
 
-function Playground({ onRestore }: { onRestore: () => void }) {
+function Playground({ example, onChoose }: { example: Example; onChoose: (example: Example) => void }) {
   const { t, i18n } = useTranslation()
-  const [config, setConfig] = useState<Table>(() => read(EXAMPLE))
+  const [config, setConfig] = useState<Table>(() => read(example.config))
   // The folder configuration being edited, by its path in the tree; the global configuration otherwise.
   const [editing, setEditing] = useState<string | null>(null)
   const [selected, setSelected] = useState<Selected | null>(null)
   const [message, setMessage] = useState('')
-  const [entries, setEntries] = useState<Entry[]>(EXAMPLE_TREE)
-  const [watch, setWatch] = useState('series')
+  const [entries, setEntries] = useState<Entry[]>(example.entries)
+  const [watch, setWatch] = useState(example.watch)
   const [simulation, setSimulation] = useState<Simulation | null>(null)
 
   const folder = entries.find((entry) => entry.path === editing)
@@ -170,7 +148,9 @@ function Playground({ onRestore }: { onRestore: () => void }) {
           <label><Upload />{t('import')}<input type="file" accept=".toml" onChange={importFile} hidden /></label>
         </Button>
         <Button size="sm" onClick={save} disabled={!status.ok}><Download />{t('download')}</Button>
-        <Button variant="ghost" size="sm" onClick={onRestore}><RotateCcw />{t('restore')}</Button>
+        <Choice label={t('examples.label')} placeholder={t('examples.label')} className="w-auto" value=""
+          options={EXAMPLES.map((one) => ({ value: one.id, label: t(`examples.${one.id}`) }))}
+          onChange={(id) => onChoose(EXAMPLES.find((one) => one.id === id)!)} />
         <Badge variant={status.ok ? 'secondary' : 'destructive'}>
           {status.ok ? (status.lines.length ? t('status.warnings', { count: status.lines.length }) : t('status.valid')) : t('status.refused')}
         </Badge>

@@ -18,9 +18,19 @@ async function dragBy(page: Page, name: string, dy: number) {
   await page.mouse.up()
 }
 
-async function addFolderConfiguration(page: Page, folder: string) {
-  await page.getByRole('combobox', { name: 'Path of a new file or folder' }).first().fill(`${folder}/auto-renamer.toml`)
-  await page.getByRole('button', { name: 'Add file' }).first().click()
+// The opening example renames in place, so the target shows the same tree; counts are taken in the source.
+function source(page: Page) {
+  return page.getByRole('group', { name: 'Source' })
+}
+
+// Every show of the opening example carries a folder configuration; Alpha's comes first in the tree.
+async function openAlphaConfiguration(page: Page) {
+  await page.getByRole('button', { name: 'auto-renamer.toml', exact: true }).first().click()
+}
+
+async function chooseExample(page: Page, name: string) {
+  await page.getByRole('combobox', { name: 'Examples' }).click()
+  await page.getByRole('option', { name }).click()
 }
 
 test.beforeEach(async ({ page }) => {
@@ -50,15 +60,15 @@ test('a reset layout draws every node where its order places it', async ({ page 
 })
 
 // @behavior PGE-034
-test('restoring the example brings back its configuration and tree', async ({ page }) => {
+test('choosing the example again brings back its configuration and tree', async ({ page }) => {
   const before = await configText(page)
   await node(page, 'move').click()
   await page.getByRole('button', { name: 'Remove', exact: true }).click()
   const path = page.getByRole('combobox', { name: 'Path of a new file or folder' }).first()
-  await path.fill('Beta/01.mkv')
+  await path.fill('Omega/01.mkv')
   await page.getByRole('button', { name: 'Add file' }).first().click()
 
-  await page.getByRole('button', { name: 'Restore example' }).click()
+  await chooseExample(page, 'Single episodes')
 
   expect(await configText(page)).toBe(before)
   await expect(page.getByText('01.mkv', { exact: true })).toHaveCount(0)
@@ -66,11 +76,11 @@ test('restoring the example brings back its configuration and tree', async ({ pa
 
 // @behavior PGE-035
 test('adding in a folder starts the new path from that folder', async ({ page }) => {
-  await page.getByText('Season 1', { exact: true }).hover()
+  await page.getByText('Season 03', { exact: true }).first().hover()
 
-  await page.getByRole('button', { name: 'Add in Season 1' }).click()
+  await page.getByRole('button', { name: 'Add in Season 03' }).first().click()
 
-  await expect(page.getByRole('combobox', { name: 'Path of a new file or folder' }).first()).toHaveValue('Alpha/Season 1/')
+  await expect(page.getByRole('combobox', { name: 'Path of a new file or folder' }).first()).toHaveValue('Series/Zeta-Show/Season 03/')
 })
 
 // @behavior PGE-036
@@ -86,8 +96,8 @@ test('a parameter limited to some values offers them in a list', async ({ page }
 test('a required parameter left empty is pointed out', async ({ page }) => {
   await node(page, 'video').click()
   await page.getByRole('combobox', { name: 'Add a stage' }).click()
-  await page.getByRole('option', { name: 'next' }).click()
-  await node(page, 'next').click()
+  await page.getByRole('option', { name: 'rank' }).click()
+  await node(page, 'rank').click()
   const into = page.getByRole('textbox', { name: /^Target field into/ })
   await into.fill('')
 
@@ -98,11 +108,9 @@ test('a required parameter left empty is pointed out', async ({ page }) => {
 
 // @behavior PGE-038
 test('a folder configuration chosen in the tree is edited with the trees still shown', async ({ page }) => {
-  await addFolderConfiguration(page, 'Alpha')
+  await openAlphaConfiguration(page)
 
-  await page.getByRole('button', { name: 'auto-renamer.toml', exact: true }).click()
-
-  await expect(page.getByText('Folder configuration of /downloads/Alpha')).toBeVisible()
+  await expect(page.getByText('Folder configuration of /downloads/Series/Alpha')).toBeVisible()
   await expect(page.getByRole('heading', { name: /^Source/ })).toBeVisible()
   await expect(page.getByRole('heading', { name: /^Target/ })).toBeVisible()
 })
@@ -113,7 +121,7 @@ test('the language chosen in the header is the one the page speaks', async ({ pa
 
   await page.getByRole('option', { name: '繁體中文' }).click()
 
-  await expect(page.getByRole('button', { name: '恢復範例' })).toBeVisible()
+  await expect(page.getByRole('combobox', { name: '範例' })).toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW')
 })
 
@@ -183,25 +191,19 @@ test('the canvas sits between the palette and the inspector, above the trees', a
 
 // @behavior PGE-048
 test('a folder configuration edited in the form applies in the next simulation', async ({ page }) => {
-  await addFolderConfiguration(page, 'Alpha')
-  await page.getByRole('button', { name: 'auto-renamer.toml', exact: true }).click()
-  await page.getByRole('button', { name: 'Add a value' }).click()
-  const name = page.getByRole('textbox', { name: 'Name' })
-  await name.fill('show')
-  await name.blur()
+  await openAlphaConfiguration(page)
   const value = page.getByRole('textbox', { name: 'Value of show' })
-  await value.fill('Beta')
+  await value.fill('Omega')
   await value.blur()
 
   await page.getByRole('button', { name: 'Trigger' }).click()
 
-  await expect(page.getByText('Beta s01e01.mkv', { exact: true })).toBeVisible()
+  await expect(page.getByText('Omega s01e12.mkv', { exact: true })).toBeVisible()
 })
 
 // @behavior PGE-049
 test('going back to the global configuration edits it again', async ({ page }) => {
-  await addFolderConfiguration(page, 'Alpha')
-  await page.getByRole('button', { name: 'auto-renamer.toml', exact: true }).click()
+  await openAlphaConfiguration(page)
   await expect(node(page, 'series')).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Back to the global configuration' }).click()
@@ -218,17 +220,17 @@ test('an imported folder configuration lands at the source root while the global
   })
 
   await expect(page.getByText('Folder configuration of /downloads', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'auto-renamer.toml', exact: true })).toBeVisible()
+  await expect(source(page).getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(7)
 })
 
 // @behavior PGE-051
 test('a folder configuration added in a folder is opened', async ({ page }) => {
-  await page.getByText('Alpha', { exact: true }).first().hover()
+  await page.getByText('Series', { exact: true }).first().hover()
 
-  await page.getByRole('button', { name: 'Add a folder configuration in Alpha' }).click()
+  await page.getByRole('button', { name: 'Add a folder configuration in Series' }).first().click()
 
-  await expect(page.getByRole('button', { name: 'auto-renamer.toml', exact: true })).toBeVisible()
-  await expect(page.getByText('Folder configuration of /downloads/Alpha', { exact: true })).toBeVisible()
+  await expect(source(page).getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(7)
+  await expect(page.getByText('Folder configuration of /downloads/Series', { exact: true })).toBeVisible()
 })
 
 // @behavior PGE-052
@@ -243,8 +245,7 @@ test('a stage is shown by its name beside the CLI\'s name', async ({ page }) => 
 
 // @behavior PGE-053
 test('an imported folder configuration replaces the one being edited', async ({ page }) => {
-  await addFolderConfiguration(page, 'Alpha')
-  await page.getByRole('button', { name: 'auto-renamer.toml', exact: true }).click()
+  await openAlphaConfiguration(page)
 
   await page.locator('input[type=file]').setInputFiles({
     name: 'auto-renamer.toml',
@@ -252,17 +253,25 @@ test('an imported folder configuration replaces the one being edited', async ({ 
     buffer: Buffer.from('[vars]\nshow = "Beta"\n'),
   })
 
-  await expect(page.getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(1)
+  await expect(source(page).getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(6)
   expect(await configText(page)).toContain('show = "Beta"')
 })
 
 // @behavior PGE-054
 test('a download is the configuration being edited', async ({ page }) => {
-  await addFolderConfiguration(page, 'Alpha')
-  await page.getByRole('button', { name: 'auto-renamer.toml', exact: true }).click()
+  await openAlphaConfiguration(page)
 
   const download = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download' }).click()
 
   expect((await download).suggestedFilename()).toBe('auto-renamer.toml')
+})
+
+// @behavior PGE-055
+test('the page opens on the single-episode example', async ({ page }) => {
+  const tree = source(page)
+
+  await expect(tree.getByText('Zeta-Show', { exact: true })).toBeVisible()
+  await expect(tree.getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(6)
+  await expect(tree.getByText('[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv', { exact: true })).toBeVisible()
 })

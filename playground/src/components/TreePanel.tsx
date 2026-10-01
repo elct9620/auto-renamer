@@ -111,7 +111,7 @@ export function TreePanel({ title, root, entries, marks, editing, onEdit, onOpen
     setPath('')
   }
   return (
-    <div className="flex min-h-0 flex-col gap-2 p-3">
+    <div role="group" aria-label={title} className="flex min-h-0 flex-col gap-2 p-3">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {title} <span className="font-mono normal-case">{root}</span>
       </h2>
