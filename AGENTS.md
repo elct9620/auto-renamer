@@ -62,7 +62,8 @@ Some tests depend on things outside their own file.
 | kernel overflow in `tests/queue.rs` | a handed-in overflow notice |
 | moves between mounts in `tests/move.rs` | the `mv` on PATH |
 | MV-028 in `tests/move.rs` | the 1 MiB tmpfs at `/small` of the test container |
-| `playground/src/config.test.ts` | the module `pnpm wasm` builds, and the stages `declare.rs` names |
+| `playground/src/config.test.ts`, `tree.test.ts` | the module `pnpm wasm` builds, whose `stages()` lists the stages `declare.rs` reads |
+| DEC-035 in `tests/declaration.rs` | debug assertions, which a release build drops |
 
 Editing a design example can break a test, and the image build leaves out `docs/`, so `tests/examples.rs` runs only on the host or in the mounted container. OrbStack queues 1,048,576 kernel events, so an overflow cannot be caused by volume there. CI runs the tests with the runner's GNU `mv`; only the test container uses the busybox `mv` the image ships.
 
@@ -75,7 +76,7 @@ Where to look for each part of the project.
 | `crates/core/` | What decides about files: pipeline, configuration, effects through a `Tree` |
 | `crates/wasm/` | The core for the playground, over a virtual tree |
 | `src/` | The CLI: filesystem, watcher, runner; modules are mapped in `docs/architecture.md` |
-| `playground/` | The GitHub Pages page: pnpm, Vite, React Flow |
+| `playground/` | The GitHub Pages page: pnpm, Vite, React Flow, Tailwind CSS with shadcn/ui, i18next |
 | `Dockerfile`, `.dockerignore` | Image build with a `test` stage; `.dockerignore` is an allow-list, `crates/wasm` by manifest only |
 | `docker-compose.test.yml` | `sut` service: the tests on Linux, the repo mounted |
 | `.github/workflows/` | `ci.yml` checks, publishes `latest` and the playground; `release.yml` releases |

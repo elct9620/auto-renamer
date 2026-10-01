@@ -4,10 +4,10 @@ auto-renamer 是一個 workspace：`crates/core` 決定檔案的名稱與去向�
 
 ```
   crates/core   auto-renamer-core: pipeline, config, effects through a Tree
-  crates/wasm   auto-renamer-wasm: check, read, render, simulate on a virtual tree
+  crates/wasm   auto-renamer-wasm: check, read, render, stages, simulate on a virtual tree
   src/lib.rs    auto-renamer: filesystem, watcher, runner; re-exports core
   src/main.rs   wiring only
-  playground/   React Flow page over crates/wasm; the TOML table is its only state
+  playground/   React Flow, shadcn/ui, i18next over crates/wasm; the TOML table is its only state
 ```
 
 ## 結構風格
@@ -75,6 +75,17 @@ core 不碰檔案系統與通知，所以能編成 WASM 給 playground 用。
 ```
 
 每個階段實作 `Stage`，是「批次 → 批次」的函式，只看得到自己管線認領的檔案；認領由 `engine` 做，前面管線的結果經 `Context` 唯讀提供。`Declared` enum 只是可宣告的封閉清單，全 crate 只有一處把它轉成 `&dyn Stage`，新增階段時編譯器會在那裡要求補上。
+
+### 宣告表
+
+解析器與 playground 的表單共用同一張宣告表，兩邊認得的參數因此相同。
+
+```
+  DECLARATIONS ─┬─► Declared::read   dispatch by name
+                └─► stages()          forms in the playground
+```
+
+debug 建置讀到表上沒列的參數就中止，測試因此會擋下描述與解析器的分歧。
 
 ### 批次組合
 

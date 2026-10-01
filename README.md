@@ -40,7 +40,7 @@ auto-renamer --config /etc/auto-renamer/config.toml
 
 ## Playground
 
-不寫 TOML 也能組設定：[Playground](https://elct9620.github.io/auto-renamer/) 把 watch 與管線畫成流程圖，在虛擬目錄上模擬改名，再下載成全域設定或 `auto-renamer.toml`。
+不寫 TOML 也能組設定：在 [Playground](https://elct9620.github.io/auto-renamer/) 的流程圖上拖放階段、把 watch 連到管線，觸發後在來源與目標兩棵虛擬目錄上看每個檔案的去向，再下載成全域設定或 `auto-renamer.toml`。介面有繁體中文與英文。
 
 | 部分 | 在 playground 裡 |
 |---|---|
