@@ -10,8 +10,8 @@ impl Stage for SetFields {
         "set"
     }
 
-    fn run(&self, batch: &mut Batch, _: &mut Context) {
-        batch.each(|record| write_all("set", &self.0, record, |_, _| true));
+    fn run(&self, batch: Batch, _: &mut Context) -> Batch {
+        batch.each(|record| write_all("set", &self.0, record, |_, _| true))
     }
 }
 
@@ -20,12 +20,12 @@ impl Stage for DefaultFields {
         "default"
     }
 
-    fn run(&self, batch: &mut Batch, _: &mut Context) {
+    fn run(&self, batch: Batch, _: &mut Context) -> Batch {
         batch.each(|record| {
             write_all("default", &self.0, record, |record, name| {
                 record.field(name).is_none()
             })
-        });
+        })
     }
 }
 
@@ -34,12 +34,12 @@ impl Stage for Replace {
         "replace"
     }
 
-    fn run(&self, batch: &mut Batch, _: &mut Context) {
+    fn run(&self, batch: Batch, _: &mut Context) -> Batch {
         batch.each(|record| {
             rewrite("replace", &self.field, record, |text| {
                 text.replace(&self.find, &self.with)
             })
-        });
+        })
     }
 }
 
@@ -48,14 +48,14 @@ impl Stage for Case {
         "case"
     }
 
-    fn run(&self, batch: &mut Batch, _: &mut Context) {
+    fn run(&self, batch: Batch, _: &mut Context) -> Batch {
         batch.each(|record| {
             rewrite("case", &self.field, record, |text| match self.to {
                 CaseKind::Lower => text.to_lowercase(),
                 CaseKind::Upper => text.to_uppercase(),
                 CaseKind::Title => title_case(text),
             })
-        });
+        })
     }
 }
 
@@ -64,7 +64,7 @@ impl Stage for Strip {
         "strip"
     }
 
-    fn run(&self, batch: &mut Batch, _: &mut Context) {
+    fn run(&self, batch: Batch, _: &mut Context) -> Batch {
         batch.each(|record| {
             rewrite("strip", &self.field, record, |text| {
                 let stripped = self
@@ -75,7 +75,7 @@ impl Stage for Strip {
                     });
                 stripped.split_whitespace().collect::<Vec<_>>().join(" ")
             })
-        });
+        })
     }
 }
 

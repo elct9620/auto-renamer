@@ -11,8 +11,8 @@ impl Stage for Next {
         "next"
     }
 
-    fn run(&self, batch: &mut Batch, context: &mut Context) {
-        batch.each(|record| apply(self, record, context));
+    fn run(&self, batch: Batch, context: &mut Context) -> Batch {
+        batch.each(|record| apply(self, record, context))
     }
 }
 

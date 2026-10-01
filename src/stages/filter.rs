@@ -7,14 +7,14 @@ impl Stage for Filter {
         "filter"
     }
 
-    fn run(&self, batch: &mut Batch, _: &mut Context) {
+    fn run(&self, batch: Batch, _: &mut Context) -> Batch {
         batch.each(|record| {
             if self.accepts(&record) {
                 Ok(record)
             } else {
                 Err(Stop::Excluded)
             }
-        });
+        })
     }
 }
 

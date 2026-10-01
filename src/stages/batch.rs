@@ -35,18 +35,20 @@ impl Batch {
 
     /// Runs a change over every record still going on. A record goes on as the change answers it, and
     /// what stops one ends its way, so no later change sees it.
-    pub(crate) fn each(&mut self, mut change: impl FnMut(Record) -> Flow) {
+    pub(crate) fn each(mut self, mut change: impl FnMut(Record) -> Flow) -> Batch {
         for file in &mut self.files {
             let flow = std::mem::replace(&mut file.flow, Err(Stop::Excluded));
             file.flow = flow.and_then(&mut change);
         }
+        self
     }
 
     /// Notes an effect to be done to every file still going on.
-    pub(crate) fn schedule(&mut self, effect: Effect) {
+    pub(crate) fn schedule(mut self, effect: Effect) -> Batch {
         for file in self.files.iter_mut().filter(|file| file.flow.is_ok()) {
             file.effects.push(effect.clone());
         }
+        self
     }
 
     /// The records still going on, in the order of their paths.

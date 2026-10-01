@@ -15,8 +15,8 @@ impl Stage for Move {
         "move"
     }
 
-    fn run(&self, batch: &mut Batch, _: &mut Context) {
-        batch.schedule(Effect::Move(self.clone()));
+    fn run(&self, batch: Batch, _: &mut Context) -> Batch {
+        batch.schedule(Effect::Move(self.clone()))
     }
 }
 
@@ -25,7 +25,7 @@ impl Stage for Cleanup {
         "cleanup"
     }
 
-    fn run(&self, batch: &mut Batch, _: &mut Context) {
-        batch.schedule(Effect::Cleanup(self.clone()));
+    fn run(&self, batch: Batch, _: &mut Context) -> Batch {
+        batch.schedule(Effect::Cleanup(self.clone()))
     }
 }

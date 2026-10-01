@@ -10,7 +10,7 @@ impl Stage for Rank {
         "rank"
     }
 
-    fn run(&self, batch: &mut Batch, _: &mut Context) {
+    fn run(&self, batch: Batch, _: &mut Context) -> Batch {
         let mut numbers = self.number(batch.live().collect()).into_iter();
         batch.each(|mut record| {
             let number = numbers
@@ -20,7 +20,7 @@ impl Stage for Rank {
                 write_field("rank", &mut record, &self.into, Value::Number(number))?;
             }
             Ok(record)
-        });
+        })
     }
 }
 

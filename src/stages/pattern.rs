@@ -7,8 +7,8 @@ impl Stage for Pattern {
         "regex"
     }
 
-    fn run(&self, batch: &mut Batch, _: &mut Context) {
-        batch.each(|record| apply(self, record));
+    fn run(&self, batch: Batch, _: &mut Context) -> Batch {
+        batch.each(|record| apply(self, record))
     }
 }
 

@@ -56,11 +56,12 @@ pub fn plan_batch(
             .partition(|record| filters.iter().all(|filter| filter.accepts(record)));
         waiting = unclaimed;
 
-        let mut batch = Batch::new(claimed);
-        for stage in rest {
-            stage.run(&mut batch, context);
-        }
-        let files = batch.into_files();
+        let files = rest
+            .iter()
+            .fold(Batch::new(claimed), |batch, stage| {
+                stage.run(batch, context)
+            })
+            .into_files();
 
         context.remember(files.iter().map(|file| Earlier {
             pipeline: name.clone(),

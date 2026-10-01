@@ -58,9 +58,9 @@ impl Stage for Take {
         "take"
     }
 
-    fn run(&self, batch: &mut Batch, context: &mut Context) {
+    fn run(&self, batch: Batch, context: &mut Context) -> Batch {
         let earlier = EarlierFiles::new(context.earlier().to_vec());
-        batch.each(|record| self.copy_into(record, &earlier));
+        batch.each(|record| self.copy_into(record, &earlier))
     }
 }
 

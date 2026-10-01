@@ -9,8 +9,8 @@ impl Stage for Lift {
         "lift"
     }
 
-    fn run(&self, batch: &mut Batch, _: &mut Context) {
-        batch.each(|record| lift(self, record));
+    fn run(&self, batch: Batch, _: &mut Context) -> Batch {
+        batch.each(|record| lift(self, record))
     }
 }
 
@@ -19,8 +19,8 @@ impl Stage for Folder {
         "folder"
     }
 
-    fn run(&self, batch: &mut Batch, _: &mut Context) {
-        batch.each(|record| folder(self, record));
+    fn run(&self, batch: Batch, _: &mut Context) -> Batch {
+        batch.each(|record| folder(self, record))
     }
 }
 

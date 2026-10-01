@@ -7,11 +7,11 @@ impl Stage for Format {
         "format"
     }
 
-    fn run(&self, batch: &mut Batch, _: &mut Context) {
+    fn run(&self, batch: Batch, _: &mut Context) -> Batch {
         batch.each(|mut record| {
             let name = self.0.render(&record).map_err(refused_by("format"))?;
             write_field("format", &mut record, "name", Value::Text(name))?;
             Ok(record)
-        });
+        })
     }
 }

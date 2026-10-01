@@ -105,8 +105,8 @@ pub trait Stage {
     fn name(&self) -> &'static str;
 
     /// Runs the stage over the batch its pipeline claimed, with what the target and the pipelines before
-    /// let it know.
-    fn run(&self, batch: &mut Batch, context: &mut Context);
+    /// let it know, and hands on the batch it made.
+    fn run(&self, batch: Batch, context: &mut Context) -> Batch;
 }
 
 /// Fixed values written into records by `set` and `default`.
@@ -162,15 +162,13 @@ impl Declared {
     }
 
     /// Runs the stage over the batch its pipeline claimed.
-    pub(crate) fn run(&self, batch: &mut Batch, context: &mut Context) {
-        self.as_stage().run(batch, context);
+    pub(crate) fn run(&self, batch: Batch, context: &mut Context) -> Batch {
+        self.as_stage().run(batch, context)
     }
 
     /// Runs the stage on one record, which is a batch of one, with what the target lets it know.
     pub fn apply(&self, record: Record, context: &mut Context) -> Flow {
-        let mut batch = Batch::new(vec![record]);
-        self.run(&mut batch, context);
-        batch
+        self.run(Batch::new(vec![record]), context)
             .into_files()
             .pop()
             .map(|file| file.flow)
