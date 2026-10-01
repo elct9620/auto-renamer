@@ -345,6 +345,7 @@
   "editing": {
     "global": "Global configuration",
     "folder": "Folder configuration of {{folder}}",
-    "back": "Back to the global configuration"
+    "label": "Configuration being edited",
+    "add": "Add a folder configuration in {{folder}}"
   }
 }

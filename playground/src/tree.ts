@@ -81,6 +81,12 @@ export function writeFile(entries: Entry[], path: string, text: string): Entry[]
   ]
 }
 
+/** Adds a folder configuration to a folder, starting from `text`; one the folder already holds is kept as it is. */
+export function startConfiguration(entries: Entry[], folder: string, text: string): Entry[] {
+  const path = `${folder}/${FOLDER_CONFIGURATION}`
+  return entries.some((entry) => entry.path === path) ? entries : writeFile(entries, path, text)
+}
+
 /** Removes a file, or a folder with everything it holds. */
 export function removeEntry(entries: Entry[], path: string): Entry[] {
   return entries.filter((entry) => entry.path !== path && !within(entry.path, path))

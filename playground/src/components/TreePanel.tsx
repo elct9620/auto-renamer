@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import type { Entry } from '../core'
-import { FOLDER_CONFIGURATION, type TreeNode, addEntry, foldersUnder, removeEntry, renameEntry, treeOf, writeFile } from '../tree'
+import { FOLDER_CONFIGURATION, type TreeNode, addEntry, foldersUnder, removeEntry, renameEntry, startConfiguration, treeOf } from '../tree'
 
 type Edit = (change: (entries: Entry[]) => Entry[]) => void
 
@@ -33,7 +33,7 @@ function Row({ node, mark, actions }: { node: TreeNode; mark?: string; actions: 
   const Icon = node.folder ? Folder : configuration ? FileCog : File
   const configure = (folder: string) => {
     const path = `${folder}/${FOLDER_CONFIGURATION}`
-    actions.onEdit((all) => (all.some((entry) => entry.path === path) ? all : writeFile(all, path, actions.starting)))
+    actions.onEdit((all) => startConfiguration(all, folder, actions.starting))
     actions.onOpen?.(path)
   }
   return (

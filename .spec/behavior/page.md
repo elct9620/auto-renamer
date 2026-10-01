@@ -489,3 +489,19 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the source tree of the opening example |
 | When | it is shown |
 | Then | each folder shows its button adding a folder configuration, and the tree says how to add one |
+
+## `PGE-061` The header lists every folder configuration to edit
+
+| Step | Statement |
+| --- | --- |
+| Given | the opening example, whose show folders each carry a folder configuration |
+| When | the configurations are listed in the header |
+| Then | the global configuration and the folder configuration of each show are offered |
+
+## `PGE-062` A folder configuration added from the header is started and opened
+
+| Step | Statement |
+| --- | --- |
+| Given | the folder `Series` without a folder configuration |
+| When | adding one for `Series` is chosen in the header |
+| Then | the source holds `Series/auto-renamer.toml`, and it is the one being edited |

@@ -206,7 +206,8 @@ test('going back to the global configuration edits it again', async ({ page }) =
   await openAlphaConfiguration(page)
   await expect(node(page, 'series')).toHaveCount(0)
 
-  await page.getByRole('button', { name: 'Back to the global configuration' }).click()
+  await page.getByRole('combobox', { name: 'Configuration being edited' }).click()
+  await page.getByRole('option', { name: 'Global configuration' }).click()
 
   await expect(node(page, 'series')).toBeVisible()
 })
@@ -294,4 +295,23 @@ test('adding a folder configuration is offered without hovering', async ({ page 
   await expect(button).toBeVisible()
   await expect(button.locator('..')).toHaveCSS('opacity', '1')
   await expect(tree.getByText('To make a folder an exception', { exact: false })).toBeVisible()
+})
+
+// @behavior PGE-061
+test('the header lists every folder configuration to edit', async ({ page }) => {
+  await page.getByRole('combobox', { name: 'Configuration being edited' }).click()
+
+  await expect(page.getByRole('option', { name: 'Global configuration' })).toBeVisible()
+  await expect(page.getByRole('option', { name: /^Folder configuration of / })).toHaveCount(6)
+  await expect(page.getByRole('option', { name: 'Folder configuration of /downloads/Series/Zeta-Show' })).toBeVisible()
+})
+
+// @behavior PGE-062
+test('a folder configuration added from the header is started and opened', async ({ page }) => {
+  await page.getByRole('combobox', { name: 'Configuration being edited' }).click()
+
+  await page.getByRole('option', { name: 'Add a folder configuration in /downloads/Series', exact: true }).click()
+
+  await expect(source(page).getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(7)
+  await expect(page.getByRole('combobox', { name: 'Configuration being edited' })).toHaveText('Folder configuration of /downloads/Series')
 })

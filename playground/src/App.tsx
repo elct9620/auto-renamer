@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, Download, FileCog, Play, Settings2, Upload } from 'lucide-react'
+import { Check, Download, Play, Upload } from 'lucide-react'
 import { type ChangeEvent, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -16,7 +16,11 @@ import { type Entry, type Kind, type Simulation, check, read, render, simulate }
 import { type Example, EXAMPLES, FIRST } from './examples'
 import type { Selected } from './graph'
 import { LANGUAGES } from './i18n'
-import { FOLDER_CONFIGURATION, marksOf, rootsOf, writeFile } from './tree'
+import { FOLDER_CONFIGURATION, foldersUnder, marksOf, rootsOf, startConfiguration, writeFile } from './tree'
+
+// The values the configuration switcher gives the global configuration and a folder still to be configured.
+const GLOBAL = '\u0000global'
+const ADD = '\u0000add:'
 
 function checked(kind: Kind, text: string): { ok: boolean; lines: string[] } {
   try {
@@ -125,6 +129,27 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
   }
   const marks = marksOf(simulation)
 
+  // The header offers the global configuration, every folder configuration of the source, and a new one for
+  // each folder still without one.
+  const folderOf = (path: string) => path.slice(0, -FOLDER_CONFIGURATION.length - 1)
+  const configurations = entries.filter((entry) => entry.path.startsWith(`${roots.source}/`) && entry.path.endsWith(`/${FOLDER_CONFIGURATION}`))
+  const bare = [roots.source, ...foldersUnder(entries, roots.source).map((folder) => `${roots.source}/${folder.slice(0, -1)}`)]
+    .filter((folder) => !configurations.some((entry) => folderOf(entry.path) === folder))
+  const editable = [
+    { value: GLOBAL, label: t('editing.global') },
+    ...configurations.map((entry) => ({ value: entry.path, label: t('editing.folder', { folder: folderOf(entry.path) }) })),
+    ...bare.map((folder) => ({ value: `${ADD}${folder}`, label: t('editing.add', { folder }) })),
+  ]
+  const choose = (value: string) => {
+    if (value === GLOBAL) return open(null)
+    if (value.startsWith(ADD)) {
+      const folder = value.slice(ADD.length)
+      editEntries((all) => startConfiguration(all, folder, render(folderStart(config, watch))))
+      return open(`${folder}/${FOLDER_CONFIGURATION}`)
+    }
+    open(value)
+  }
+
   const run = () => {
     try {
       setSimulation(simulate(globalText, watch, entries))
@@ -139,11 +164,7 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
     <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto_minmax(0,11rem)] bg-background text-foreground">
       <header className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
         <h1 className="mr-2 text-sm font-semibold">Auto Renamer Playground</h1>
-        <Badge variant="outline" className="h-7 gap-1.5 px-2.5 text-sm font-normal">
-          {folder ? <FileCog /> : <Settings2 />}
-          {folder ? t('editing.folder', { folder: folder.path.slice(0, -FOLDER_CONFIGURATION.length - 1) }) : t('editing.global')}
-        </Badge>
-        {folder && <Button variant="ghost" size="sm" onClick={() => open(null)}><ArrowLeft />{t('editing.back')}</Button>}
+        <Choice label={t('editing.label')} className="w-auto" value={editing ?? GLOBAL} options={editable} onChange={choose} />
         <Button variant="outline" size="sm" asChild>
           <label><Upload />{t('import')}<input type="file" accept=".toml" onChange={importFile} hidden /></label>
         </Button>
