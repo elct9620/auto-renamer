@@ -22,8 +22,9 @@ import {
   stageName,
   stagesOf,
 } from '../config'
-import { type Kind, read, stages } from '../core'
+import { type Kind, type Simulation, read, stages } from '../core'
 import type { Selected } from '../graph'
+import { afterStage } from '../steps'
 import { StageForm } from './StageForm'
 
 function Field({ label, children, error }: { label: string; children: React.ReactNode; error?: string }) {
@@ -45,10 +46,45 @@ function Section({ title, icon: Icon, children }: { title: React.ReactNode; icon
   )
 }
 
-export function Inspector({ config, kind, selected, folders = [], onChange, onSelect, onOverride }: {
+/** The files a triggered simulation ran through a stage, each as the stage left it. */
+function FilesAfter({ simulation, pipeline, index, folder }: {
+  simulation: Simulation
+  pipeline: string
+  index: number
+  folder: string | null
+}) {
+  const { t } = useTranslation()
+  const { ran, taken } = afterStage(simulation.outcomes, pipeline, index, folder)
+  return (
+    <section aria-label={t('inspector.after')} className="grid gap-1.5 border-t pt-3">
+      <h3 className="text-xs font-semibold">{t('inspector.after')}</h3>
+      {ran.length === 0 && <p className="text-xs text-muted-foreground">{t('inspector.none')}</p>}
+      <ul className="grid gap-1.5">
+        {ran.map(({ origin, step, changes }) => (
+          <li key={origin} className="grid font-mono text-xs">
+            <span className="truncate text-muted-foreground" title={origin}>{origin}</span>
+            {step.stop !== null ? (
+              <span className="text-destructive">{step.stop === 'excluded' ? t('output.excluded') : step.stop}</span>
+            ) : (
+              changes.map((change) => <span key={change.key}>{change.key}: {change.to}</span>)
+            )}
+          </li>
+        ))}
+      </ul>
+      {taken.length > 0 && (
+        <p className="text-xs text-muted-foreground">{t('inspector.taken', { count: taken.length })}</p>
+      )}
+    </section>
+  )
+}
+
+export function Inspector({ config, kind, selected, folders = [], simulation = null, folder = null, onChange, onSelect, onOverride }: {
   config: Table
   kind: Kind
   selected: Selected | null
+  simulation?: Simulation | null
+  /** The folder whose configuration is edited, relative to the source; null for the global configuration. */
+  folder?: string | null
   /** The source folders a global pipeline can be overridden in. */
   folders?: string[]
   onChange: (config: Table) => void
@@ -135,6 +171,7 @@ export function Inspector({ config, kind, selected, folders = [], onChange, onSe
           <Trash2 />{t('inspector.remove')}
         </Button>
       </div>
+      {simulation && <FilesAfter simulation={simulation} pipeline={selected.pipeline} index={selected.index} folder={folder} />}
     </Section>
   )
 }

@@ -537,3 +537,27 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the opening example triggered |
 | When | a file is chosen among the results |
 | Then | its steps are shown in order, from the pipeline that claimed it to the stage that named it |
+
+## `PGE-067` A stage lists the files it ran on, apart from those a folder configuration took
+
+| Step | Statement |
+| --- | --- |
+| Given | a simulation where one file ran the global `video` and another ran a `video` its folder configuration replaced |
+| When | the files after the second stage of the global `video` are asked for |
+| Then | the first file is listed with what it held after that stage, and the second is named as taken by a folder configuration |
+
+## `PGE-068` A selected stage shows the files after it
+
+| Step | Statement |
+| --- | --- |
+| Given | the opening example triggered |
+| When | the format stage of `video` is selected |
+| Then | the inspector lists each file with the name the format gave it |
+
+## `PGE-069` Editing the configuration clears the simulation
+
+| Step | Statement |
+| --- | --- |
+| Given | the opening example triggered |
+| When | a stage is removed |
+| Then | no result is shown until the watch is triggered again |

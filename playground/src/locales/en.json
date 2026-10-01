@@ -46,7 +46,11 @@
     "useDefault": "Follow the default",
     "notSimulated": "not simulated",
     "override": "Override in a folder",
-    "chooseFolder": "Choose a folder"
+    "chooseFolder": "Choose a folder",
+    "after": "Files after this stage",
+    "none": "No file reached this stage.",
+    "taken_one": "{{count}} file ran this pipeline as a folder configuration replaced it.",
+    "taken_other": "{{count}} files ran this pipeline as folder configurations replaced it."
   },
   "tree": {
     "source": "Source",

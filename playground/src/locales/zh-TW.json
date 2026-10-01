@@ -46,7 +46,11 @@
     "useDefault": "改回沿用預設",
     "notSimulated": "不模擬",
     "override": "在資料夾覆寫",
-    "chooseFolder": "選擇資料夾"
+    "chooseFolder": "選擇資料夾",
+    "after": "跑完這個階段的檔案",
+    "none": "沒有檔案跑到這個階段。",
+    "taken_one": "{{count}} 個檔案走的是目錄設定取代的管線。",
+    "taken_other": "{{count}} 個檔案走的是目錄設定取代的管線。"
   },
   "tree": {
     "source": "來源",

@@ -339,3 +339,25 @@ test('choosing a result shows how its file was planned', async ({ page }) => {
   await expect(steps.filter({ hasText: 'episode: 12' })).toHaveCount(1)
   await expect(steps.last()).toContainText('cleanup')
 })
+
+// @behavior PGE-068
+test('a selected stage shows the files after it', async ({ page }) => {
+  await page.getByRole('button', { name: 'Trigger' }).click()
+
+  await node(page, 'format').click()
+
+  const after = page.getByRole('region', { name: 'Files after this stage' })
+  await expect(after.getByRole('listitem')).toHaveCount(6)
+  await expect(after.getByText('name: Alpha s01e12', { exact: true })).toBeVisible()
+})
+
+// @behavior PGE-069
+test('editing the configuration clears the simulation', async ({ page }) => {
+  await page.getByRole('button', { name: 'Trigger' }).click()
+  await expect(page.getByText('Trigger the watch to see where each file goes.')).toHaveCount(0)
+
+  await node(page, 'cleanup').click()
+  await page.getByRole('button', { name: 'Remove', exact: true }).click()
+
+  await expect(page.getByText('Trigger the watch to see where each file goes.')).toBeVisible()
+})

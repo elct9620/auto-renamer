@@ -59,9 +59,13 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
   const roots = rootsOf(config, watch)
   const fileName = kind === 'global' ? 'config.toml' : FOLDER_CONFIGURATION
 
+  // A simulation answers for the configuration it ran, so any edit to a configuration clears it.
   const edit = (next: Table) => {
     if (folder) editEntries((all) => writeFile(all, folder.path, render(next)))
-    else setConfig(next)
+    else {
+      setConfig(next)
+      setSimulation(null)
+    }
   }
 
   const open = (path: string | null) => {
@@ -203,7 +207,8 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
           <Canvas key={editing ?? ''} config={edited} onChange={edit} onSelect={setSelected} />
         </div>
         <aside className="min-h-0 overflow-auto border-l p-3">
-          <Inspector config={edited} kind={kind} selected={selected} folders={folders} onChange={edit} onSelect={setSelected}
+          <Inspector config={edited} kind={kind} selected={selected} folders={folders} simulation={simulation}
+            folder={folder ? folderOf(folder.path).slice(roots.source.length + 1) : null} onChange={edit} onSelect={setSelected}
             onOverride={folder ? undefined : override} />
         </aside>
       </main>
