@@ -69,7 +69,7 @@ test('adding in a folder starts the new path from that folder', async ({ page })
 test('a parameter limited to some values offers them in a list', async ({ page }) => {
   await node(page, 'move').click()
 
-  await page.getByRole('combobox', { name: 'on_conflict' }).click()
+  await page.getByRole('combobox', { name: 'On a clash' }).click()
 
   await expect(page.getByRole('option')).toHaveText(['—', 'reject', 'suffix'])
 })
@@ -80,7 +80,7 @@ test('a required parameter left empty is pointed out', async ({ page }) => {
   await page.getByRole('combobox', { name: 'Add a stage' }).click()
   await page.getByRole('option', { name: 'next' }).click()
   await node(page, 'next').click()
-  const into = page.getByRole('textbox', { name: /^into/ })
+  const into = page.getByRole('textbox', { name: /^Target field into/ })
   await into.fill('')
 
   await into.blur()
@@ -132,7 +132,7 @@ test('a watch lists pipelines picked from those defined', async ({ page }) => {
 test('a unit is chosen among its three forms', async ({ page }) => {
   await node(page, 'series').click()
 
-  await page.getByRole('combobox', { name: 'unit' }).click()
+  await page.getByRole('combobox', { name: 'Unit' }).click()
 
   await expect(page.getByRole('option')).toHaveText(['—', /^directory/, /^source/, /^root/])
 })
@@ -141,20 +141,19 @@ test('a unit is chosen among its three forms', async ({ page }) => {
 test('a yes-or-no setting is a switch', async ({ page }) => {
   await node(page, 'series').click()
 
-  const dryRun = page.getByRole('switch', { name: /dry_run/ })
+  const dryRun = page.getByRole('switch', { name: 'Dry run dry_run' })
 
   await expect(dryRun).toBeVisible()
 })
 
 // @behavior PGE-044
-test('keys stay as the CLI writes them in any language', async ({ page }) => {
+test('a key is labelled in the page\'s language beside the CLI\'s key', async ({ page }) => {
   await page.getByRole('combobox', { name: 'Language' }).click()
   await page.getByRole('option', { name: '繁體中文' }).click()
 
   await node(page, 'series').click()
 
-  await expect(page.getByRole('textbox', { name: /^source/ })).toBeVisible()
-  await expect(page.getByRole('textbox', { name: /^target/ })).toBeVisible()
+  await expect(page.getByRole('switch', { name: '試運行 dry_run' })).toBeVisible()
 })
 
 // @behavior PGE-045

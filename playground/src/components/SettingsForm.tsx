@@ -2,7 +2,7 @@ import { X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Choice } from '@/components/Choice'
-import { TextField, ValueRows } from '@/components/Fields'
+import { Caption, TextField, ValueRows } from '@/components/Fields'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
@@ -53,11 +53,11 @@ function UnitField({ value, onApply }: { value: Value | undefined; onApply: (val
   const chosen = typeof value === 'string' ? value : roots !== undefined ? 'root' : ''
   return (
     <div className="grid gap-1.5">
-      <Choice label="unit" value={chosen} clearable placeholder="directory"
+      <Choice label={t('settings.unit')} value={chosen} clearable placeholder="directory"
         options={['directory', 'source', 'root'].map((one) => ({ value: one, label: t(`unit.${one}`) }))}
         onChange={(one) => onApply(one === '' ? undefined : one === 'root' ? { root: names(roots) } : one)} />
       {chosen === 'root' && (
-        <TextField label="root" kind="texts" value={roots} onApply={(patterns) => onApply({ root: patterns ?? [] })} />
+        <TextField caption={<Caption name={t('settings.root')} code="root" />} kind="texts" value={roots} onApply={(patterns) => onApply({ root: patterns ?? [] })} />
       )}
     </div>
   )
@@ -72,18 +72,17 @@ function Field({ setting, value, inherited, defined, onApply }: {
 }) {
   const { t } = useTranslation()
   const caption = (
-    <span className="flex items-center gap-1.5 font-mono text-xs font-medium">
-      {setting.key}{setting.required && <span className="text-destructive">*</span>}
+    <Caption name={t(`settings.${setting.key}`)} code={setting.key} required={setting.required}>
       {!setting.simulated && <Badge variant="outline">{t('inspector.notSimulated')}</Badge>}
-    </span>
+    </Caption>
   )
   switch (setting.kind) {
     case 'path':
     case 'duration':
-      return <TextField label={setting.key} required={setting.required} kind="text" value={value} placeholder={String(setting.example)}
-        caption={caption} onApply={onApply} />
+      return <TextField caption={caption} required={setting.required} kind="text" value={value} placeholder={String(setting.example)}
+        onApply={onApply} />
     case 'count':
-      return <TextField label={setting.key} kind="integer" value={value} placeholder={String(setting.example)} caption={caption} onApply={onApply} />
+      return <TextField caption={caption} kind="integer" value={value} placeholder={String(setting.example)} onApply={onApply} />
     case 'boolean':
       return (
         <label className="flex items-center gap-2">

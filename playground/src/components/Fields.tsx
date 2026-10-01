@@ -13,6 +13,23 @@ export function Hint({ children }: { children: React.ReactNode }) {
   return <p className="text-xs text-muted-foreground">{children}</p>
 }
 
+/** A field's name in the page's language, with the key the configuration writes beside it. */
+export function Caption({ name, code, required, children }: {
+  name: string
+  code: string
+  required?: boolean
+  children?: React.ReactNode
+}) {
+  return (
+    <span className="flex items-center gap-1.5 text-xs font-medium">
+      {name}
+      <code className="font-mono font-normal text-muted-foreground">{code}</code>
+      {required && <span className="text-destructive">*</span>}
+      {children}
+    </span>
+  )
+}
+
 function shown(value: Value | undefined): string {
   if (value === undefined || typeof value === 'object' && !Array.isArray(value)) return ''
   return Array.isArray(value) ? value.join(', ') : String(value)
@@ -27,21 +44,20 @@ function parsed(kind: ParameterKind, text: string): Value | undefined {
   return text
 }
 
-/** A value typed as text and read as `kind` once the field is left; `caption` replaces the plain label. */
-export function TextField({ label, required, kind, value, placeholder, caption, hint, onApply }: {
-  label: string
+/** A value typed as text and read as `kind` once the field is left. */
+export function TextField({ caption, required, kind, value, placeholder, hint, onApply }: {
+  caption: React.ReactNode
   required?: boolean
   kind: ParameterKind
   value: Value | undefined
   placeholder?: string
-  caption?: React.ReactNode
   hint?: string
   onApply: (value: Value | undefined) => void
 }) {
   const { t } = useTranslation()
   return (
     <label className="grid gap-1.5">
-      {caption ?? <span className="font-mono text-xs font-medium">{label}{required && <span className="text-destructive">*</span>}</span>}
+      {caption}
       <Input key={shown(value)} className="h-8 font-mono text-xs" defaultValue={shown(value)}
         type={kind === 'integer' ? 'number' : 'text'} min={kind === 'integer' ? 1 : undefined}
         placeholder={placeholder ?? (kind === 'texts' ? 'a, b, c' : undefined)}

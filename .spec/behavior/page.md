@@ -353,13 +353,13 @@ The playground page draws a configuration for people who do not read TOML: each 
 | When | its form is shown |
 | Then | `dry_run` is a switch |
 
-## `PGE-044` Keys stay as the CLI writes them in any language
+## `PGE-044` A key is labelled in the page's language beside the CLI's key
 
 | Step | Statement |
 | --- | --- |
 | Given | the page shown in Traditional Chinese |
 | When | the watch `series` is selected |
-| Then | its fields are labelled `source` and `target` |
+| Then | its `dry_run` field is labelled 試運行 with `dry_run` beside it |
 
 ## `PGE-045` The canvas sits between the palette and the inspector, above the trees
 
