@@ -130,12 +130,22 @@ export function setIn(config: Table, path: string[], value: Value | undefined): 
   return next
 }
 
-/** A stage as the inline TOML a person edits, such as `{ filter = { ext = ["mkv"] } }` or `"move"`. */
-export function stageText(stage: Stage, render: (table: Table) => string): string {
-  return render({ stages: [stage] })
-    .trim()
-    .replace(/^stages = \[/, '')
-    .replace(/\]$/, '')
+/** The named parameters a stage is written with; none for a bare name or a single value. */
+export function parametersOf(stage: Stage): Table {
+  return typeof stage === 'string' ? {} : asTable(stage[stageName(stage)])
+}
+
+/** Sets or clears one parameter; a stage left with none is written as its name when its name alone
+ * declares it. */
+export function withParameter(stage: Stage, declaration: Declaration, name: string, value: Value | undefined): Stage {
+  const kind = stageName(stage)
+  const parameters = setIn(parametersOf(stage), [name], value)
+  return Object.keys(parameters).length === 0 && declaration.bare ? kind : { [kind]: parameters }
+}
+
+/** The stage declared with a single value, as `{ format = "..." }`. */
+export function withValue(stage: Stage, value: Value): Stage {
+  return { [stageName(stage)]: value }
 }
 
 /** The stage an inline TOML text declares, read by the core's own reader. */

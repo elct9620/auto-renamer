@@ -1,3 +1,4 @@
+import { STAGE_DRAG } from '@/components/Canvas'
 import { Button } from '@/components/ui/button'
 import { stages } from '../core'
 
@@ -10,8 +11,13 @@ export function Palette({ global, onAdd }: { global: boolean; onAdd: (table: 'wa
       </div>
       <div className="grid gap-1">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Stages</h2>
+        <p className="text-xs text-muted-foreground">Drag a stage onto a pipeline.</p>
         {stages().map(({ name }) => (
-          <div key={name} className="rounded-md border bg-card px-2 py-1 font-mono text-xs">{name}</div>
+          <div key={name} draggable className="cursor-grab rounded-md border bg-card px-2 py-1 font-mono text-xs active:cursor-grabbing"
+            onDragStart={(event) => {
+              event.dataTransfer.setData(STAGE_DRAG, name)
+              event.dataTransfer.effectAllowed = 'copy'
+            }}>{name}</div>
         ))}
       </div>
     </div>

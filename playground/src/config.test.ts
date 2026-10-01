@@ -19,9 +19,10 @@ import {
   replaceStage,
   stageName,
   stagesOf,
+  withParameter,
 } from './config'
 import { check, read, render, stages } from './core'
-import { pipelineId, stageId, toGraph, watchId } from './graph'
+import { dropAt, pipelineId, stageId, toGraph, watchId } from './graph'
 
 const CONFIG = `
 [default]
@@ -126,6 +127,13 @@ describe('editing', () => {
     expect(names(config)).toEqual(['filter', 'format', 'move'])
   })
 
+  it('drops a stage before the stage nearest the point', () => {
+    const config = read(CONFIG)
+    const [, second] = toGraph(config).nodes.filter((node) => node.id.startsWith('stage:video:'))
+
+    expect(dropAt(config, { x: second.position.x, y: second.position.y })).toEqual({ pipeline: 'video', index: 1 })
+  })
+
   // @behavior PGE-016
   it('starts a new stage with the example the core describes', () => {
     const example = stages().find((stage) => stage.name === 'regex')?.example
@@ -133,6 +141,24 @@ describe('editing', () => {
     const config = addStage(pipeline('[]'), 'video', newStage('regex', stages(), read))
 
     expect(stagesOf(config, 'video')).toEqual(stagesOf(read(`[pipeline.video]\nstages = [{ regex = ${example} }]`), 'video'))
+  })
+})
+
+describe('forms', () => {
+  const declaration = (name: string) => stages().find((stage) => stage.name === name)!
+
+  // @behavior PGE-022
+  it('writes a parameter set in the form into the stage', () => {
+    const stage = withParameter({ filter: { ext: ['mkv'] } }, declaration('filter'), 'invert', true)
+
+    expect(stage).toEqual({ filter: { ext: ['mkv'], invert: true } })
+  })
+
+  // @behavior PGE-023
+  it('writes a stage left without parameters as its name', () => {
+    const stage = withParameter({ move: { on_conflict: 'suffix' } }, declaration('move'), 'on_conflict', undefined)
+
+    expect(render({ stages: [stage] })).toContain('stages = ["move"]')
   })
 })
 

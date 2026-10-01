@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { errorOf } from '@/lib/utils'
@@ -11,16 +12,17 @@ import {
   asTable,
   moveStage,
   newStage,
-  readStage,
   removePipeline,
   removeStage,
+  renamePipeline,
   replaceStage,
   setIn,
+  stageName,
   stagesOf,
-  stageText,
 } from '../config'
 import { type Kind, read, render, stages } from '../core'
 import type { Selected } from '../graph'
+import { StageForm } from './StageForm'
 
 function Field({ label, children, error }: { label: string; children: React.ReactNode; error?: string }) {
   return (
@@ -83,7 +85,7 @@ export function Inspector({ config, kind, selected, onChange, onSelect }: {
   onChange: (config: Table) => void
   onSelect: (selected: Selected | null) => void
 }) {
-  const [stageError, setStageError] = useState('')
+  const [nameError, setNameError] = useState('')
 
   if (selected === null) {
     const root = kind === 'global' ? ['default'] : []
@@ -122,6 +124,19 @@ export function Inspector({ config, kind, selected, onChange, onSelect }: {
   if (selected.kind === 'pipeline') {
     return (
       <Section title={`Pipeline ${selected.name}`}>
+        <Field label="name" error={nameError}>
+          <Input key={selected.name} className="h-8 font-mono text-xs" defaultValue={selected.name} onBlur={(event) => {
+            const name = event.target.value.trim()
+            if (name === selected.name) return
+            if (name === '' || name in asTable(config.pipeline)) {
+              setNameError(name === '' ? 'A pipeline needs a name' : `A pipeline is already named ${name}`)
+              return
+            }
+            setNameError('')
+            onChange(renamePipeline(config, selected.name, name))
+            onSelect({ kind: 'pipeline', name })
+          }} />
+        </Field>
         <Field label="Add a stage">
           <select className="h-8 rounded-md border bg-background px-2 text-sm" value="" onChange={(event) => {
             if (event.target.value) onChange(addStage(config, selected.name, newStage(event.target.value, stages(), read)))
@@ -142,19 +157,10 @@ export function Inspector({ config, kind, selected, onChange, onSelect }: {
   if (stage === undefined) return null
   const at = (index: number) => onSelect({ ...selected, index })
   return (
-    <Section title={`Stage ${selected.index + 1} of ${selected.pipeline}`}>
-      <Field label="Written as" error={stageError}>
-        <Textarea className="font-mono text-xs" key={`${selected.pipeline}-${selected.index}-${stageText(stage, render)}`}
-          defaultValue={stageText(stage, render)} rows={4}
-          onBlur={(event) => {
-            try {
-              onChange(replaceStage(config, selected.pipeline, selected.index, readStage(event.target.value, read)))
-              setStageError('')
-            } catch (failure) {
-              setStageError(errorOf(failure))
-            }
-          }} />
-      </Field>
+    <Section title={`${stageName(stage)} · stage ${selected.index + 1} of ${selected.pipeline}`}>
+      <StageForm key={`${selected.pipeline}-${selected.index}`} stage={stage}
+        declaration={stages().find((declaration) => declaration.name === stageName(stage))!}
+        onChange={(next) => onChange(replaceStage(config, selected.pipeline, selected.index, next))} />
       <div className="flex gap-2">
         <Button variant="outline" size="sm" disabled={selected.index === 0} onClick={() => {
           onChange(moveStage(config, selected.pipeline, selected.index, -1)); at(selected.index - 1)

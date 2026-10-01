@@ -15,6 +15,7 @@ export interface NodeData extends Record<string, unknown> {
 
 const COLUMN = 240
 const ROW = 110
+const FIRST_STAGE = COLUMN * 2
 
 export function watchId(name: string): string {
   return `watch:${name}`
@@ -26,6 +27,22 @@ export function pipelineId(name: string): string {
 
 export function stageId(pipeline: string, index: number): string {
   return `stage:${pipeline}:${index}`
+}
+
+/** A joint of a watch to a pipeline; one the watch takes from the default is drawn dashed. */
+export interface Joint extends Record<string, unknown> {
+  watch: string
+  pipeline: string
+}
+
+/** Where a stage dropped at a point of the drawing goes: the pipeline on that row, before the stage
+ * nearest the point. */
+export function dropAt(config: Table, point: { x: number; y: number }): { pipeline: string; index: number } | null {
+  const pipelines = Object.keys(asTable(config.pipeline))
+  const pipeline = pipelines[Math.round(point.y / ROW)]
+  if (pipeline === undefined) return null
+  const index = Math.round((point.x - FIRST_STAGE) / COLUMN)
+  return { pipeline, index: Math.min(Math.max(index, 0), stagesOf(config, pipeline).length) }
 }
 
 function stageDetail(stage: Stage): string | undefined {
@@ -52,18 +69,22 @@ export function toGraph(config: Table): { nodes: Node<NodeData>[]; edges: Edge[]
       id: watchId(name),
       type: 'watch',
       position: { x: 0, y: row * ROW },
+      draggable: false,
       data: {
         label: name,
         detail: typeof watch.source === 'string' ? watch.source : undefined,
         selected: { kind: 'watch', name },
       },
     })
+    const followsDefault = watch.pipelines === undefined
     pipelinesOf(config, name).forEach((pipeline, order) => {
       edges.push({
         id: `${watchId(name)}->${pipelineId(pipeline)}`,
         source: watchId(name),
         target: pipelineId(pipeline),
         label: String(order + 1),
+        style: followsDefault ? { strokeDasharray: '6 4' } : undefined,
+        data: { watch: name, pipeline } satisfies Joint,
       })
     })
   })
@@ -74,6 +95,7 @@ export function toGraph(config: Table): { nodes: Node<NodeData>[]; edges: Edge[]
       id: pipelineId(pipeline),
       type: 'pipeline',
       position: { x: COLUMN, y },
+      draggable: false,
       data: { label: pipeline, selected: { kind: 'pipeline', name: pipeline } },
     })
     let previous = pipelineId(pipeline)
@@ -82,14 +104,14 @@ export function toGraph(config: Table): { nodes: Node<NodeData>[]; edges: Edge[]
       nodes.push({
         id,
         type: 'stage',
-        position: { x: COLUMN * (index + 2), y },
+        position: { x: FIRST_STAGE + COLUMN * index, y },
         data: {
           label: stageName(stage),
           detail: stageDetail(stage),
           selected: { kind: 'stage', pipeline, index },
         },
       })
-      edges.push({ id: `${previous}->${id}`, source: previous, target: id })
+      edges.push({ id: `${previous}->${id}`, source: previous, target: id, deletable: false, selectable: false })
       previous = id
     })
   })

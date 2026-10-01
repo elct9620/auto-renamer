@@ -165,3 +165,19 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the file `/downloads/Alpha/x.mkv` |
 | When | the folder `/downloads/Alpha` is renamed `Beta` |
 | Then | the file is `/downloads/Beta/x.mkv` |
+
+## `PGE-022` A parameter set in a stage's form is written into the stage
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline whose first stage is a filter on `mkv` |
+| When | its `invert` parameter is set in the form |
+| Then | the first stage is a filter on `mkv` that inverts |
+
+## `PGE-023` A stage left without parameters is written as its name
+
+| Step | Statement |
+| --- | --- |
+| Given | a move stage whose `on_conflict` is `suffix` |
+| When | `on_conflict` is cleared in the form |
+| Then | the stage is written as the text `move` |

@@ -1,4 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { cn } from '@/lib/utils'
 import type { Simulation } from '../core'
 
 export function Output({ fileName, text, status, simulation }: {
@@ -8,7 +9,7 @@ export function Output({ fileName, text, status, simulation }: {
   simulation: Simulation | null
 }) {
   return (
-    <Tabs defaultValue="results" className="flex min-h-0 flex-col p-3">
+    <Tabs defaultValue="results" className="flex min-h-0 min-w-0 flex-col p-3">
       <TabsList>
         <TabsTrigger value="results">Results</TabsTrigger>
         <TabsTrigger value="config">{fileName}</TabsTrigger>
@@ -33,7 +34,7 @@ export function Output({ fileName, text, status, simulation }: {
         )}
       </TabsContent>
       <TabsContent value="config" className="min-h-0 overflow-auto">
-        <pre className={status.ok ? 'p-2 text-xs' : 'p-2 text-xs text-destructive'}>{text}</pre>
+        <pre className={cn('p-2 text-xs whitespace-pre-wrap break-all', !status.ok && 'text-destructive')}>{text}</pre>
         {status.lines.map((line) => (
           <p key={line} className={status.ok ? 'px-2 text-xs text-amber-600' : 'px-2 text-xs text-destructive'}>{line}</p>
         ))}

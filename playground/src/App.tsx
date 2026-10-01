@@ -112,7 +112,7 @@ export default function App() {
   }
 
   return (
-    <div className="grid h-dvh grid-rows-[auto_minmax(0,1fr)_auto_minmax(0,11rem)] bg-background text-foreground">
+    <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto_minmax(0,11rem)] bg-background text-foreground">
       <header className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
         <h1 className="mr-2 text-sm font-semibold">auto-renamer playground</h1>
         <select className="h-8 rounded-md border bg-background px-2 text-sm" value={kind}
@@ -135,7 +135,7 @@ export default function App() {
           <Palette global={kind === 'global'} onAdd={add} />
         </aside>
         <div className="min-h-0">
-          <Canvas config={config} onSelect={setSelected} />
+          <Canvas config={config} onChange={setConfig} onSelect={setSelected} />
         </div>
         <aside className="min-h-0 overflow-auto border-l p-3">
           <Inspector config={config} kind={kind} selected={selected} onChange={setConfig} onSelect={setSelected} />
