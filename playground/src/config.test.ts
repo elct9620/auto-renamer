@@ -92,8 +92,8 @@ describe('drawing', () => {
     expect(first.position.y).toBeLessThan(second.position.y)
     expect(edgeBetween(config, routeId('series', 0), pipelineId('video'))).toBeDefined()
     expect(edgeBetween(config, routeId('series', 1), pipelineId('subtitle'))).toBeDefined()
-    const x = (id: string) => nodeOf(config, id)!.position.x
-    expect(x(pipelineId('video'))).toBeLessThan(x(pipelineId('subtitle')))
+    const y = (id: string) => nodeOf(config, id)!.position.y
+    expect(y(pipelineId('video'))).toBeLessThan(y(pipelineId('subtitle')))
   })
 
   // @behavior PGE-003
@@ -106,15 +106,15 @@ describe('drawing', () => {
   })
 
   // @behavior PGE-056
-  it('stacks the stages of a pipeline below it in order', () => {
+  it('runs the stages of a pipeline inside it from left to right', () => {
     const { nodes } = toGraph(read(CONFIG))
     const column = ['stage:video:0', 'stage:video:1', 'stage:video:2'].map((id) => nodes.find((node) => node.id === id)!)
 
     expect(column.every((node) => node.parentId === pipelineId('video'))).toBe(true)
-    expect(new Set(column.map(({ position }) => position.x)).size).toBe(1)
-    const ys = column.map(({ position }) => position.y)
-    expect(ys).toEqual([...ys].sort((a, b) => a - b))
-    expect(new Set(ys).size).toBe(column.length)
+    expect(new Set(column.map(({ position }) => position.y)).size).toBe(1)
+    const xs = column.map(({ position }) => position.x)
+    expect(xs).toEqual([...xs].sort((a, b) => a - b))
+    expect(new Set(xs).size).toBe(column.length)
   })
 
   // @behavior PGE-073
@@ -190,9 +190,9 @@ describe('layout', () => {
 
   it('drops a stage on the pipeline where it is drawn', () => {
     const config = read(CONFIG)
-    const moved = laidOut(toGraph(config).nodes, { [pipelineId('subtitle')]: { x: 1200, y: 0 } })
+    const moved = laidOut(toGraph(config).nodes, { [pipelineId('subtitle')]: { x: 1200, y: 900 } })
 
-    expect(dropAt(moved, { x: 1200, y: 600 })).toEqual({ pipeline: 'subtitle', index: 1 })
+    expect(dropAt(moved, { x: 1600, y: 950 })).toEqual({ pipeline: 'subtitle', index: 1 })
   })
 
   // @behavior PGE-028
@@ -274,7 +274,7 @@ describe('editing', () => {
 
     const at = absolute(nodes, second)
 
-    expect(dropAt(nodes, { x: at.x, y: at.y + 10 })).toEqual({ pipeline: 'video', index: 1 })
+    expect(dropAt(nodes, { x: at.x + 10, y: at.y })).toEqual({ pipeline: 'video', index: 1 })
   })
 
   // @behavior PGE-016

@@ -19,13 +19,15 @@ export interface NodeData extends Record<string, unknown> {
   followed?: boolean
 }
 
-const COLUMN = 240
-/** How wide a watch or a pipeline is drawn; what it holds is drawn inside, inset by `PAD`. */
+/** How wide a watch is drawn, and a route or a stage inside a group; what a group holds is inset by `PAD`. */
 const GROUP = 200
+const CHILD = GROUP - 24
 const PAD = 12
 const HEADER = 44
-// A route or a stage sits below the one before it, so a long list grows down instead of shrinking the drawing.
+// A route sits below the one before it in its watch; a stage sits right of the one before it in its pipeline.
 const STEP = 64
+const STAGE_GAP = 16
+const STAGE_STEP = CHILD + STAGE_GAP
 const GAP = 80
 const TARGET_ROW = 80
 
@@ -68,8 +70,19 @@ function heightOf(count: number): number {
   return HEADER + STEP * count + PAD
 }
 
-function inside(index: number): XYPosition {
+/** A pipeline is one row as high as a single stage, and as wide as its stages laid side by side. */
+const PIPELINE_HEIGHT = heightOf(1)
+
+function widthOf(count: number): number {
+  return Math.max(GROUP, PAD + STAGE_STEP * count - STAGE_GAP + PAD)
+}
+
+function below(index: number): XYPosition {
   return { x: PAD, y: HEADER + STEP * index }
+}
+
+function beside(index: number): XYPosition {
+  return { x: PAD + STAGE_STEP * index, y: HEADER }
 }
 
 /** Where a node is drawn on the canvas: its own position, or its position inside the node holding it. */
@@ -78,19 +91,19 @@ export function absolute(nodes: Node<NodeData>[], node: Node<NodeData>): XYPosit
   return parent ? { x: parent.position.x + node.position.x, y: parent.position.y + node.position.y } : node.position
 }
 
-/** Where a stage dropped at a point of the drawing goes: the pipeline drawn over that point's column, after each
- * of its stages whose middle is above the point; none on a built-in pipeline. `nodes` are as drawn, without the
+/** Where a stage dropped at a point of the drawing goes: the pipeline drawn across that point's row, after each of
+ * its stages whose middle is left of the point; none on a built-in pipeline. `nodes` are as drawn, without the
  * stage being moved. */
 export function dropAt(nodes: Node<NodeData>[], point: XYPosition): { pipeline: string; index: number } | null {
-  const middle = (node: Node<NodeData>) => node.position.x + GROUP / 2
-  const column = nodes
-    .filter((node) => node.type === 'pipeline' && Math.abs(middle(node) - point.x) < COLUMN / 2)
-    .sort((a, b) => Math.abs(middle(a) - point.x) - Math.abs(middle(b) - point.x))[0]
-  if (column === undefined || column.data.selected.kind !== 'pipeline' || column.data.locked) return null
-  const pipeline = column.data.selected.name
+  const middle = (node: Node<NodeData>) => node.position.y + PIPELINE_HEIGHT / 2
+  const row = nodes
+    .filter((node) => node.type === 'pipeline' && Math.abs(middle(node) - point.y) < (PIPELINE_HEIGHT + GAP) / 2)
+    .sort((a, b) => Math.abs(middle(a) - point.y) - Math.abs(middle(b) - point.y))[0]
+  if (row === undefined || row.data.selected.kind !== 'pipeline' || row.data.locked) return null
+  const pipeline = row.data.selected.name
   const index = nodes.filter((node) => {
     const one = node.data.selected
-    return one.kind === 'stage' && one.pipeline === pipeline && absolute(nodes, node).y + STEP / 2 <= point.y
+    return one.kind === 'stage' && one.pipeline === pipeline && absolute(nodes, node).x + CHILD / 2 <= point.x
   }).length
   return { pipeline, index }
 }
@@ -125,10 +138,10 @@ function pipelinesRouted(route: Table): string[] {
 }
 
 /**
- * The drawing of a configuration, read from the top down: each watch holding its routes in the order they claim,
- * the targets beside them, and below them each pipeline holding its stages in order. A route leads to its
- * pipeline and to the target it moves to; where its rejected route goes is joined apart. A built-in pipeline
- * is drawn when a route names it, locked.
+ * The drawing of a configuration, read from left to right: the watches stacked in the first column, each holding its
+ * routes in the order they claim; then each pipeline as a row holding its stages in order; then the targets. A
+ * route leads to its pipeline and to the target it moves to; where its rejected route goes is joined apart. A
+ * built-in pipeline is drawn when a route names it, locked.
  */
 export function toGraph(config: Table, builtIns: Table = {}): { nodes: Node<NodeData>[]; edges: Edge[] } {
   const nodes: Node<NodeData>[] = []
@@ -143,16 +156,22 @@ export function toGraph(config: Table, builtIns: Table = {}): { nodes: Node<Node
       return pipeline ? [{ name, ...pipeline }] : []
     })
   const drawn = new Set(pipelines.map(({ name }) => name))
-  const top = Math.max(0, ...watches.map((name) => heightOf(routesOf(config, name).length))) + GAP
+  // Rows are laid out in turn, each below the one before it; the pipelines start right of the watches and the
+  // targets right of the widest pipeline.
+  const tops = (heights: number[]) => heights.map((_, index) => heights.slice(0, index).reduce((sum, one) => sum + one + GAP / 2, 0))
+  const watchTops = tops(watches.map((name) => heightOf(routesOf(config, name).length)))
+  const pipelineTops = tops(pipelines.map(() => PIPELINE_HEIGHT))
+  const pipelinesLeft = GROUP + GAP
+  const targetsLeft = pipelinesLeft + Math.max(GROUP, ...pipelines.map(({ stages }) => widthOf(stages.length))) + GAP
 
-  watches.forEach((name, column) => {
+  watches.forEach((name, row) => {
     const watch = asTable(asTable(config.watch)[name])
     const routes = routesOf(config, name)
     const followed = watch.routes === undefined
     nodes.push({
       id: watchId(name),
       type: 'watch',
-      position: { x: column * COLUMN, y: 0 },
+      position: { x: 0, y: watchTops[row] },
       style: { width: GROUP, height: heightOf(routes.length) },
       data: {
         label: name,
@@ -168,8 +187,8 @@ export function toGraph(config: Table, builtIns: Table = {}): { nodes: Node<Node
         type: 'route',
         parentId: watchId(name),
         extent: 'parent',
-        position: inside(index),
-        style: { width: GROUP - PAD * 2 },
+        position: below(index),
+        style: { width: CHILD },
         data: { label: `${index + 1} · ${pipeline}`, followed, selected: { kind: 'route', watch: name, index } },
       })
       if (drawn.has(pipeline)) {
@@ -202,17 +221,17 @@ export function toGraph(config: Table, builtIns: Table = {}): { nodes: Node<Node
     nodes.push({
       id: targetId(name),
       type: 'target',
-      position: { x: watches.length * COLUMN, y: row * TARGET_ROW },
+      position: { x: targetsLeft, y: row * TARGET_ROW },
       data: { label: name, detail: targetsOf(config)[name], selected: { kind: 'target', name } },
     })
   })
 
-  pipelines.forEach(({ name: pipeline, stages, locked }, column) => {
+  pipelines.forEach(({ name: pipeline, stages, locked }, row) => {
     nodes.push({
       id: pipelineId(pipeline),
       type: 'pipeline',
-      position: { x: COLUMN * column, y: top },
-      style: { width: GROUP, height: heightOf(stages.length) },
+      position: { x: pipelinesLeft, y: pipelineTops[row] },
+      style: { width: widthOf(stages.length), height: PIPELINE_HEIGHT },
       deletable: !locked,
       data: { label: pipeline, locked, selected: { kind: 'pipeline', name: pipeline } },
     })
@@ -224,8 +243,8 @@ export function toGraph(config: Table, builtIns: Table = {}): { nodes: Node<Node
         type: 'stage',
         parentId: pipelineId(pipeline),
         extent: 'parent',
-        position: inside(index),
-        style: { width: GROUP - PAD * 2 },
+        position: beside(index),
+        style: { width: CHILD },
         draggable: !locked,
         deletable: !locked,
         data: {
@@ -241,19 +260,6 @@ export function toGraph(config: Table, builtIns: Table = {}): { nodes: Node<Node
   })
 
   return { nodes, edges }
-}
-
-/** The nodes the view opens on: the watches, the targets and the first stages of each pipeline, at full scale. A
- * longer pipeline goes on below, reached by panning, rather than shrinking every node to fit. */
-export function head(nodes: Node<NodeData>[]): Node<NodeData>[] {
-  const first = 4
-  return nodes.filter((node) => {
-    const one = node.data.selected
-    if (one.kind === 'stage') return one.index < first
-    if (one.kind === 'pipeline') return !nodes.some((other) => other.parentId === node.id && other.data.selected.kind === 'stage'
-      && other.data.selected.index >= first)
-    return true
-  })
 }
 
 /** Where nodes were left by hand, by id; the configuration's order places every other node. A node held by

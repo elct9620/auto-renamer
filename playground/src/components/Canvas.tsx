@@ -44,7 +44,7 @@ import {
   setIn,
 } from '../config'
 import { builtIns, read, stages } from '../core'
-import { type Joint, type Layout, type Move, type NodeData, type Selected, absolute, dropAt, head, laidOut, relaid, routeAt, toGraph } from '../graph'
+import { type Joint, type Layout, type Move, type NodeData, type Selected, absolute, dropAt, laidOut, relaid, routeAt, toGraph } from '../graph'
 
 /** The type a stage dragged from the palette carries its name under. */
 export const STAGE_DRAG = 'application/x-auto-renamer-stage'
@@ -80,33 +80,33 @@ function ConfigNode({ data, kind }: { data: NodeData; kind: Kind }) {
   )
 }
 
-// A watch is joined to pipelines by its handle, and each of its routes to its pipeline below and its targets
-// beside; stages follow each other only by order.
+// Everything flows right: a watch is joined to pipelines by its handle, and each of its routes to its pipeline and
+// its targets; stages follow each other only by order.
 const nodeTypes = {
   watch: ({ data }: NodeProps<Node<NodeData>>) => (
     <>
       <ConfigNode data={data} kind="watch" />
-      <Handle type="source" position={Position.Bottom} />
+      <Handle type="source" position={Position.Right} />
     </>
   ),
   route: ({ data }: NodeProps<Node<NodeData>>) => (
     <>
       <ConfigNode data={data} kind="route" />
-      <Handle type="source" position={Position.Bottom} isConnectable={false} />
-      <Handle type="source" id="effects" position={Position.Right} />
+      <Handle type="source" position={Position.Right} style={{ top: '35%' }} isConnectable={false} />
+      <Handle type="source" id="effects" position={Position.Right} style={{ top: '70%' }} />
     </>
   ),
   pipeline: ({ data }: NodeProps<Node<NodeData>>) => (
     <>
       <ConfigNode data={data} kind="pipeline" />
-      <Handle type="target" position={Position.Top} />
+      <Handle type="target" position={Position.Left} />
     </>
   ),
   stage: ({ data }: NodeProps<Node<NodeData>>) => (
     <>
-      <Handle type="target" position={Position.Top} isConnectable={false} />
+      <Handle type="target" position={Position.Left} isConnectable={false} />
       <ConfigNode data={data} kind="stage" />
-      <Handle type="source" position={Position.Bottom} isConnectable={false} />
+      <Handle type="source" position={Position.Right} isConnectable={false} />
     </>
   ),
   target: ({ data }: NodeProps<Node<NodeData>>) => (
@@ -199,7 +199,8 @@ function Flow({ config, onChange, onSelect }: {
 
   return (
     <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} colorMode="system" fitView
-      fitViewOptions={{ nodes: head(shown), maxZoom: 1 }}
+      // A long pipeline is wider than the canvas; the whole drawing is fitted, scaled down past the default limit.
+      minZoom={0.2} fitViewOptions={{ maxZoom: 1 }}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onNodeDragStop={(_, node) => {

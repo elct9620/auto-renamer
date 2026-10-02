@@ -450,13 +450,13 @@ The playground page draws a configuration for people who do not read TOML: each 
 | When | the trees are shown |
 | Then | the source holds the single-episode files of each show, named by its folder |
 
-## `PGE-056` A pipeline's stages are stacked inside it in order
+## `PGE-056` A pipeline's stages run inside it from left to right
 
 | Step | Statement |
 | --- | --- |
 | Given | a pipeline `video` with the stages filter, format and strip |
 | When | it is drawn |
-| Then | each stage is drawn inside the pipeline, below the one before it |
+| Then | each stage is drawn inside the pipeline, right of the one before it |
 
 ## `PGE-057` Every example moves its files where the cases say
 
