@@ -65,7 +65,7 @@ function FilesAfter({ simulation, pipeline, index, folder, claims }: {
           <li key={origin} className="grid font-mono text-xs">
             <span className="truncate text-muted-foreground" title={origin}>{origin}</span>
             {step.stop !== null ? (
-              <span className="text-destructive">{step.stop === 'excluded' ? t('output.excluded') : step.stop}</span>
+              <span className="text-destructive">{step.stop}</span>
             ) : (
               changes.map((change) => <span key={change.key}>{change.key}: {change.to}</span>)
             )}

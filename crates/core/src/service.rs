@@ -37,7 +37,6 @@ pub enum What {
     Skipped(SkipReason),
     Refused(String),
     Unclaimed,
-    Excluded,
     LeftTooLarge,
 }
 
@@ -167,10 +166,7 @@ fn process(
                 renames,
             ),
             Verdict::Unclaimed => What::Unclaimed,
-            Verdict::Excluded => What::Excluded,
-            Verdict::Rejected(rejection) => {
-                What::Refused(format!("{}: {}", rejection.stage, rejection.reason))
-            }
+            Verdict::Rejected(stop) => What::Refused(format!("{}: {}", stop.stage, stop.reason)),
         };
         processed.push(Processed {
             origin: entry.origin,

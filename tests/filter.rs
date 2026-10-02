@@ -1,7 +1,6 @@
 mod common;
 
-use auto_renamer::Stop;
-use common::{apply, record};
+use common::{apply, assert_rejected_by, record};
 
 // @behavior FLT-001
 #[test]
@@ -13,10 +12,10 @@ fn should_let_a_listed_extension_pass() {
 
 // @behavior FLT-002
 #[test]
-fn should_exclude_an_unlisted_extension() {
+fn should_refuse_an_unlisted_extension() {
     let outcome = apply(r#"{ filter = { ext = ["mkv"] } }"#, record("Alpha.nfo"));
 
-    assert_eq!(outcome, Err(Stop::Excluded));
+    assert_rejected_by(outcome, "filter");
 }
 
 // @behavior FLT-003
@@ -40,13 +39,13 @@ fn should_match_a_name_pattern_against_the_whole_file_name() {
 
 // @behavior FLT-005
 #[test]
-fn should_turn_a_match_into_an_exclusion_when_inverted() {
+fn should_turn_a_match_into_a_refusal_when_inverted() {
     let outcome = apply(
         r#"{ filter = { ext = ["nfo"], invert = true } }"#,
         record("Alpha.nfo"),
     );
 
-    assert_eq!(outcome, Err(Stop::Excluded));
+    assert_rejected_by(outcome, "filter");
 }
 
 // @behavior FLT-006
@@ -68,5 +67,5 @@ fn should_need_both_the_extension_and_the_pattern_to_match() {
         record("Alpha.mkv"),
     );
 
-    assert_eq!(outcome, Err(Stop::Excluded));
+    assert_rejected_by(outcome, "filter");
 }

@@ -11,8 +11,8 @@ use std::path::PathBuf;
 
 pub use auto_renamer_core::Declaration;
 use auto_renamer_core::{
-    Config, Declared, FolderConfig, Processed, Renames, Step, Stop, Value, What,
-    process_batch_observed, replaced_pipelines,
+    Config, Declared, FolderConfig, Processed, Renames, Step, Value, What, process_batch_observed,
+    replaced_pipelines,
 };
 use serde::{Deserialize, Serialize};
 pub use toml::Table;
@@ -101,10 +101,7 @@ impl SimulatedStep {
                     .collect(),
                 None,
             ),
-            Err(Stop::Excluded) => (None, BTreeMap::new(), Some("excluded".to_string())),
-            Err(Stop::Rejected(rejection)) => {
-                (None, BTreeMap::new(), Some(rejection.reason.clone()))
-            }
+            Err(stop) => (None, BTreeMap::new(), Some(stop.reason.clone())),
         };
         SimulatedStep {
             pipeline: step.pipeline.to_string(),
@@ -188,7 +185,6 @@ fn outcome(entry: Processed) -> Outcome {
         What::Skipped(reason) => ("skipped", None, Some(reason.to_string())),
         What::Refused(reason) => ("refused", None, Some(reason)),
         What::Unclaimed => ("unclaimed", None, None),
-        What::Excluded => ("excluded", None, None),
         What::LeftTooLarge => ("left too large", None, None),
     };
     Outcome {

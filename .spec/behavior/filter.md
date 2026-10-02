@@ -1,6 +1,6 @@
 # Filter
 
-A filter decides whether a file goes on down its pipeline. A file it lets through is unchanged; a file it turns away is excluded, which is not a refusal.
+A filter decides whether a file goes on down its pipeline. A file it lets through is unchanged; a file it turns away is refused, naming the stage `filter`, the same way any stage stops a file.
 
 ## Includes
 
@@ -14,13 +14,13 @@ A filter decides whether a file goes on down its pipeline. A file it lets throug
 | When | the stage is applied |
 | Then | the record goes on unchanged |
 
-## `FLT-002` An unlisted extension is excluded
+## `FLT-002` An unlisted extension is refused
 
 | Step | Statement |
 | --- | --- |
 | Given | a filter for the extension `mkv` and a record for `Alpha.nfo` |
 | When | the stage is applied |
-| Then | the record is excluded |
+| Then | the record is refused, naming the stage `filter` |
 
 ## `FLT-003` Extensions are compared without regard to case
 
@@ -38,13 +38,13 @@ A filter decides whether a file goes on down its pipeline. A file it lets throug
 | When | the stage is applied |
 | Then | the record goes on unchanged |
 
-## `FLT-005` Inverting turns a match into an exclusion
+## `FLT-005` Inverting turns a match into a refusal
 
 | Step | Statement |
 | --- | --- |
 | Given | a filter for the extension `nfo` with inversion and a record for `Alpha.nfo` |
 | When | the stage is applied |
-| Then | the record is excluded |
+| Then | the record is refused, naming the stage `filter` |
 
 ## `FLT-006` Inverting lets everything else through
 
@@ -60,4 +60,4 @@ A filter decides whether a file goes on down its pipeline. A file it lets throug
 | --- | --- |
 | Given | a filter for the extension `mkv` and the name pattern `Beta*` and a record for `Alpha.mkv` |
 | When | the stage is applied |
-| Then | the record is excluded |
+| Then | the record is refused, naming the stage `filter` |

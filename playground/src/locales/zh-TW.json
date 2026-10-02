@@ -76,7 +76,6 @@
     "to": "目的地",
     "why": "原因",
     "claimed": "由 {{pipeline}} 認領",
-    "excluded": "已排除",
     "steps": "{{file}} 的處理步驟"
   },
   "what": {
@@ -87,7 +86,6 @@
     "skipped": "略過",
     "refused": "拒絕",
     "unclaimed": "未認領",
-    "excluded": "已排除",
     "left too large": "數量過多未處理"
   },
   "canvas": {

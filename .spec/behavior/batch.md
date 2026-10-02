@@ -44,7 +44,7 @@ A batch is planned as a whole: files are put in name order, each is claimed by t
 | --- | --- |
 | Given | a pipeline that formats and then filters for `mkv`, followed by a pipeline that keeps every file, and the file `a.nfo` |
 | When | the batch is planned |
-| Then | `a.nfo` is excluded and not offered to the second pipeline |
+| Then | `a.nfo` is refused by `filter` and not offered to the second pipeline |
 
 ## `BAT-006` A refused file leaves the others planned
 

@@ -4,15 +4,14 @@ use std::path::{Path, PathBuf};
 use crate::context::{Context, Earlier, Target};
 use crate::pipeline::Pipeline;
 use crate::record::Record;
-use crate::stages::{Batch, Effect, Flow, Rejection, Stop};
+use crate::stages::{Batch, Effect, Flow, Stop};
 
 /// What a batch made of one file.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Verdict {
     Planned(Record),
-    Excluded,
     Unclaimed,
-    Rejected(Rejection),
+    Rejected(Stop),
 }
 
 impl Verdict {
@@ -20,8 +19,7 @@ impl Verdict {
     fn of(flow: Flow) -> Verdict {
         match flow {
             Ok(record) => Verdict::Planned(record),
-            Err(Stop::Excluded) => Verdict::Excluded,
-            Err(Stop::Rejected(rejection)) => Verdict::Rejected(rejection),
+            Err(stop) => Verdict::Rejected(stop),
         }
     }
 }

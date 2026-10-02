@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use auto_renamer::{
-    ConfigError, Context, Declared, Flow, Judged, Pipeline, Record, Stop, Target, Value, Verdict,
+    ConfigError, Context, Declared, Flow, Judged, Pipeline, Record, Target, Value, Verdict,
     plan_batch,
 };
 use chrono::{TimeZone, Utc};
@@ -95,7 +95,7 @@ pub fn run(declaration: &str, record: Record) -> Record {
 
 pub fn assert_rejected_by(flow: Flow, stage: &str) {
     match flow {
-        Err(Stop::Rejected(rejection)) => assert_eq!(rejection.stage, stage),
+        Err(stop) => assert_eq!(stop.stage, stage),
         other => panic!("expected a refusal by `{stage}`, got {other:?}"),
     }
 }

@@ -19,7 +19,7 @@ function Timeline({ outcome }: { outcome: Outcome }) {
             {step.name === null ? t('output.claimed', { pipeline: step.pipeline }) : <StageName name={step.name} />}
           </span>
           {step.stop !== null && (
-            <span className="text-destructive">{step.stop === 'excluded' ? t('output.excluded') : step.stop}</span>
+            <span className="text-destructive">{step.stop}</span>
           )}
           {changes(outcome.steps[index - 1], step).map((change) => (
             <span key={change.key}>

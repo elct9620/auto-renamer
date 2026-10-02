@@ -335,26 +335,14 @@ pub enum PipelineError {}
 
 ## `Stop`
 
-What ends the way of a record through its pipeline: a filter excluded it, or a stage refused it. A stage answers with the record to go on with, or with a stop.
+Why a stage refused a record, and which stage it was. A filter that turns a record away refuses it too, so every stop is a refusal. A stage answers with the record to go on with, or with a stop.
 
 | Attribute | Value |
 | --- | --- |
 | internal | yes |
 
 ```rust
-pub enum Stop {}
-```
-
-## `Rejection`
-
-Why a stage refused a record, and which stage it was.
-
-| Attribute | Value |
-| --- | --- |
-| internal | yes |
-
-```rust
-pub struct Rejection {}
+pub struct Stop {}
 ```
 
 ## `Declared::apply`
@@ -491,7 +479,7 @@ impl Record {
 
 ## `Verdict`
 
-What a batch made of one file: planned, excluded, unclaimed, or refused.
+What a batch made of one file: planned, unclaimed, or refused.
 
 | Attribute | Value |
 | --- | --- |

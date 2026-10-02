@@ -1,6 +1,6 @@
 mod common;
 
-use auto_renamer::{Flow, Stop, Value, Verdict, plan_batch, plan_batch_observed};
+use auto_renamer::{Flow, Value, Verdict, plan_batch, plan_batch_observed};
 use common::{Files, number, pipelines, planned_batch, planned_record, record, verdict, with};
 
 fn kind_of(judged: &[auto_renamer::Judged], origin: &str) -> Option<String> {
@@ -69,7 +69,7 @@ fn should_let_a_pipeline_without_a_leading_filter_claim_what_is_left() {
 
 // @behavior BAT-005
 #[test]
-fn should_exclude_a_file_for_good_when_a_later_filter_turns_it_away() {
+fn should_refuse_a_file_for_good_when_a_later_filter_turns_it_away() {
     let list = [
         (
             "first",
@@ -80,7 +80,10 @@ fn should_exclude_a_file_for_good_when_a_later_filter_turns_it_away() {
 
     let judged = planned_batch(&list, vec![record("a.nfo")]);
 
-    assert_eq!(verdict(&judged, "a.nfo"), &Verdict::Excluded);
+    match verdict(&judged, "a.nfo") {
+        Verdict::Rejected(stop) => assert_eq!(stop.stage, "filter"),
+        other => panic!("expected a refusal by `filter`, got {other:?}"),
+    }
 }
 
 // @behavior BAT-006
@@ -224,5 +227,5 @@ fn should_tell_a_stopped_file_no_further_than_the_stage_that_stopped_it() {
 
     let (stage, flow) = told.last().expect("the file was told");
     assert_eq!(*stage, Some((0, "format")));
-    assert!(matches!(flow, Err(Stop::Rejected(rejection)) if rejection.stage == "format"));
+    assert!(matches!(flow, Err(stop) if stop.stage == "format"));
 }

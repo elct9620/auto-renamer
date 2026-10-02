@@ -108,7 +108,7 @@ The `auto-renamer.toml` a folder carries for the exceptions of what lies in it. 
 
 ### Verdict
 
-What a batch made of one file: planned, excluded, unclaimed or refused.
+What a batch made of one file: planned, unclaimed or refused.
 
 #### Rejected
 
@@ -116,7 +116,7 @@ What a batch made of one file: planned, excluded, unclaimed or refused.
 
 ### Flow
 
-What a stage answers for one record: the record to go on with, or the stop that ends its way through the pipeline. A stop is an exclusion by a filter or a refusal with its reason.
+What a stage answers for one record: the record to go on with, or the stop that ends its way through the pipeline. A stop is a refusal, naming the stage and its reason; a filter that turns a file away refuses it too.
 
 #### Rejected
 

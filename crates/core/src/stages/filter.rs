@@ -12,7 +12,10 @@ impl Stage for Filter {
             if self.accepts(&record) {
                 Ok(record)
             } else {
-                Err(Stop::Excluded)
+                Err(Stop::rejected(
+                    "filter",
+                    "the file does not pass the filter",
+                ))
             }
         })
     }

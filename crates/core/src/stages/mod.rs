@@ -28,26 +28,20 @@ pub use effect::Effect;
 /// What a stage answers for one record: the record to go on with, or what stops it.
 pub type Flow = Result<Record, Stop>;
 
-/// What ends the way of a record through its pipeline: a filter excluded it, or a stage refused it.
+/// Why a stage refused a record, and which stage it was. A filter that turns a record away refuses it
+/// too, so every stop is a refusal.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Stop {
-    Excluded,
-    Rejected(Rejection),
-}
-
-/// Why a stage refused a record, and which stage it was.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Rejection {
+pub struct Stop {
     pub stage: String,
     pub reason: String,
 }
 
 impl Stop {
     fn rejected(stage: &str, reason: impl Into<String>) -> Stop {
-        Stop::Rejected(Rejection {
+        Stop {
             stage: stage.to_string(),
             reason: reason.into(),
-        })
+        }
     }
 }
 

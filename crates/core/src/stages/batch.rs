@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use super::{Effect, Flow, Stop};
+use super::{Effect, Flow};
 use crate::record::Record;
 
 /// One file of a batch: going on while its flow holds a record, and stopped once a stage ended its way.
@@ -36,10 +36,14 @@ impl Batch {
     /// Runs a change over every record still going on. A record goes on as the change answers it, and
     /// what stops one ends its way, so no later change sees it.
     pub(crate) fn each(mut self, mut change: impl FnMut(Record) -> Flow) -> Batch {
-        for file in &mut self.files {
-            let flow = std::mem::replace(&mut file.flow, Err(Stop::Excluded));
-            file.flow = flow.and_then(&mut change);
-        }
+        self.files = self
+            .files
+            .into_iter()
+            .map(|mut file| {
+                file.flow = file.flow.and_then(&mut change);
+                file
+            })
+            .collect();
         self
     }
 

@@ -389,7 +389,6 @@ fn report(entry: &Processed) {
         What::Previewed(to) => eprintln!("[info] {origin} would go to {}", to.display()),
         What::Unchanged => {}
         What::Unclaimed => eprintln!("[info] {origin} left: no pipeline claims it"),
-        What::Excluded => eprintln!("[info] {origin} left: a filter excluded it"),
         What::Skipped(reason) => eprintln!("[warn] {origin} skipped: {reason}"),
         What::Refused(reason) => eprintln!("[warn] {origin} refused: {reason}"),
         What::LeftTooLarge => eprintln!("[warn] {origin} left: the batch is too large"),

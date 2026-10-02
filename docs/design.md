@@ -592,9 +592,9 @@ dry_run = true      # log each plan, run no effect
 |---|---|
 | `ext` | 副檔名清單，不分大小寫，不含點 |
 | `glob` | 檔名樣式 |
-| `invert` | 反轉結果，用於排除 |
+| `invert` | 反轉結果，用於擋下特定檔案 |
 
-`ext` 與 `glob` 同時給時都要符合。開頭的 `filter` 認領檔案，中途的 `filter` 排除檔案（2.5）。
+`ext` 與 `glob` 同時給時都要符合。開頭的 `filter` 認領檔案，中途的 `filter` 拒絕檔案（2.5）。
 
 ### 5.9 名稱改寫
 

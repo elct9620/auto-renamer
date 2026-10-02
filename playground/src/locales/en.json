@@ -76,7 +76,6 @@
     "to": "To",
     "why": "Why",
     "claimed": "Claimed by {{pipeline}}",
-    "excluded": "Excluded",
     "steps": "Steps of {{file}}"
   },
   "what": {
@@ -87,7 +86,6 @@
     "skipped": "skipped",
     "refused": "refused",
     "unclaimed": "unclaimed",
-    "excluded": "excluded",
     "left too large": "left too large"
   },
   "canvas": {

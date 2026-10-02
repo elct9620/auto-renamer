@@ -25,6 +25,6 @@ pub use service::{
     Processed, Renames, What, process_batch, process_batch_observed, replaced_pipelines,
 };
 pub use stages::{
-    Declaration, DeclareError, Declared, Effect, Flow, Parameter, ParameterKind, Rejection, Stop,
+    Declaration, DeclareError, Declared, Effect, Flow, Parameter, ParameterKind, Stop,
 };
 pub use template::{RenderError, Template, TemplateError};
