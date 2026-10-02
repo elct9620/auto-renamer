@@ -4,6 +4,12 @@ function node(page: Page, name: string) {
   return page.locator('.react-flow__node').filter({ has: page.getByText(name, { exact: true }) })
 }
 
+// The opening example routes the built-in `series-video`, which is copied in before its stages can change.
+async function ownSeriesVideo(page: Page) {
+  await title(page, 'series-video').click()
+  await page.getByRole('button', { name: 'Copy as own pipeline' }).click()
+}
+
 // The route the opening example's watch claims with first.
 const FIRST_ROUTE = '1 · series-video'
 
@@ -70,6 +76,7 @@ test('a reset layout draws every node where its order places it', async ({ page 
 // @behavior PGE-034
 test('choosing the example again brings back its configuration and tree', async ({ page }) => {
   const before = await configText(page)
+  await ownSeriesVideo(page)
   await title(page, 'format').click()
   await page.getByRole('button', { name: 'Remove', exact: true }).click()
   const path = page.getByRole('combobox', { name: 'Path of a new file or folder' }).first()
@@ -93,7 +100,7 @@ test('adding in a folder starts the new path from that folder', async ({ page })
 
 // @behavior PGE-036
 test('a parameter limited to some values offers them in a list', async ({ page }) => {
-  await title(page, 'series-video').click()
+  await ownSeriesVideo(page)
   await page.getByRole('combobox', { name: 'Add a stage' }).click()
   await page.getByRole('option', { name: 'case' }).click()
   await title(page, 'case').click()
@@ -105,7 +112,7 @@ test('a parameter limited to some values offers them in a list', async ({ page }
 
 // @behavior PGE-037
 test('a required parameter left empty is pointed out', async ({ page }) => {
-  await title(page, 'series-video').click()
+  await ownSeriesVideo(page)
   await page.getByRole('combobox', { name: 'Add a stage' }).click()
   await page.getByRole('option', { name: 'rank' }).click()
   await title(page, 'rank').click()
@@ -371,6 +378,7 @@ test('a selected stage shows the files after it', async ({ page }) => {
 
 // @behavior PGE-069
 test('editing the configuration clears the simulation', async ({ page }) => {
+  await ownSeriesVideo(page)
   await page.getByRole('button', { name: 'Trigger' }).click()
   await expect(page.getByText('Trigger the watch to see where each file goes.')).toHaveCount(0)
 

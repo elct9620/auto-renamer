@@ -170,6 +170,7 @@ export function Inspector({ config, kind, selected, folders = [], simulation = n
   const builtIn = selected.kind === 'pipeline' ? selected.name : selected.pipeline
   if (!(builtIn in asTable(config.pipeline))) {
     if (!(builtIn in builtIns())) return null
+    const builtInStages = stagesOf({ pipeline: builtIns() }, builtIn)
     return (
       <Section icon={KIND_ICONS.pipeline} title={t('inspector.pipeline', { name: builtIn })}>
         <p className="text-xs text-muted-foreground">{t('inspector.builtIn')}</p>
@@ -182,6 +183,8 @@ export function Inspector({ config, kind, selected, folders = [], simulation = n
               onChange={(folder) => onOverride(builtIn, folder)} />
           </Field>
         )}
+        {simulation && selected.kind === 'stage' && <FilesAfter simulation={simulation} pipeline={builtIn} index={selected.index}
+          folder={folder} claims={builtInStages.slice(0, selected.index + 1).every((one) => stageName(one) === 'filter')} />}
       </Section>
     )
   }

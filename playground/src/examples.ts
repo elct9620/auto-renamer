@@ -84,12 +84,10 @@ ${series({
   ],
 }
 
-// The page opens here, so the built-in `series-video` is written out for the canvas to draw its stages.
 const SINGLE: Example = {
   id: 'single',
   watch: 'series',
-  config: `${seriesVideo()}
-${series({ video: `, ${KEEP_SEASONS}`, subtitle: false, unit: '{ root = ["*"] }' })}`,
+  config: `${series({ video: `, ${KEEP_SEASONS}`, subtitle: false, unit: '{ root = ["*"] }' })}`,
   entries: [
     'Alpha/[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv',
     'Beta Show/[Studio] Beta Show [12][WEB][HEVC-10bit 1080p AAC][EN].mp4',
