@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import type { Outcome, SimulatedStep, Simulation } from '../core'
-import { type StageView, afterStage, changes, claimedBy } from '../steps'
+import { type Change, type StageView, afterStage, changes, claimedBy } from '../steps'
 
 /** How the pipeline planned one file: the claim, then each stage it reached with only what that stage changed. */
 function Timeline({ outcome }: { outcome: Outcome }) {
@@ -37,6 +37,26 @@ function Timeline({ outcome }: { outcome: Outcome }) {
   )
 }
 
+/** The column names of a table in the panel. */
+function Head({ columns }: { columns: string[] }) {
+  return (
+    <thead className="text-muted-foreground">
+      <tr>{columns.map((column) => <th key={column} className="p-1">{column}</th>)}</tr>
+    </thead>
+  )
+}
+
+/** One field a stage changed: its name, the value before and the value after. */
+function ChangeCells({ change }: { change: Change }) {
+  return (
+    <>
+      <td className="p-1">{change.key}</td>
+      <td className="p-1 break-all text-muted-foreground">{change.from}</td>
+      <td className="p-1 break-all">{change.to}</td>
+    </>
+  )
+}
+
 /** The files a simulation ran through a stage, each with every field the stage changed, before and after; a
  * refused file says why instead. Paths are shown whole, wrapping where they must. */
 function StageFiles({ simulation, stage }: { simulation: Simulation; stage: StageView }) {
@@ -46,9 +66,7 @@ function StageFiles({ simulation, stage }: { simulation: Simulation; stage: Stag
   return (
     <>
       <table className="w-full text-left font-mono text-xs">
-        <thead className="text-muted-foreground">
-          <tr><th className="p-1">{t('output.file')}</th><th className="p-1">{t('output.field')}</th><th className="p-1">{t('output.before')}</th><th className="p-1">{t('output.after')}</th></tr>
-        </thead>
+        <Head columns={[t('output.file'), t('output.field'), t('output.before'), t('output.after')]} />
         <tbody>
           {ran.map(({ origin, step, changes }) => {
             const rows = step.stop !== null || changes.length === 0 ? 1 : changes.length
@@ -61,13 +79,11 @@ function StageFiles({ simulation, stage }: { simulation: Simulation; stage: Stag
                   ) : changes.length === 0 ? (
                     <td className="p-1 text-muted-foreground" colSpan={3}>{t('output.unchanged')}</td>
                   ) : (
-                    <><td className="p-1">{changes[0].key}</td><td className="p-1 break-all text-muted-foreground">{changes[0].from}</td><td className="p-1 break-all">{changes[0].to}</td></>
+                    <ChangeCells change={changes[0]} />
                   )}
                 </tr>
                 {step.stop === null && changes.slice(1).map((change) => (
-                  <tr key={change.key} className="align-top">
-                    <td className="p-1">{change.key}</td><td className="p-1 break-all text-muted-foreground">{change.from}</td><td className="p-1 break-all">{change.to}</td>
-                  </tr>
+                  <tr key={change.key} className="align-top"><ChangeCells change={change} /></tr>
                 ))}
               </Fragment>
             )
@@ -128,9 +144,7 @@ export function Dock({ trees, controls, fileName, text, status, simulation, stag
           <p className="p-2 text-xs text-muted-foreground">{t('output.empty')}</p>
         ) : (
           <table className="w-full text-left font-mono text-xs">
-            <thead className="text-muted-foreground">
-              <tr><th className="p-1">{t('output.file')}</th><th className="p-1">{t('output.became')}</th><th className="p-1">{t('output.to')}</th><th className="p-1">{t('output.why')}</th></tr>
-            </thead>
+            <Head columns={[t('output.file'), t('output.became'), t('output.to'), t('output.why')]} />
             <tbody>
               {simulation.outcomes.map((outcome) => (
                 <Fragment key={outcome.origin}>
