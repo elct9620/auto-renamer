@@ -1,6 +1,6 @@
 # Page
 
-The playground page draws a configuration for people who do not read TOML: each watch is joined to the pipelines it uses, and each pipeline is its stages in order. The table the core reads is the baseline; the drawing and every edit are made from it and back into it, so what is downloaded is what was drawn. Where a node sits is only its layout, which is neither written nor kept.
+The playground page draws a configuration for people who do not read TOML: each watch is joined to the pipelines its routes run, and each pipeline is its stages in order. The table the core reads is the baseline; the drawing and every edit are made from it and back into it, so what is downloaded is what was drawn. Where a node sits is only its layout, which is neither written nor kept.
 
 ## Includes
 
@@ -11,23 +11,23 @@ The playground page draws a configuration for people who do not read TOML: each 
 
 | Step | Statement |
 | --- | --- |
-| Given | a configuration whose pipeline `video` has the stages filter, format and move |
+| Given | a configuration whose pipeline `video` has the stages filter, format and strip |
 | When | it is drawn |
-| Then | the pipeline leads to the filter, the filter to the format, and the format to the move |
+| Then | the pipeline leads to the filter, the filter to the format, and the format to the strip |
 
-## `PGE-002` A watch is joined to the pipelines it lists
+## `PGE-002` A watch is joined to the pipelines of its routes
 
 | Step | Statement |
 | --- | --- |
-| Given | a configuration whose watch `series` lists the pipelines `video` and `subtitle` |
+| Given | a configuration whose watch `series` has routes of `video` and `subtitle` |
 | When | it is drawn |
 | Then | the watch leads to `video` first and to `subtitle` second |
 
-## `PGE-003` A watch without its own list is joined to the default pipelines
+## `PGE-003` A watch without its own routes is joined to the default's
 
 | Step | Statement |
 | --- | --- |
-| Given | a configuration whose default lists the pipeline `video` and whose watch lists none |
+| Given | a configuration whose default has a route of `video` and whose watch has none |
 | When | it is drawn |
 | Then | the watch leads to `video` |
 
@@ -35,25 +35,25 @@ The playground page draws a configuration for people who do not read TOML: each 
 
 | Step | Statement |
 | --- | --- |
-| Given | a pipeline with the stages filter and move |
+| Given | a pipeline with the stages filter and strip |
 | When | a format stage is added to it |
-| Then | its stages are filter, move and format |
+| Then | its stages are filter, strip and format |
 
 ## `PGE-005` A stage moved earlier is written earlier
 
 | Step | Statement |
 | --- | --- |
-| Given | a pipeline with the stages filter, move and format |
+| Given | a pipeline with the stages filter, strip and format |
 | When | the format stage is moved one place earlier |
-| Then | its stages are filter, format and move |
+| Then | its stages are filter, format and strip |
 
 ## `PGE-006` A removed stage leaves the others in order
 
 | Step | Statement |
 | --- | --- |
-| Given | a pipeline with the stages filter, format and move |
+| Given | a pipeline with the stages filter, format and strip |
 | When | the format stage is removed |
-| Then | its stages are filter and move |
+| Then | its stages are filter and strip |
 
 ## `PGE-007` A stage's parameters are written as its value
 
@@ -68,8 +68,8 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Step | Statement |
 | --- | --- |
 | Given | a pipeline |
-| When | a move stage is added with no parameters |
-| Then | the stage is written as the text `move` |
+| When | a strip stage is added with no parameters |
+| Then | the stage is written as the text `strip` |
 
 ## `PGE-009` A configuration that is refused cannot be downloaded
 
@@ -83,49 +83,49 @@ The playground page draws a configuration for people who do not read TOML: each 
 
 | Step | Statement |
 | --- | --- |
-| Given | a pipeline with the stages filter and move |
+| Given | a pipeline with the stages filter and strip |
 | When | a format stage is dropped between them |
-| Then | its stages are filter, format and move |
+| Then | its stages are filter, format and strip |
 
-## `PGE-011` A watch joined to a pipeline lists it last
+## `PGE-011` A watch joined to a pipeline routes it last
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch listing the pipeline `video` |
+| Given | a watch with a route of `video` |
 | When | it is joined to `subtitle` |
-| Then | it lists `video` and `subtitle` |
+| Then | it has routes of `video` and `subtitle` |
 
-## `PGE-012` A watch following the default lists its own pipelines once joined
+## `PGE-012` A watch following the default has its own routes once joined
 
 | Step | Statement |
 | --- | --- |
-| Given | a default listing `video` and a watch listing none |
+| Given | a default with a route of `video` and a watch with none |
 | When | the watch is joined to `subtitle` |
-| Then | the watch lists `video` and `subtitle` |
+| Then | the watch has its own routes of `video` and `subtitle` |
 
 ## `PGE-013` A joint removed drops the pipeline from the watch
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch listing `video` and `subtitle` |
+| Given | a watch with routes of `video` and `subtitle` |
 | When | its joint to `video` is removed |
-| Then | it lists `subtitle` |
+| Then | it has a route of `subtitle` only |
 
 ## `PGE-014` A renamed pipeline is renamed where it is listed
 
 | Step | Statement |
 | --- | --- |
-| Given | a pipeline `video` listed by the default and by a watch |
+| Given | a pipeline `video` routed by the default and by a watch |
 | When | it is renamed `episode` |
-| Then | the default and the watch list `episode` and not `video` |
+| Then | the routes of the default and the watch run `episode` and not `video` |
 
 ## `PGE-015` A removed pipeline is listed nowhere
 
 | Step | Statement |
 | --- | --- |
-| Given | a pipeline `video` listed by the default and by a watch |
+| Given | a pipeline `video` routed by the default and by a watch |
 | When | it is removed |
-| Then | neither the default nor the watch lists `video` |
+| Then | no route of the default or the watch runs `video` |
 
 ## `PGE-016` A new stage starts with the example the core describes
 
@@ -139,7 +139,7 @@ The playground page draws a configuration for people who do not read TOML: each 
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch from `/downloads` to `/video` and files under both |
+| Given | a watch from `/downloads` whose route moves into a target at `/video`, and files under both |
 | When | the tree is drawn for the watch |
 | Then | the source shows the files under `/downloads` and the target those under `/video` |
 
@@ -179,9 +179,9 @@ The playground page draws a configuration for people who do not read TOML: each 
 
 | Step | Statement |
 | --- | --- |
-| Given | a move stage whose `on_conflict` is `suffix` |
-| When | `on_conflict` is cleared in the form |
-| Then | the stage is written as the text `move` |
+| Given | a strip stage whose `groups` is set |
+| When | `groups` is cleared in the form |
+| Then | the stage is written as the text `strip` |
 
 ## `PGE-021` A file a simulation moved is marked where it arrived
 
@@ -292,9 +292,9 @@ The playground page draws a configuration for people who do not read TOML: each 
 
 | Step | Statement |
 | --- | --- |
-| Given | the move stage selected |
-| When | its `on_conflict` is opened |
-| Then | the choices are `reject` and `suffix` |
+| Given | a case stage added and selected |
+| When | its `to` is opened |
+| Then | the choices are `lower`, `upper` and `title` |
 
 ## `PGE-037` A required parameter left empty is pointed out
 
@@ -320,22 +320,22 @@ The playground page draws a configuration for people who do not read TOML: each 
 | When | 繁體中文 is chosen in the header |
 | Then | the page is shown in Traditional Chinese |
 
-## `PGE-040` Batch settings are not offered while they wait for a redesign
+## `PGE-040` A watch offers the settings for when a unit is processed
 
 | Step | Statement |
 | --- | --- |
 | Given | the watch `series` selected |
 | When | its form is shown |
-| Then | no `max_files`, `quiet` or `max_wait` is offered |
+| Then | `quiet`, `max_wait` and `max_files` are offered |
 
-## `PGE-041` A watch lists pipelines picked from those defined
+## `PGE-041` A watch routes pipelines picked from those defined
 
 | Step | Statement |
 | --- | --- |
 | Given | a configuration defining the pipelines `video` and `new_pipeline` |
-| Given | the watch `series` listing `video` |
+| Given | the watch `series` with a route of `video` |
 | When | `new_pipeline` is picked in its form |
-| Then | the watch lists `video` and `new_pipeline` |
+| Then | the watch has routes of `video` and `new_pipeline` |
 
 ## `PGE-042` A unit is chosen among its three forms
 
@@ -448,13 +448,13 @@ The playground page draws a configuration for people who do not read TOML: each 
 | --- | --- |
 | Given | the page just opened |
 | When | the trees are shown |
-| Then | the source holds the single-episode files of each show, each show folder with its folder configuration |
+| Then | the source holds the single-episode files of each show, named by its folder |
 
 ## `PGE-056` A pipeline's stages are stacked below it in order
 
 | Step | Statement |
 | --- | --- |
-| Given | a pipeline `video` with the stages filter, format and move |
+| Given | a pipeline `video` with the stages filter, format and strip |
 | When | it is drawn |
 | Then | each stage is drawn in the pipeline's column, below the one before it |
 
@@ -472,7 +472,7 @@ The playground page draws a configuration for people who do not read TOML: each 
 | --- | --- |
 | Given | the watch `series` joined to the pipeline `video` |
 | When | the remove button on that joint is pressed |
-| Then | the joint is gone and the configuration text lists no `video` for the watch |
+| Then | the joint is gone and the configuration text has no route of `video` for the watch |
 
 ## `PGE-059` A new folder configuration starts with the watch's values
 
@@ -494,17 +494,17 @@ The playground page draws a configuration for people who do not read TOML: each 
 
 | Step | Statement |
 | --- | --- |
-| Given | the opening example, whose show folders each carry a folder configuration |
+| Given | the opening example with a folder configuration started for `Alpha` |
 | When | the configurations are listed in the header |
-| Then | the global configuration and the folder configuration of each show are offered |
+| Then | the global configuration and the folder configuration of `Alpha` are offered |
 
 ## `PGE-062` A folder configuration added from the header is started and opened
 
 | Step | Statement |
 | --- | --- |
-| Given | the folder `Series` without a folder configuration |
-| When | adding one for `Series` is chosen in the header |
-| Then | the source holds `Series/auto-renamer.toml`, and it is the one being edited |
+| Given | the folder `Alpha` without a folder configuration |
+| When | adding one for `Alpha` is chosen in the header |
+| Then | the source holds `Alpha/auto-renamer.toml`, and it is the one being edited |
 
 ## `PGE-063` A pipeline overridden in a folder is copied into its folder configuration
 
@@ -518,9 +518,9 @@ The playground page draws a configuration for people who do not read TOML: each 
 
 | Step | Statement |
 | --- | --- |
-| Given | the pipeline `video` selected in the global configuration |
-| When | it is overridden in the folder `Series` |
-| Then | `Series/auto-renamer.toml` is the one being edited, and its canvas draws `video` |
+| Given | the pipeline `series-video` selected in the global configuration |
+| When | it is overridden in the folder `Alpha` |
+| Then | `Alpha/auto-renamer.toml` is the one being edited, and its canvas draws `series-video` |
 
 ## `PGE-065` A file's timeline marks only what each step changed
 
@@ -569,3 +569,19 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | a simulation where the leading filter of `video` claimed a video and left a subtitle |
 | When | the files after that filter are asked for |
 | Then | the video is listed and the subtitle is not |
+
+## `PGE-071` A target added in the defaults form is declared
+
+| Step | Statement |
+| --- | --- |
+| Given | the global configuration with nothing selected |
+| When | a new target `conflict` is named in the form |
+| Then | the configuration declares `target.conflict` |
+
+## `PGE-072` A route moves into a target picked from those declared
+
+| Step | Statement |
+| --- | --- |
+| Given | the target `conflict` declared and the watch `series` selected |
+| When | `conflict` is picked as where its route moves |
+| Then | the route moves into `conflict` |

@@ -225,8 +225,12 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
             <Button size="sm" variant="outline" onClick={() => editEntries(() => simulation.entries)}><Check />{t('tree.keep')}</Button>
           )}
         </div>
-        <TreePanel title={t('tree.target')} root={roots.target} entries={simulation?.entries ?? entries} marks={marks} editing={editing}
-          onEdit={editEntries} />
+        <div className="flex min-h-0 flex-col overflow-auto">
+          {roots.targets.map((root) => (
+            <TreePanel key={root} title={roots.targets.length > 1 ? `${t('tree.target')} ${root}` : t('tree.target')} root={root}
+              entries={simulation?.entries ?? entries} marks={marks} editing={editing} onEdit={editEntries} />
+          ))}
+        </div>
       </section>
 
       <Output fileName={fileName} text={text} status={status} simulation={simulation} />

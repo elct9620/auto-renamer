@@ -8,15 +8,14 @@ export interface Table {
   [key: string]: Value
 }
 
+/** The pipelines the core builds in, which a route may name without the configuration defining them. */
+export const BUILT_IN_PIPELINES = ['series-video', 'series-subtitle']
+
 /** A stage as written in `stages`: its name alone, or a one-key table of its name and parameters. */
 export type Stage = string | Table
 
 export function asTable(value: Value | undefined): Table {
   return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : {}
-}
-
-function asNames(value: Value | undefined): string[] {
-  return Array.isArray(value) ? value.filter((name): name is string => typeof name === 'string') : []
 }
 
 export function stageName(stage: Stage): string {
@@ -28,10 +27,29 @@ export function stagesOf(config: Table, pipeline: string): Stage[] {
   return Array.isArray(stages) ? (stages as Stage[]) : []
 }
 
-/** The pipelines a watch runs, in order: its own list, or the default one. */
+/** The routes a watch claims files by, in order: its own, or the default ones. */
+export function routesOf(config: Table, watch: string): Table[] {
+  const own = asTable(asTable(config.watch)[watch]).routes
+  return asRoutes(own === undefined ? asTable(config.default).routes : own)
+}
+
+function asRoutes(value: Value | undefined): Table[] {
+  return Array.isArray(value) ? value.map((route) => asTable(route)) : []
+}
+
+/** The pipelines a watch's routes run, in the order the routes claim. */
 export function pipelinesOf(config: Table, watch: string): string[] {
-  const own = asTable(asTable(config.watch)[watch]).pipelines
-  return own === undefined ? asNames(asTable(config.default).pipelines) : asNames(own)
+  return routesOf(config, watch).flatMap((route) => (typeof route.pipeline === 'string' ? [route.pipeline] : []))
+}
+
+/** The targets the configuration declares, by name, with the root each stands for. */
+export function targetsOf(config: Table): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(asTable(config.target)).flatMap(([name, value]) => {
+      const path = asTable(value).path
+      return typeof path === 'string' ? [[name, path]] : []
+    }),
+  )
 }
 
 /** What a folder configuration started for a watch holds: the values the watch gives its files, for the folder
@@ -90,43 +108,54 @@ export function replaceStage(config: Table, pipeline: string, index: number, sta
   )
 }
 
-/** Lists the pipelines of a watch as its own, starting from the default it followed. */
-function withPipelines(config: Table, watch: string, change: (pipelines: string[]) => string[]): Table {
-  return setIn(config, ['watch', watch, 'pipelines'], change(pipelinesOf(config, watch)))
+/** Writes the routes of a watch as its own, starting from the default ones it followed. */
+export function withRoutes(config: Table, watch: string, change: (routes: Table[]) => Table[]): Table {
+  return setIn(config, ['watch', watch, 'routes'], change(routesOf(config, watch)))
 }
 
+/** Adds a route of a pipeline to a watch, unless one already runs it. */
 export function joinPipeline(config: Table, watch: string, pipeline: string): Table {
-  return withPipelines(config, watch, (pipelines) =>
-    pipelines.includes(pipeline) ? pipelines : [...pipelines, pipeline])
+  return withRoutes(config, watch, (routes) =>
+    routes.some((route) => route.pipeline === pipeline) ? routes : [...routes, { pipeline }])
 }
 
 export function partPipeline(config: Table, watch: string, pipeline: string): Table {
-  return withPipelines(config, watch, (pipelines) => pipelines.filter((name) => name !== pipeline))
+  return withRoutes(config, watch, (routes) => routes.filter((route) => route.pipeline !== pipeline))
 }
 
-/** Rewrites every list naming a pipeline: the default's and each watch's own. */
-function rewriteListed(config: Table, change: (names: string[]) => string[]): Table {
+/** Rewrites the pipeline every route names, its rejected route's included: in the default's routes and in
+ * each watch's own. A route whose pipeline is renamed to nothing goes; a rejected route loses its pipeline. */
+function rewriteRouted(config: Table, change: (name: string) => string | undefined): Table {
+  const rewrite = (routes: Table[]) =>
+    routes.flatMap((route) => {
+      const pipeline = typeof route.pipeline === 'string' ? change(route.pipeline) : undefined
+      if (pipeline === undefined) return []
+      const rejected = asTable(route.rejected)
+      const kept = typeof rejected.pipeline === 'string' ? change(rejected.pipeline) : undefined
+      const next = { ...route, pipeline }
+      return [route.rejected === undefined ? next : { ...next, rejected: setIn(rejected, ['pipeline'], kept) }]
+    })
   let next = config
-  const defaults = asTable(config.default).pipelines
-  if (defaults !== undefined) next = setIn(next, ['default', 'pipelines'], change(asNames(defaults)))
+  const defaults = asTable(config.default).routes
+  if (defaults !== undefined) next = setIn(next, ['default', 'routes'], rewrite(asRoutes(defaults)))
   for (const [watch, value] of Object.entries(asTable(config.watch))) {
-    const own = asTable(value).pipelines
-    if (own !== undefined) next = setIn(next, ['watch', watch, 'pipelines'], change(asNames(own)))
+    const own = asTable(value).routes
+    if (own !== undefined) next = setIn(next, ['watch', watch, 'routes'], rewrite(asRoutes(own)))
   }
   return next
 }
 
-/** Renames a pipeline and every list naming it. */
+/** Renames a pipeline and every route naming it. */
 export function renamePipeline(config: Table, from: string, to: string): Table {
   const pipeline = asTable(config.pipeline)[from]
-  return rewriteListed(
+  return rewriteRouted(
     setIn(setIn(config, ['pipeline', from], undefined), ['pipeline', to], pipeline),
-    (names) => names.map((name) => (name === from ? to : name)),
+    (name) => (name === from ? to : name),
   )
 }
 
 export function removePipeline(config: Table, name: string): Table {
-  return rewriteListed(setIn(config, ['pipeline', name], undefined), (names) => names.filter((listed) => listed !== name))
+  return rewriteRouted(setIn(config, ['pipeline', name], undefined), (listed) => (listed === name ? undefined : listed))
 }
 
 export function setIn(config: Table, path: string[], value: Value | undefined): Table {
@@ -185,7 +214,7 @@ export function download(
   kind: 'global' | 'folder',
   config: Table,
   render: (table: Table) => string,
-  check: (kind: 'global' | 'folder', text: string) => string[],
+  check: (kind: 'global' | 'folder', text: string) => void,
 ): Download {
   const text = render(config)
   try {

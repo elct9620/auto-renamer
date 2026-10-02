@@ -1,7 +1,7 @@
 // The virtual tree as folders: the flat entries the core reads, drawn and edited as the source and the
-// target of a watch.
+// targets of a watch.
 
-import { type Table, asTable } from './config'
+import { type Table, asTable, routesOf, targetsOf } from './config'
 import type { Entry, Simulation } from './core'
 
 /** The name a folder configuration goes by in the tree, as the CLI looks for it. */
@@ -14,12 +14,18 @@ export interface TreeNode {
   children: TreeNode[]
 }
 
-/** The source and the target of a watch; a watch without a target renames in place. */
-export function rootsOf(config: Table, watch: string): { source: string; target: string } {
+/** The source of a watch and the roots its routes move files to, their rejected routes' included; a route
+ * without a target renames in place, under the source. */
+export function rootsOf(config: Table, watch: string): { source: string; targets: string[] } {
   const declared = asTable(asTable(config.watch)[watch])
   const source = typeof declared.source === 'string' ? declared.source : ''
-  const target = typeof declared.target === 'string' ? declared.target : source
-  return { source, target }
+  const named = targetsOf(config)
+  const rootOf = (move: unknown) => (typeof move === 'string' && named[move] !== undefined ? named[move] : source)
+  const targets = routesOf(config, watch).flatMap((route) => [
+    rootOf(route.move),
+    ...(route.rejected === undefined ? [] : [rootOf(asTable(route.rejected).move)]),
+  ])
+  return { source, targets: targets.length ? [...new Set(targets)] : [source] }
 }
 
 function within(path: string, folder: string): boolean {

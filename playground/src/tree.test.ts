@@ -16,12 +16,13 @@ function paths(entries: Entry[]): string[] {
 describe('drawing the tree', () => {
   // @behavior PGE-017
   it('shows the source and the target of a watch', () => {
-    const config = read('[watch.series]\nsource = "/downloads"\ntarget = "/video"')
+    const config = read('[pipeline.p]\nstages = []\n\n[target.video]\npath = "/video"\n\n[watch.series]\nsource = "/downloads"\nroutes = [{ pipeline = "p", move = "video" }]')
     const entries = [file('/downloads/x.mkv'), file('/video/y.mkv')]
-    const { source, target } = rootsOf(config, 'series')
+    const { source, targets } = rootsOf(config, 'series')
 
     expect(treeOf(entries, source).map((node) => node.path)).toEqual(['/downloads/x.mkv'])
-    expect(treeOf(entries, target).map((node) => node.path)).toEqual(['/video/y.mkv'])
+    expect(targets).toEqual(['/video'])
+    expect(treeOf(entries, targets[0]).map((node) => node.path)).toEqual(['/video/y.mkv'])
   })
 
   // @behavior PGE-018
@@ -52,7 +53,7 @@ describe('editing the tree', () => {
 describe('marking a simulation', () => {
   // @behavior PGE-021
   it('marks a file the simulation moved where it arrived', () => {
-    const config = `[pipeline.p]\nstages = [{ format = "Alpha" }, "move"]\n\n[watch.w]\nsource = "/downloads"\ntarget = "/video"\npipelines = ["p"]\nunit = "directory"\n`
+    const config = `[pipeline.p]\nstages = [{ format = "Alpha" }]\n\n[target.video]\npath = "/video"\n\n[watch.w]\nsource = "/downloads"\nroutes = [{ pipeline = "p", move = "video" }]\nunit = "directory"\n`
 
     const marks = marksOf(simulate(config, 'w', [file('/downloads/Alpha/x.mkv')]))
 

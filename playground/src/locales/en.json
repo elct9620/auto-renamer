@@ -127,6 +127,10 @@
         "invert": {
           "name": "Invert",
           "about": "Inverts the result, to drop what matches."
+        },
+        "reason": {
+          "name": "Refused for",
+          "about": "The stages a refused file was refused by; only those files are taken. Used on a rejected route."
         }
       }
     },
@@ -311,45 +315,34 @@
           "about": "The pipeline to take from; all earlier ones by default."
         }
       }
-    },
-    "move": {
-      "name": "Move",
-      "about": "Moves the file to its planned path, never overwriting a file.",
-      "parameters": {
-        "on_conflict": {
-          "name": "On a clash",
-          "about": "On a clash, reject refuses; suffix retries once with a suffix."
-        },
-        "suffix": {
-          "name": "Suffix",
-          "about": "The suffix added on a clash; _v2 by default."
-        }
-      }
-    },
-    "cleanup": {
-      "name": "Clean up",
-      "about": "Removes folders the move emptied, only inside the unit.",
-      "parameters": {
-        "keep": {
-          "name": "Folders to keep",
-          "about": "Folders matching these patterns are kept."
-        }
-      }
     }
   },
   "settings": {
     "source": "Source folder",
-    "target": "Target folder",
+    "target": "Targets",
     "unit": "Unit",
-    "pipelines": "Pipelines",
     "vars": "Variables",
     "dry_run": "Dry run",
-    "root": "Unit patterns"
+    "root": "Unit patterns",
+    "routes": "Routes",
+    "group": "Group by",
+    "quiet": "Quiet for",
+    "max_wait": "Wait at most",
+    "max_files": "Most files",
+    "path": "Path"
   },
   "editing": {
     "global": "Global configuration",
     "folder": "Folder configuration of {{folder}}",
     "label": "Configuration being edited",
     "add": "Add a folder configuration in {{folder}}"
+  },
+  "route": {
+    "move": "Move to",
+    "inPlace": "in place",
+    "cleanup": "Clean up",
+    "rejected": "Refused files move to",
+    "noRejected": "stay in the source",
+    "newTarget": "New target"
   }
 }

@@ -7,7 +7,10 @@ import { type Scope, settingsOf } from './settings'
 
 const GLOBAL = `
 [pipeline.video]
-stages = ["move"]
+stages = []
+
+[target.video]
+path = "/video"
 
 [watch.series]
 source = "/downloads"
@@ -15,13 +18,14 @@ source = "/downloads"
 
 const FOLDER = `
 [pipeline.video]
-stages = ["move"]
+stages = []
 `
 
 const PLACES: Record<Scope, { kind: 'global' | 'folder'; text: string; path: string[] }> = {
   watch: { kind: 'global', text: GLOBAL, path: ['watch', 'series'] },
   default: { kind: 'global', text: GLOBAL, path: ['default'] },
   folder: { kind: 'folder', text: FOLDER, path: [] },
+  target: { kind: 'global', text: GLOBAL, path: ['target', 'video'] },
 }
 
 describe('settings', () => {

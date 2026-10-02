@@ -127,6 +127,10 @@
         "invert": {
           "name": "反轉",
           "about": "反轉結果，用來排除符合的檔案。"
+        },
+        "reason": {
+          "name": "拒絕理由",
+          "about": "被拒絕的檔案是哪個階段拒絕的；只接手這些檔案。用在失敗路線上。"
         }
       }
     },
@@ -311,45 +315,34 @@
           "about": "來源管線，預設前面所有管線。"
         }
       }
-    },
-    "move": {
-      "name": "搬移",
-      "about": "把檔案搬到計畫路徑，絕不覆寫既有檔案。",
-      "parameters": {
-        "on_conflict": {
-          "name": "撞名時",
-          "about": "撞名時 reject 拒絕，或 suffix 加字尾重試一次。"
-        },
-        "suffix": {
-          "name": "字尾",
-          "about": "撞名時加上的字尾，預設 _v2。"
-        }
-      }
-    },
-    "cleanup": {
-      "name": "清理",
-      "about": "刪除搬移後清空的資料夾，只在單元之內。",
-      "parameters": {
-        "keep": {
-          "name": "保留資料夾",
-          "about": "符合這些樣式的資料夾保留。"
-        }
-      }
     }
   },
   "settings": {
     "source": "來源資料夾",
-    "target": "目的資料夾",
+    "target": "目標",
     "unit": "單元",
-    "pipelines": "管線",
     "vars": "變數",
     "dry_run": "試運行",
-    "root": "單元樣式"
+    "root": "單元樣式",
+    "routes": "路線",
+    "group": "一組依據",
+    "quiet": "安靜時間",
+    "max_wait": "最多等待",
+    "max_files": "檔案上限",
+    "path": "路徑"
   },
   "editing": {
     "global": "全域設定",
     "folder": "{{folder}} 的目錄設定",
     "label": "正在編輯的設定",
     "add": "在 {{folder}} 新增目錄設定"
+  },
+  "route": {
+    "move": "搬到",
+    "inPlace": "原地",
+    "cleanup": "清理",
+    "rejected": "被拒絕的檔案搬到",
+    "noRejected": "留在 source",
+    "newTarget": "新增目標"
   }
 }

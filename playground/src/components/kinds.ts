@@ -6,9 +6,7 @@ import {
   Equal,
   Eraser,
   Eye,
-  FolderInput,
   FolderTree,
-  FolderX,
   Funnel,
   Hash,
   Layers,
@@ -39,8 +37,6 @@ const STAGE_ICONS: Record<string, LucideIcon> = {
   next: ListPlus,
   rank: ListOrdered,
   take: Copy,
-  move: FolderInput,
-  cleanup: FolderX,
 }
 
 /** The icon a stage carries wherever it is shown, by the name the core declares it under; a stage without

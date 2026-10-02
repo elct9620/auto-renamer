@@ -23,9 +23,9 @@ function source(page: Page) {
   return page.getByRole('group', { name: 'Source' })
 }
 
-// Every show of the opening example carries a folder configuration; Alpha's comes first in the tree.
+// The opening example names every show by its folder, so a folder configuration for Alpha is started and opened.
 async function openAlphaConfiguration(page: Page) {
-  await page.getByRole('button', { name: 'auto-renamer.toml', exact: true }).first().click()
+  await source(page).getByRole('button', { name: 'Add a folder configuration in Alpha' }).click()
 }
 
 async function chooseExample(page: Page, name: string) {
@@ -51,18 +51,18 @@ test('a node moved on the canvas leaves the configuration as it was', async ({ p
 test('a reset layout draws every node where its order places it', async ({ page }) => {
   // A drag may pan the view, so the watch is placed against a pipeline rather than the page.
   const top = async (name: string) => Math.round((await node(page, name).boundingBox())!.y)
-  const gap = (await top('video')) - (await top('series'))
+  const gap = (await top('series-video')) - (await top('series'))
   await dragBy(page, 'series', 150)
 
   await page.getByRole('button', { name: 'Reset layout' }).click()
 
-  await expect.poll(async () => (await top('video')) - (await top('series'))).toBe(gap)
+  await expect.poll(async () => (await top('series-video')) - (await top('series'))).toBe(gap)
 })
 
 // @behavior PGE-034
 test('choosing the example again brings back its configuration and tree', async ({ page }) => {
   const before = await configText(page)
-  await node(page, 'move').click()
+  await node(page, 'format').click()
   await page.getByRole('button', { name: 'Remove', exact: true }).click()
   const path = page.getByRole('combobox', { name: 'Path of a new file or folder' }).first()
   await path.fill('Omega/01.mkv')
@@ -80,21 +80,24 @@ test('adding in a folder starts the new path from that folder', async ({ page })
 
   await page.getByRole('button', { name: 'Add in Season 03' }).first().click()
 
-  await expect(page.getByRole('combobox', { name: 'Path of a new file or folder' }).first()).toHaveValue('Series/Zeta-Show/Season 03/')
+  await expect(page.getByRole('combobox', { name: 'Path of a new file or folder' }).first()).toHaveValue('Zeta-Show/Season 03/')
 })
 
 // @behavior PGE-036
 test('a parameter limited to some values offers them in a list', async ({ page }) => {
-  await node(page, 'move').click()
+  await node(page, 'series-video').click()
+  await page.getByRole('combobox', { name: 'Add a stage' }).click()
+  await page.getByRole('option', { name: 'case' }).click()
+  await node(page, 'case').click()
 
-  await page.getByRole('combobox', { name: 'On a clash' }).click()
+  await page.getByRole('combobox', { name: /^Case/ }).click()
 
-  await expect(page.getByRole('option')).toHaveText(['—', 'reject', 'suffix'])
+  await expect(page.getByRole('option')).toHaveText(['—', 'lower', 'upper', 'title'])
 })
 
 // @behavior PGE-037
 test('a required parameter left empty is pointed out', async ({ page }) => {
-  await node(page, 'video').click()
+  await node(page, 'series-video').click()
   await page.getByRole('combobox', { name: 'Add a stage' }).click()
   await page.getByRole('option', { name: 'rank' }).click()
   await node(page, 'rank').click()
@@ -110,7 +113,7 @@ test('a required parameter left empty is pointed out', async ({ page }) => {
 test('a folder configuration chosen in the tree is edited with the trees still shown', async ({ page }) => {
   await openAlphaConfiguration(page)
 
-  await expect(page.getByText('Folder configuration of /downloads/Series/Alpha')).toBeVisible()
+  await expect(page.getByText('Folder configuration of /downloads/Alpha')).toBeVisible()
   await expect(page.getByRole('heading', { name: /^Source/ })).toBeVisible()
   await expect(page.getByRole('heading', { name: /^Target/ })).toBeVisible()
 })
@@ -126,23 +129,25 @@ test('the language chosen in the header is the one the page speaks', async ({ pa
 })
 
 // @behavior PGE-040
-test('batch settings are not offered while they wait for a redesign', async ({ page }) => {
+test('a watch offers the settings for when a unit is processed', async ({ page }) => {
   await node(page, 'series').click()
 
-  await expect(page.getByRole('switch', { name: 'Dry run dry_run' })).toBeVisible()
-
-  await expect(page.getByText(/^batch_/)).toHaveCount(0)
+  await expect(page.getByRole('textbox', { name: 'Quiet for quiet' })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Wait at most max_wait' })).toBeVisible()
+  await expect(page.getByRole('spinbutton', { name: 'Most files max_files' })).toBeVisible()
 })
 
 // @behavior PGE-041
-test('a watch lists pipelines picked from those defined', async ({ page }) => {
+test('a watch routes pipelines picked from those defined', async ({ page }) => {
   await page.getByRole('button', { name: 'Add pipeline' }).click()
   await node(page, 'series').click()
 
   await page.getByRole('combobox', { name: 'Add a pipeline' }).click()
   await page.getByRole('option', { name: 'new_pipeline' }).click()
 
-  expect(await configText(page)).toContain('pipelines = ["video", "new_pipeline"]')
+  const text = await configText(page)
+  expect(text).toContain('[[watch.series.routes]]')
+  expect(text).toContain('pipeline = "new_pipeline"')
 })
 
 // @behavior PGE-042
@@ -192,6 +197,10 @@ test('the canvas sits between the palette and the inspector, above the trees', a
 // @behavior PGE-048
 test('a folder configuration edited in the form applies in the next simulation', async ({ page }) => {
   await openAlphaConfiguration(page)
+  await page.getByRole('button', { name: 'Add a value' }).click()
+  const name = page.getByRole('textbox', { name: 'Name', exact: true })
+  await name.fill('show')
+  await name.blur()
   const value = page.getByRole('textbox', { name: 'Value of show' })
   await value.fill('Omega')
   await value.blur()
@@ -221,17 +230,17 @@ test('an imported folder configuration lands at the source root while the global
   })
 
   await expect(page.getByText('Folder configuration of /downloads', { exact: true })).toBeVisible()
-  await expect(source(page).getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(7)
+  await expect(source(page).getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(1)
 })
 
 // @behavior PGE-051
 test('a folder configuration added in a folder is opened', async ({ page }) => {
-  await page.getByText('Series', { exact: true }).first().hover()
+  await page.getByText('Alpha', { exact: true }).first().hover()
 
-  await page.getByRole('button', { name: 'Add a folder configuration in Series' }).first().click()
+  await page.getByRole('button', { name: 'Add a folder configuration in Alpha' }).first().click()
 
-  await expect(source(page).getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(7)
-  await expect(page.getByText('Folder configuration of /downloads/Series', { exact: true })).toBeVisible()
+  await expect(source(page).getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(1)
+  await expect(page.getByText('Folder configuration of /downloads/Alpha', { exact: true })).toBeVisible()
 })
 
 // @behavior PGE-052
@@ -254,7 +263,7 @@ test('an imported folder configuration replaces the one being edited', async ({ 
     buffer: Buffer.from('[vars]\nshow = "Beta"\n'),
   })
 
-  await expect(source(page).getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(6)
+  await expect(source(page).getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(1)
   expect(await configText(page)).toContain('show = "Beta"')
 })
 
@@ -273,16 +282,15 @@ test('the page opens on the single-episode example', async ({ page }) => {
   const tree = source(page)
 
   await expect(tree.getByText('Zeta-Show', { exact: true })).toBeVisible()
-  await expect(tree.getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(6)
   await expect(tree.getByText('[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv', { exact: true })).toBeVisible()
 })
 
 // @behavior PGE-058
 test('a joint\'s remove button drops the pipeline from the watch', async ({ page }) => {
-  await page.getByRole('button', { name: 'Remove video from series' }).click()
+  await page.getByRole('button', { name: 'Remove series-video from series' }).click()
 
-  await expect(page.getByRole('button', { name: 'Remove video from series' })).toHaveCount(0)
-  expect(await configText(page)).toContain('pipelines = []')
+  await expect(page.getByRole('button', { name: 'Remove series-video from series' })).toHaveCount(0)
+  expect(await configText(page)).toContain('routes = []')
 })
 
 // @behavior PGE-060
@@ -299,32 +307,34 @@ test('adding a folder configuration is offered without hovering', async ({ page 
 
 // @behavior PGE-061
 test('the header lists every folder configuration to edit', async ({ page }) => {
+  await openAlphaConfiguration(page)
+
   await page.getByRole('combobox', { name: 'Configuration being edited' }).click()
 
   await expect(page.getByRole('option', { name: 'Global configuration' })).toBeVisible()
-  await expect(page.getByRole('option', { name: /^Folder configuration of / })).toHaveCount(6)
-  await expect(page.getByRole('option', { name: 'Folder configuration of /downloads/Series/Zeta-Show' })).toBeVisible()
+  await expect(page.getByRole('option', { name: /^Folder configuration of / })).toHaveCount(1)
+  await expect(page.getByRole('option', { name: 'Folder configuration of /downloads/Alpha' })).toBeVisible()
 })
 
 // @behavior PGE-062
 test('a folder configuration added from the header is started and opened', async ({ page }) => {
   await page.getByRole('combobox', { name: 'Configuration being edited' }).click()
 
-  await page.getByRole('option', { name: 'Add a folder configuration in /downloads/Series', exact: true }).click()
+  await page.getByRole('option', { name: 'Add a folder configuration in /downloads/Alpha', exact: true }).click()
 
-  await expect(source(page).getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(7)
-  await expect(page.getByRole('combobox', { name: 'Configuration being edited' })).toHaveText('Folder configuration of /downloads/Series')
+  await expect(source(page).getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(1)
+  await expect(page.getByRole('combobox', { name: 'Configuration being edited' })).toHaveText('Folder configuration of /downloads/Alpha')
 })
 
 // @behavior PGE-064
 test('overriding a pipeline in a folder opens that folder\'s configuration', async ({ page }) => {
-  await node(page, 'video').click()
+  await node(page, 'series-video').click()
 
   await page.getByRole('combobox', { name: /Override in a folder/ }).click()
-  await page.getByRole('option', { name: '/downloads/Series', exact: true }).click()
+  await page.getByRole('option', { name: '/downloads/Alpha', exact: true }).click()
 
-  await expect(page.getByRole('combobox', { name: 'Configuration being edited' })).toHaveText('Folder configuration of /downloads/Series')
-  await expect(node(page, 'video')).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Configuration being edited' })).toHaveText('Folder configuration of /downloads/Alpha')
+  await expect(node(page, 'series-video')).toBeVisible()
   await expect(node(page, 'series')).toHaveCount(0)
 })
 
@@ -332,12 +342,12 @@ test('overriding a pipeline in a folder opens that folder\'s configuration', asy
 test('choosing a result shows how its file was planned', async ({ page }) => {
   await page.getByRole('button', { name: 'Trigger' }).click()
 
-  await page.getByRole('button', { name: 'Series/Alpha/[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv' }).click()
+  await page.getByRole('button', { name: 'Alpha/[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv' }).click()
 
   const steps = page.getByRole('list', { name: /^Steps of / }).getByRole('listitem')
-  await expect(steps.first()).toHaveText('Claimed by video')
+  await expect(steps.first()).toHaveText('Claimed by series-video')
   await expect(steps.filter({ hasText: 'episode: 12' })).toHaveCount(1)
-  await expect(steps.last()).toContainText('cleanup')
+  await expect(steps.last()).toContainText('move')
 })
 
 // @behavior PGE-068
@@ -356,8 +366,32 @@ test('editing the configuration clears the simulation', async ({ page }) => {
   await page.getByRole('button', { name: 'Trigger' }).click()
   await expect(page.getByText('Trigger the watch to see where each file goes.')).toHaveCount(0)
 
-  await node(page, 'cleanup').click()
+  await node(page, 'format').click()
   await page.getByRole('button', { name: 'Remove', exact: true }).click()
 
   await expect(page.getByText('Trigger the watch to see where each file goes.')).toBeVisible()
+})
+
+async function declareTarget(page: Page, name: string) {
+  const field = page.getByRole('textbox', { name: 'New target target' })
+  await field.fill(name)
+  await field.blur()
+}
+
+// @behavior PGE-071
+test('a target added in the defaults form is declared', async ({ page }) => {
+  await declareTarget(page, 'conflict')
+
+  expect(await configText(page)).toContain('[target.conflict]')
+})
+
+// @behavior PGE-072
+test('a route moves into a target picked from those declared', async ({ page }) => {
+  await declareTarget(page, 'conflict')
+  await node(page, 'series').click()
+
+  await page.getByRole('combobox', { name: 'Move to', exact: true }).click()
+  await page.getByRole('option', { name: 'conflict' }).click()
+
+  expect(await configText(page)).toContain('move = "conflict"')
 })

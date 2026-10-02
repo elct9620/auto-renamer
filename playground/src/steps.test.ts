@@ -9,7 +9,7 @@ stages = [{ number = { into = "episode" } }, { format = "Show {episode}" }]
 
 [watch.series]
 source = "/downloads"
-pipelines = ["video"]
+routes = [{ pipeline = "video" }]
 `
 
 describe('a timeline', () => {
@@ -50,7 +50,7 @@ stages = [{ filter = { ext = ["mkv"] } }, { format = "Show" }]
 
 [watch.series]
 source = "/downloads"
-pipelines = ["video"]
+routes = [{ pipeline = "video" }]
 `
     const file = (path: string) => ({ path, folder: false, modified: 0, text: '' })
     const { outcomes } = simulate(config, 'series', [file('/downloads/a.mkv'), file('/downloads/a.ass')])

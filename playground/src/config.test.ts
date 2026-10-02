@@ -28,18 +28,20 @@ import { dropAt, laidOut, pipelineId, relaid, stageId, toGraph, watchId } from '
 
 const CONFIG = `
 [default]
-pipelines = ["video"]
+routes = [{ pipeline = "video" }]
 
 [pipeline.video]
-stages = [{ filter = { ext = ["mkv"] } }, { format = "{show}" }, "move"]
+stages = [{ filter = { ext = ["mkv"] } }, { format = "{show}" }, "strip"]
 
 [pipeline.subtitle]
-stages = ["move"]
+stages = ["strip"]
+
+[target.dst]
+path = "/dst"
 
 [watch.series]
 source = "/src"
-target = "/dst"
-pipelines = ["video", "subtitle"]
+routes = [{ pipeline = "video", move = "dst" }, { pipeline = "subtitle", move = "dst" }]
 vars = { show = "Alpha" }
 
 [watch.movies]
@@ -62,11 +64,11 @@ describe('drawing', () => {
     expect(edgeBetween(config, pipelineId('video'), stageId('video', 0))).toBeDefined()
     expect(edgeBetween(config, stageId('video', 0), stageId('video', 1))).toBeDefined()
     expect(edgeBetween(config, stageId('video', 1), stageId('video', 2))).toBeDefined()
-    expect(names(config)).toEqual(['filter', 'format', 'move'])
+    expect(names(config)).toEqual(['filter', 'format', 'strip'])
   })
 
   // @behavior PGE-002
-  it('joins a watch to the pipelines it lists, in order', () => {
+  it('joins a watch to the pipelines of its routes, in order', () => {
     const config = read(CONFIG)
 
     expect(edgeBetween(config, watchId('series'), pipelineId('video'))?.label).toBe('1')
@@ -76,7 +78,7 @@ describe('drawing', () => {
   })
 
   // @behavior PGE-003
-  it('joins a watch without its own list to the default pipelines', () => {
+  it('joins a watch without its own routes to the default ones', () => {
     const config = read(CONFIG)
 
     expect(edgeBetween(config, watchId('movies'), pipelineId('video'))).toBeDefined()
@@ -132,46 +134,46 @@ describe('editing', () => {
 
   // @behavior PGE-004
   it('adds a stage after the others', () => {
-    const config = addStage(pipeline('[{ filter = { ext = ["mkv"] } }, "move"]'), 'video', newStage('format', stages(), read))
+    const config = addStage(pipeline('[{ filter = { ext = ["mkv"] } }, "strip"]'), 'video', newStage('format', stages(), read))
 
-    expect(names(config)).toEqual(['filter', 'move', 'format'])
+    expect(names(config)).toEqual(['filter', 'strip', 'format'])
   })
 
   // @behavior PGE-005
   it('writes a stage moved earlier earlier', () => {
-    const config = moveStage(pipeline('[{ filter = { ext = ["mkv"] } }, "move", { format = "{show}" }]'), 'video', 2, -1)
+    const config = moveStage(pipeline('[{ filter = { ext = ["mkv"] } }, "strip", { format = "{show}" }]'), 'video', 2, -1)
 
-    expect(names(config)).toEqual(['filter', 'format', 'move'])
+    expect(names(config)).toEqual(['filter', 'format', 'strip'])
   })
 
   // @behavior PGE-006
   it('leaves the others in order when a stage is removed', () => {
-    const config = removeStage(pipeline('[{ filter = { ext = ["mkv"] } }, { format = "{show}" }, "move"]'), 'video', 1)
+    const config = removeStage(pipeline('[{ filter = { ext = ["mkv"] } }, { format = "{show}" }, "strip"]'), 'video', 1)
 
-    expect(names(config)).toEqual(['filter', 'move'])
+    expect(names(config)).toEqual(['filter', 'strip'])
   })
 
   // @behavior PGE-007
   it('writes edited parameters as the value of the stage', () => {
-    const before = pipeline('[{ filter = { ext = ["mkv"] } }, "move"]')
+    const before = pipeline('[{ filter = { ext = ["mkv"] } }, "strip"]')
 
     const config = replaceStage(before, 'video', 0, readStage('{ filter = { ext = ["mp4"] } }', read))
 
-    expect(stagesOf(config, 'video')).toEqual([{ filter: { ext: ['mp4'] } }, 'move'])
+    expect(stagesOf(config, 'video')).toEqual([{ filter: { ext: ['mp4'] } }, 'strip'])
   })
 
   // @behavior PGE-008
   it('writes a stage without parameters as its name', () => {
-    const config = addStage(pipeline('[]'), 'video', newStage('move', stages(), read))
+    const config = addStage(pipeline('[]'), 'video', newStage('strip', stages(), read))
 
-    expect(render(config)).toContain('stages = ["move"]')
+    expect(render(config)).toContain('stages = ["strip"]')
   })
 
   // @behavior PGE-010
   it('writes a stage dropped between two stages between them', () => {
-    const config = insertStage(pipeline('[{ filter = { ext = ["mkv"] } }, "move"]'), 'video', 1, newStage('format', stages(), read))
+    const config = insertStage(pipeline('[{ filter = { ext = ["mkv"] } }, "strip"]'), 'video', 1, newStage('format', stages(), read))
 
-    expect(names(config)).toEqual(['filter', 'format', 'move'])
+    expect(names(config)).toEqual(['filter', 'format', 'strip'])
   })
 
   it('drops a stage before the stage nearest the point', () => {
@@ -204,25 +206,25 @@ describe('forms', () => {
 
   // @behavior PGE-023
   it('writes a stage left without parameters as its name', () => {
-    const stage = withParameter({ move: { on_conflict: 'suffix' } }, declaration('move'), 'on_conflict', undefined)
+    const stage = withParameter({ strip: { groups: ['[]'] } }, declaration('strip'), 'groups', undefined)
 
-    expect(render({ stages: [stage] })).toContain('stages = ["move"]')
+    expect(render({ stages: [stage] })).toContain('stages = ["strip"]')
   })
 })
 
 describe('joining', () => {
   // @behavior PGE-011
-  it('lists a pipeline a watch is joined to last', () => {
+  it('routes a pipeline a watch is joined to last', () => {
     const config = joinPipeline(read(CONFIG), 'series', 'extra')
 
     expect(pipelinesOf(config, 'series')).toEqual(['video', 'subtitle', 'extra'])
   })
 
   // @behavior PGE-012
-  it('gives a watch following the default its own list once joined', () => {
+  it('gives a watch following the default its own routes once joined', () => {
     const config = joinPipeline(read(CONFIG), 'movies', 'subtitle')
 
-    expect(asTable(asTable(config.watch).movies).pipelines).toEqual(['video', 'subtitle'])
+    expect(asTable(asTable(config.watch).movies).routes).toEqual([{ pipeline: 'video' }, { pipeline: 'subtitle' }])
   })
 
   // @behavior PGE-013
@@ -235,18 +237,18 @@ describe('joining', () => {
 
 describe('pipelines', () => {
   // @behavior PGE-014
-  it('renames a pipeline where it is listed', () => {
+  it('renames a pipeline where it is routed', () => {
     const config = renamePipeline(read(CONFIG), 'video', 'episode')
 
-    expect(asTable(config.default).pipelines).toEqual(['episode'])
+    expect(asTable(config.default).routes).toEqual([{ pipeline: 'episode' }])
     expect(pipelinesOf(config, 'series')).toEqual(['episode', 'subtitle'])
   })
 
   // @behavior PGE-015
-  it('lists a removed pipeline nowhere', () => {
+  it('routes a removed pipeline nowhere', () => {
     const config = removePipeline(read(CONFIG), 'video')
 
-    expect(asTable(config.default).pipelines).toEqual([])
+    expect(asTable(config.default).routes).toEqual([])
     expect(pipelinesOf(config, 'series')).toEqual(['subtitle'])
     expect(asTable(config.pipeline).video).toBeUndefined()
   })
@@ -284,12 +286,12 @@ describe('starting a folder configuration', () => {
 describe('overriding a pipeline in a folder', () => {
   // @behavior PGE-063
   it('copies the global pipeline in, keeping what the folder holds', () => {
-    const folder = read('vars = { show = "Alpha" }\n\n[pipeline.subtitle]\nstages = ["move"]\n\n[pipeline.video]\nstages = []\n')
+    const folder = read('vars = { show = "Alpha" }\n\n[pipeline.subtitle]\nstages = ["strip"]\n\n[pipeline.video]\nstages = []\n')
 
     const result = overridden(folder, read(CONFIG), 'video')
 
     expect(result.vars).toEqual({ show: 'Alpha' })
-    expect(names(result, 'subtitle')).toEqual(['move'])
+    expect(names(result, 'subtitle')).toEqual(['strip'])
     expect(names(result)).toEqual(names(read(CONFIG)))
   })
 })

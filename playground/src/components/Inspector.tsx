@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 
 import { Choice } from '@/components/Choice'
 import { StageName } from '@/components/Fields'
-import { SettingsForm } from '@/components/SettingsForm'
+import { SettingsForm, TargetsForm } from '@/components/SettingsForm'
 import { KIND_ICONS, stageIcon } from '@/components/kinds'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -101,6 +101,7 @@ export function Inspector({ config, kind, selected, folders = [], simulation = n
         <p className="text-xs text-muted-foreground">{t('inspector.hint')}</p>
         <SettingsForm config={config} scope={kind === 'global' ? 'default' : 'folder'} path={kind === 'global' ? ['default'] : []}
           onChange={onChange} />
+        {kind === 'global' && <TargetsForm config={config} onChange={onChange} />}
       </Section>
     )
   }

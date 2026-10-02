@@ -84,7 +84,7 @@ export function toGraph(config: Table): { nodes: Node<NodeData>[]; edges: Edge[]
         selected: { kind: 'watch', name },
       },
     })
-    const followsDefault = watch.pipelines === undefined
+    const followsDefault = watch.routes === undefined
     pipelinesOf(config, name).forEach((pipeline, order) => {
       edges.push({
         id: `${watchId(name)}->${pipelineId(pipeline)}`,
