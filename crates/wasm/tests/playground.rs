@@ -80,7 +80,7 @@ fn should_not_process_a_folder_configuration_as_a_file() {
 #[test]
 fn should_process_each_unit_as_its_own_batch() {
     let simulation = run(
-        &config(MOVE_AS_SHOW, "batch_max = 1"),
+        &config(MOVE_AS_SHOW, "max_files = 1"),
         vec![file("/src/A/x.mkv"), file("/src/B/y.mkv")],
     );
 
@@ -153,10 +153,7 @@ fn should_check_a_folder_configuration_as_one() {
 // @behavior PLG-010
 #[test]
 fn should_parse_the_same_once_read_and_written_again() {
-    let text = format!(
-        "[default]\nbatch_window = \"1m\"\n\n{}",
-        config(MOVE_AS_SHOW, "")
-    );
+    let text = format!("[default]\nquiet = \"1m\"\n\n{}", config(MOVE_AS_SHOW, ""));
 
     let written = render(&read(&text).expect("the text should be read"));
 

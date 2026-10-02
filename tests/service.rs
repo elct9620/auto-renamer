@@ -175,7 +175,7 @@ fn should_move_nothing_in_a_dry_run() {
 // @behavior SVC-007
 #[test]
 fn should_leave_a_batch_over_the_limit_as_it_is() {
-    let run = alpha("batch_max = 1");
+    let run = alpha("max_files = 1");
     run.sandbox.write("source/Show/x.mkv", "a");
     run.sandbox.write("source/Show/y.mkv", "b");
 
@@ -191,12 +191,12 @@ fn should_leave_a_batch_over_the_limit_as_it_is() {
 fn should_let_a_folder_configuration_raise_the_limit_for_its_batch() {
     let run = setup(
         r#"[{ format = "{name}-{show}" }, "move"]"#,
-        "vars = { show = \"Alpha\" }\nbatch_max = 1",
+        "vars = { show = \"Alpha\" }\nmax_files = 1",
     );
     run.sandbox.write("source/Show/x.mkv", "a");
     run.sandbox.write("source/Show/y.mkv", "b");
     run.sandbox
-        .write("source/Show/auto-renamer.toml", "batch_max = 5\n");
+        .write("source/Show/auto-renamer.toml", "max_files = 5\n");
 
     let processed = run.process("Show", &["Show/x.mkv", "Show/y.mkv"]);
 

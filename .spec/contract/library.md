@@ -633,7 +633,7 @@ impl Watch {
 
 ## `FolderConfig`
 
-What a folder says of the files in it: variables, pipelines and a batch limit.
+What a folder says of the files in it: variables, pipelines and a file limit.
 
 | Attribute | Value |
 | --- | --- |
@@ -853,7 +853,7 @@ pub struct Machine {}
 
 ## `Machine::new`
 
-Start a machine for a watch, with its unit, window and maximum wait.
+Start a machine for a watch, with its unit, quiet period and maximum wait.
 
 | Attribute | Value |
 | --- | --- |

@@ -34,7 +34,7 @@ The playground checks, reads and writes a configuration, and simulates a watch o
 
 | Step | Statement |
 | --- | --- |
-| Given | the same configuration taking each folder as a unit with `batch_max` 1, and a virtual source holding `A/x.mkv` and `B/y.mkv` |
+| Given | the same configuration taking each folder as a unit with `max_files` 1, and a virtual source holding `A/x.mkv` and `B/y.mkv` |
 | When | the watch is simulated |
 | Then | both are moved, since neither batch holds more than one file |
 

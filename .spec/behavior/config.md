@@ -38,13 +38,13 @@ The configuration says which folders are watched, where their files go, and by w
 | When | the configuration is read |
 | Then | the watch has the `show` of the watch and the `year` of the default |
 
-## `CFG-005` A batch window is five minutes unless set
+## `CFG-005` A quiet period is five minutes unless set
 
 | Step | Statement |
 | --- | --- |
 | Given | a configuration with a pipeline `video` and a watch `series` for `/downloads` into `/library` listing `video` |
 | When | the configuration is read |
-| Then | the batch window is five minutes |
+| Then | the quiet period is five minutes |
 
 ## `CFG-006` A maximum wait is thirty minutes unless set
 
@@ -74,25 +74,25 @@ The configuration says which folders are watched, where their files go, and by w
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with the batch window `90s` and the maximum wait `2h` |
+| Given | a watch with the quiet period `90s` and the maximum wait `2h` |
 | When | the configuration is read |
-| Then | the window is 90 seconds and the maximum wait is 2 hours |
+| Then | the quiet period is 90 seconds and the maximum wait is 2 hours |
 
 ## `CFG-010` A duration without a unit is refused
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with the batch window `5` |
+| Given | a watch with the quiet period `5` |
 | When | the configuration is read |
-| Then | the configuration is refused, naming `batch_window` |
+| Then | the configuration is refused, naming `quiet` |
 
-## `CFG-011` A maximum wait shorter than the window is refused
+## `CFG-011` A maximum wait shorter than the quiet period is refused
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with the batch window `10m` and the maximum wait `5m` |
+| Given | a watch with the quiet period `10m` and the maximum wait `5m` |
 | When | the configuration is read |
-| Then | the configuration is refused, naming `batch_max_wait` |
+| Then | the configuration is refused, naming `max_wait` |
 
 ## `CFG-012` A source that is not an absolute path is refused
 
@@ -174,13 +174,13 @@ The configuration says which folders are watched, where their files go, and by w
 | When | the configuration is read |
 | Then | the watch has no target |
 
-## `CFG-022` A batch limit must be a positive whole number
+## `CFG-022` A file limit must be a positive whole number
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with the batch limit 0 |
+| Given | a watch with the file limit 0 |
 | When | the configuration is read |
-| Then | the configuration is refused, naming `batch_max` |
+| Then | the configuration is refused, naming `max_files` |
 
 ## `CFG-023` A document that is not TOML is refused
 
@@ -215,19 +215,19 @@ The configuration says which folders are watched, where their files go, and by w
 | Then | the configuration is refused, naming `source` |
 
 
-## `CFG-028` A batch limit above the ceiling is refused
+## `CFG-028` A file limit above the ceiling is refused
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with the batch limit 100001 |
+| Given | a watch with the file limit 100001 |
 | When | the configuration is read |
-| Then | the configuration is refused, naming `batch_max` |
+| Then | the configuration is refused, naming `max_files` |
 
 ## `CFG-029` The ceiling itself is accepted
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with the batch limit 100000 |
+| Given | a watch with the file limit 100000 |
 | When | the configuration is read |
 | Then | the watch has the limit 100000 |
 

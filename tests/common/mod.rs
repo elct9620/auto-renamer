@@ -307,7 +307,7 @@ impl Program {
         sandbox.write(
             "config.toml",
             &format!(
-                "[pipeline.p]\nstages = {stages}\n\n[watch.w]\nsource = \"{}\"\n{target}pipelines = [\"p\"]\nunit = \"source\"\nbatch_window = \"1s\"\nbatch_max_wait = \"{max_wait}\"\n{extra}\n",
+                "[pipeline.p]\nstages = {stages}\n\n[watch.w]\nsource = \"{}\"\n{target}pipelines = [\"p\"]\nunit = \"source\"\nquiet = \"1s\"\nmax_wait = \"{max_wait}\"\n{extra}\n",
                 sandbox.path("source").display(),
             ),
         );

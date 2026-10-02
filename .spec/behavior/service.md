@@ -58,7 +58,7 @@ Processing a batch is what a ready batch of settled files turns into: the files 
 
 | Step | Statement |
 | --- | --- |
-| Given | the same watch with a batch limit of 1 and two files in `Show` |
+| Given | the same watch with a file limit of 1 and two files in `Show` |
 | When | the batch is processed |
 | Then | both files are reported as left because the batch is too large, and both are still in the source |
 
@@ -66,7 +66,7 @@ Processing a batch is what a ready batch of settled files turns into: the files 
 
 | Step | Statement |
 | --- | --- |
-| Given | the same watch with a batch limit of 1, a folder configuration in `Show` setting the limit to 5, and two files in `Show` |
+| Given | the same watch with a file limit of 1, a folder configuration in `Show` setting the limit to 5, and two files in `Show` |
 | When | the batch is processed |
 | Then | both files are moved |
 

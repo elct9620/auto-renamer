@@ -14,7 +14,7 @@ stages = ["move"]
 source = "/downloads"
 pipelines = ["video", "photo"]
 vars = { show = "Alpha" }
-batch_max = 100
+max_files = 100
 "#;
 
 fn watch() -> Watch {
@@ -85,9 +85,9 @@ fn should_keep_the_pipelines_of_other_names() {
 // @behavior LAY-005
 #[test]
 fn should_let_a_folder_set_the_batch_limit() {
-    let under = watch().under(&[folder("batch_max = 20")]);
+    let under = watch().under(&[folder("max_files = 20")]);
 
-    assert_eq!(under.batch_max, 20);
+    assert_eq!(under.max_files, 20);
 }
 
 // @behavior LAY-006
@@ -116,8 +116,8 @@ fn should_not_let_a_folder_switch_off_a_dry_run() {
 
 // @behavior LAY-011
 #[test]
-fn should_not_let_a_folder_set_the_batch_window() {
-    assert!(names(&refused("batch_window = \"1s\""), "batch_window"));
+fn should_not_let_a_folder_set_the_quiet() {
+    assert!(names(&refused("quiet = \"1s\""), "quiet"));
 }
 
 // @behavior LAY-011
@@ -159,5 +159,5 @@ fn should_not_run_a_pipeline_a_folder_defines_unless_the_watch_lists_it() {
 // @behavior LAY-016
 #[test]
 fn should_refuse_a_folder_batch_limit_above_the_ceiling() {
-    assert!(names(&refused("batch_max = 100001"), "batch_max"));
+    assert!(names(&refused("max_files = 100001"), "max_files"));
 }

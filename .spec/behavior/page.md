@@ -326,7 +326,7 @@ The playground page draws a configuration for people who do not read TOML: each 
 | --- | --- |
 | Given | the watch `series` selected |
 | When | its form is shown |
-| Then | no `batch_max`, `batch_window` or `batch_max_wait` is offered |
+| Then | no `max_files`, `quiet` or `max_wait` is offered |
 
 ## `PGE-041` A watch lists pipelines picked from those defined
 

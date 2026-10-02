@@ -6,19 +6,19 @@ The machine decides when the settled files of a unit are handed over as a batch.
 
 - `tests/machine.rs`
 
-## `WCH-001` A unit is handed over once it has been quiet for the window
+## `WCH-001` A unit is handed over once it has been quiet for the quiet period
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, and `a.mkv` and `b.mkv` of the folder `Show` settled at 0 minutes |
+| Given | a watch with a quiet period of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, and `a.mkv` and `b.mkv` of the folder `Show` settled at 0 minutes |
 | When | the machine is asked at 5 minutes |
 | Then | one batch of `Show/a.mkv` and `Show/b.mkv` is ready |
 
-## `WCH-002` Nothing is handed over before the window has passed
+## `WCH-002` Nothing is handed over before the quiet period has passed
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, and `Show/a.mkv` settled at 0 minutes |
+| Given | a watch with a quiet period of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, and `Show/a.mkv` settled at 0 minutes |
 | When | the machine is asked at 4 minutes 59 seconds |
 | Then | nothing is ready |
 
@@ -26,7 +26,7 @@ The machine decides when the settled files of a unit are handed over as a batch.
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `Show/a.mkv` settled at 0 minutes and `Show/b.mkv` at 3 minutes |
+| Given | a watch with a quiet period of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `Show/a.mkv` settled at 0 minutes and `Show/b.mkv` at 3 minutes |
 | When | the machine is asked at 5 minutes and at 8 minutes |
 | Then | nothing is ready at 5 minutes and both files at 8 |
 
@@ -34,7 +34,7 @@ The machine decides when the settled files of a unit are handed over as a batch.
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `A/a.mkv` settled at 0 minutes and `B/b.mkv` at 3 minutes |
+| Given | a watch with a quiet period of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `A/a.mkv` settled at 0 minutes and `B/b.mkv` at 3 minutes |
 | When | the machine is asked at 5 minutes |
 | Then | only the batch of `A` is ready |
 
@@ -42,7 +42,7 @@ The machine decides when the settled files of a unit are handed over as a batch.
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, and a file settling in `Show` every 4 minutes from 0 |
+| Given | a watch with a quiet period of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, and a file settling in `Show` every 4 minutes from 0 |
 | When | the machine is asked at 30 minutes |
 | Then | the batch is ready with the files so far |
 
@@ -50,7 +50,7 @@ The machine decides when the settled files of a unit are handed over as a batch.
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, and `Show/b.mkv`, `Show/c.mkv` and `Show/a.mkv` settled in that order |
+| Given | a watch with a quiet period of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, and `Show/b.mkv`, `Show/c.mkv` and `Show/a.mkv` settled in that order |
 | When | the machine is asked when they are due |
 | Then | the files are `a.mkv`, `b.mkv`, `c.mkv` |
 
@@ -58,7 +58,7 @@ The machine decides when the settled files of a unit are handed over as a batch.
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, and `Show/auto-renamer.toml` and `Show/a.mkv` settled |
+| Given | a watch with a quiet period of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, and `Show/auto-renamer.toml` and `Show/a.mkv` settled |
 | When | the machine is asked when they are due |
 | Then | the batch holds `Show/a.mkv` only |
 
@@ -66,7 +66,7 @@ The machine decides when the settled files of a unit are handed over as a batch.
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `Show/a.mkv` settled at 0 minutes and `Show/b.mkv` written to at 4 minutes |
+| Given | a watch with a quiet period of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `Show/a.mkv` settled at 0 minutes and `Show/b.mkv` written to at 4 minutes |
 | When | the machine is asked at 20 minutes |
 | Then | nothing is ready |
 
@@ -74,7 +74,7 @@ The machine decides when the settled files of a unit are handed over as a batch.
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `Show/a.mkv` settled and `Show/b.mkv` written to and then gone |
+| Given | a watch with a quiet period of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `Show/a.mkv` settled and `Show/b.mkv` written to and then gone |
 | When | the machine is asked when they are due |
 | Then | the batch holds `Show/a.mkv` |
 
@@ -82,7 +82,7 @@ The machine decides when the settled files of a unit are handed over as a batch.
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `Show/a.mkv` settled at 0 minutes and written to at 1 minute, and settled again at 2 minutes |
+| Given | a watch with a quiet period of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `Show/a.mkv` settled at 0 minutes and written to at 1 minute, and settled again at 2 minutes |
 | When | the machine is asked at 7 minutes |
 | Then | the batch holds `Show/a.mkv` |
 
@@ -90,15 +90,15 @@ The machine decides when the settled files of a unit are handed over as a batch.
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, and `Show/a.mkv` found at start, last changed 10 minutes ago |
+| Given | a watch with a quiet period of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, and `Show/a.mkv` found at start, last changed 10 minutes ago |
 | When | the machine is asked 5 minutes later |
 | Then | the batch holds `Show/a.mkv` |
 
-## `WCH-014` A file found at start that was changed lately is settled after a window with no writes
+## `WCH-014` A file found at start that was changed lately is settled after a quiet period with no writes
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, and `Show/a.mkv` found at start, last changed 1 minute ago |
+| Given | a watch with a quiet period of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, and `Show/a.mkv` found at start, last changed 1 minute ago |
 | When | the machine is asked 3 minutes later and 4 minutes later |
 | Then | nothing is ready at first, and the batch holds `Show/a.mkv` after |
 
@@ -106,7 +106,7 @@ The machine decides when the settled files of a unit are handed over as a batch.
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `Show/a.mkv` found at start changed 1 minute ago and written to 2 minutes later |
+| Given | a watch with a quiet period of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `Show/a.mkv` found at start changed 1 minute ago and written to 2 minutes later |
 | When | the machine is asked 20 minutes later |
 | Then | nothing is ready |
 
@@ -114,7 +114,7 @@ The machine decides when the settled files of a unit are handed over as a batch.
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `Show/a.mkv` written to at 0 minutes and never settled, and `Show/b.mkv` settled at 1 minute |
+| Given | a watch with a quiet period of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `Show/a.mkv` written to at 0 minutes and never settled, and `Show/b.mkv` settled at 1 minute |
 | When | the machine is asked at 31 minutes |
 | Then | the batch holds `Show/b.mkv` |
 
@@ -122,7 +122,7 @@ The machine decides when the settled files of a unit are handed over as a batch.
 
 | Step | Statement |
 | --- | --- |
-| Given | a machine with `Show/a.mkv` settled at 0 minutes and a window of 5 minutes |
+| Given | a machine with `Show/a.mkv` settled at 0 minutes and a quiet period of 5 minutes |
 | When | the next deadline is asked for |
 | Then | it is at 5 minutes, and there is none when nothing is pending |
 
@@ -138,7 +138,7 @@ The machine decides when the settled files of a unit are handed over as a batch.
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, and `Show/a.mkv` found at start with a modification time a year ahead |
+| Given | a watch with a quiet period of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, and `Show/a.mkv` found at start with a modification time a year ahead |
 | When | the machine is asked 5 minutes later |
 | Then | the batch holds `Show/a.mkv` |
 
@@ -147,7 +147,7 @@ The machine decides when the settled files of a unit are handed over as a batch.
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, and `Show/a.mkv` written to at 0 minutes |
+| Given | a watch with a quiet period of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, and `Show/a.mkv` written to at 0 minutes |
 | When | the next deadline is asked for |
 | Then | it is at the maximum wait, 30 minutes |
 
@@ -155,7 +155,7 @@ The machine decides when the settled files of a unit are handed over as a batch.
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with each folder as a unit and a batch limit of 100000, and 100005 files settled in `Show` |
+| Given | a watch with each folder as a unit and a file limit of 100000, and 100005 files settled in `Show` |
 | When | the batches that are ready are asked for |
 | Then | the batch handed over names no more than 100001 of the files |
 
@@ -195,7 +195,7 @@ The machine decides when the settled files of a unit are handed over as a batch.
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `Show/a.mkv` written to at 0 minutes, and then found by a scan at 1 minute, last changed at 1 minute |
+| Given | a watch with a quiet period of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `Show/a.mkv` written to at 0 minutes, and then found by a scan at 1 minute, last changed at 1 minute |
 | When | the machine is asked at 20 minutes |
 | Then | nothing is ready |
 
@@ -203,7 +203,7 @@ The machine decides when the settled files of a unit are handed over as a batch.
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch with a batch window of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `Show/a.mkv` settled at 0 minutes, and then found by a scan at 1 minute, last changed at 1 minute |
+| Given | a watch with a quiet period of 5 minutes, a maximum wait of 30 minutes, and each folder as a unit, `Show/a.mkv` settled at 0 minutes, and then found by a scan at 1 minute, last changed at 1 minute |
 | When | the machine is asked at 5 minutes |
 | Then | the batch holds `Show/a.mkv` |
 

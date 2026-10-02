@@ -177,8 +177,8 @@ source = "/data/source"
 target = "/data/target"
 pipelines = ["video"]
 vars = { show = "Alpha" }
-batch_window = "1h"
-batch_max_wait = "1h"
+quiet = "1h"
+max_wait = "1h"
 CONFIG
   start -v "$PREFIX-data:/data"
   until_steady
@@ -199,8 +199,8 @@ source = "/data/source"
 target = "/data/target"
 pipelines = ["video"]
 vars = { show = "Alpha" }
-batch_window = "2s"
-batch_max_wait = "2s"
+quiet = "2s"
+max_wait = "2s"
 CONFIG
   start -v "$PREFIX-data:/data"
   until_moved $(($1 * FILES_PER_FOLDER))
@@ -221,9 +221,9 @@ target = "/data/target"
 pipelines = ["video"]
 unit = "source"
 vars = { show = "Alpha" }
-batch_window = "2s"
-batch_max_wait = "2s"
-batch_max = $(($1 * FILES_PER_FOLDER))
+quiet = "2s"
+max_wait = "2s"
+max_files = $(($1 * FILES_PER_FOLDER))
 CONFIG
   start -v "$PREFIX-data:/data"
   until_moved $(($1 * FILES_PER_FOLDER))
@@ -240,8 +240,8 @@ source = "/data/source"
 target = "/data/target"
 pipelines = ["video"]
 vars = { show = "Alpha" }
-batch_window = "2s"
-batch_max_wait = "2s"
+quiet = "2s"
+max_wait = "2s"
 CONFIG
   start -v "$PREFIX-data:/data"
   sleep 3

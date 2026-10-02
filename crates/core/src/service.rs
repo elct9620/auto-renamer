@@ -121,7 +121,7 @@ fn process(
     let layers = folder_configs(tree, &watch.source, unit, &mut processed);
     let effective = watch.under(&layers);
 
-    if files.len() > effective.batch_max {
+    if files.len() > effective.max_files {
         processed.extend(files.iter().map(|origin| Processed {
             origin: origin.clone(),
             what: What::LeftTooLarge,

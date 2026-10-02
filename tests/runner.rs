@@ -12,7 +12,7 @@ use common::{Sandbox, eventually, eventually_within};
 
 fn config_of(sandbox: &Sandbox, stages: &str) -> String {
     format!(
-        "[pipeline.p]\nstages = {stages}\n\n[watch.w]\nsource = \"{}\"\ntarget = \"{}\"\npipelines = [\"p\"]\nunit = \"source\"\nbatch_window = \"1s\"\nbatch_max_wait = \"3s\"\n",
+        "[pipeline.p]\nstages = {stages}\n\n[watch.w]\nsource = \"{}\"\ntarget = \"{}\"\npipelines = [\"p\"]\nunit = \"source\"\nquiet = \"1s\"\nmax_wait = \"3s\"\n",
         sandbox.path("source").display(),
         sandbox.path("target").display(),
     )

@@ -12,7 +12,7 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 
 | Step | Statement |
 | --- | --- |
-| Given | a running watcher with a short batch window and a pipeline that moves |
+| Given | a running watcher with a short quiet period and a pipeline that moves |
 | When | a file is written into the source |
 | Then | the file appears in the target |
 
@@ -180,7 +180,7 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 
 | Step | Statement |
 | --- | --- |
-| Given | a source holding 600 files of one unit, last changed before the batch window, and a pipeline that numbers the files of a batch |
+| Given | a source holding 600 files of one unit, last changed before the quiet period, and a pipeline that numbers the files of a batch |
 | When | the watcher starts |
 | Then | all 600 files appear in the target, numbered as one batch |
 

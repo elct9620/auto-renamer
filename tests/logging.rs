@@ -190,7 +190,7 @@ fn should_make_up_for_lost_notifications_by_scanning_again() {
         sandbox.write(&format!("source/old/{number:06}.mkv"), "video");
     }
     thread::sleep(Duration::from_millis(1200));
-    let program = Program::start_without_waiting(&sandbox, r#"["move"]"#, "batch_max = 100000");
+    let program = Program::start_without_waiting(&sandbox, r#"["move"]"#, "max_files = 100000");
 
     // Every file moved out of the source is reported, so by now more wait than the queue has room for,
     // and the batch is far from done.

@@ -76,7 +76,7 @@ docker run -d \
 | 搬移 10 萬個檔案，每批 10 個 | 約 4 s | 尖峰 16 MB |
 | 搬移 10 萬個檔案，同一批 | 3.5–5.5 s | 尖峰 140 MB |
 
-數字量自 Apple Silicon 上的容器：記憶體可以直接參考，CPU 時間要在部署的機器上重量。同一批的檔案越多，規劃時佔的記憶體越多；預設的 `batch_max` 是 1000。`scripts/measure.sh` 只需要 docker，不帶參數執行會列出情境。
+數字量自 Apple Silicon 上的容器：記憶體可以直接參考，CPU 時間要在部署的機器上重量。同一批的檔案越多，規劃時佔的記憶體越多；預設的 `max_files` 是 1000。`scripts/measure.sh` 只需要 docker，不帶參數執行會列出情境。
 
 ## 文件
 

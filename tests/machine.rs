@@ -3,10 +3,10 @@ use std::time::{Duration, Instant, SystemTime};
 
 use auto_renamer::{Config, Event, Machine, Ready};
 
-/// A machine for a watch with a window of 5 minutes and a maximum wait of 30, plus the extra settings.
+/// A machine for a watch with a quiet period of 5 minutes and a maximum wait of 30, plus the extra settings.
 fn machine(extra: &str) -> Machine {
     let text = format!(
-        "[pipeline.p]\nstages = [\"move\"]\n\n[watch.w]\nsource = \"/s\"\npipelines = [\"p\"]\nbatch_window = \"5m\"\nbatch_max_wait = \"30m\"\n{extra}\n"
+        "[pipeline.p]\nstages = [\"move\"]\n\n[watch.w]\nsource = \"/s\"\npipelines = [\"p\"]\nquiet = \"5m\"\nmax_wait = \"30m\"\n{extra}\n"
     );
     let config = Config::parse(&text).expect("the configuration should be accepted");
     Machine::new(&config.watches()[0])
@@ -33,7 +33,7 @@ fn batch(unit: &str, files: &[&str]) -> Ready {
 
 // @behavior WCH-001
 #[test]
-fn should_hand_a_unit_over_once_it_has_been_quiet_for_the_window() {
+fn should_hand_a_unit_over_once_it_has_been_quiet_for_the_quiet_period() {
     let mut machine = machine("");
     settled(&mut machine, "Show/a.mkv", at(0, 0));
     settled(&mut machine, "Show/b.mkv", at(0, 0));
@@ -45,7 +45,7 @@ fn should_hand_a_unit_over_once_it_has_been_quiet_for_the_window() {
 
 // @behavior WCH-002
 #[test]
-fn should_hand_nothing_over_before_the_window_has_passed() {
+fn should_hand_nothing_over_before_the_quiet_period_has_passed() {
     let mut machine = machine("");
     settled(&mut machine, "Show/a.mkv", at(0, 0));
 
@@ -164,7 +164,7 @@ fn should_settle_a_file_found_at_start_that_was_changed_long_ago() {
 
 // @behavior WCH-014
 #[test]
-fn should_settle_a_file_found_at_start_after_a_window_with_no_writes() {
+fn should_settle_a_file_found_at_start_after_a_quiet_period_with_no_writes() {
     let mut machine = machine("");
     machine.observe(
         Event::Found {
@@ -275,7 +275,7 @@ fn should_include_the_end_of_a_hold_in_the_deadline() {
 // @behavior WCH-022
 #[test]
 fn should_stop_collecting_files_of_a_unit_past_the_ceiling() {
-    let mut machine = machine("unit = \"directory\"\nbatch_max = 100000");
+    let mut machine = machine("unit = \"directory\"\nmax_files = 100000");
     for number in 0..100_005 {
         settled(&mut machine, &format!("Show/{number}.mkv"), at(0, 0));
     }

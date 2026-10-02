@@ -22,9 +22,9 @@ pub(crate) const MAX_FOLDER_CONFIG_BYTES: usize = 64 * 1024;
 
 /// The most files a batch may hold, whatever the configuration says, so that a unit cannot grow without bound.
 pub const MAX_BATCH_FILES: usize = 100_000;
-const DEFAULT_BATCH_MAX: usize = 1000;
-const DEFAULT_BATCH_WINDOW: Duration = Duration::from_secs(5 * 60);
-const DEFAULT_BATCH_MAX_WAIT: Duration = Duration::from_secs(30 * 60);
+const DEFAULT_MAX_FILES: usize = 1000;
+const DEFAULT_QUIET: Duration = Duration::from_secs(5 * 60);
+const DEFAULT_MAX_WAIT: Duration = Duration::from_secs(30 * 60);
 
 /// Why a configuration was refused.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -79,9 +79,9 @@ pub struct Watch {
     pub target: Option<PathBuf>,
     pub unit: Unit,
     pub vars: BTreeMap<String, Value>,
-    pub batch_window: Duration,
-    pub batch_max_wait: Duration,
-    pub batch_max: usize,
+    pub quiet: Duration,
+    pub max_wait: Duration,
+    pub max_files: usize,
     pub dry_run: bool,
     pipeline_names: Vec<String>,
     definitions: BTreeMap<String, Pipeline>,
@@ -92,15 +92,15 @@ pub struct Watch {
 pub struct FolderConfig {
     vars: BTreeMap<String, Value>,
     pipelines: BTreeMap<String, Pipeline>,
-    batch_max: Option<usize>,
+    max_files: Option<usize>,
 }
 
 /// The settings a `[default]` and a watch have in common.
 #[derive(Default)]
 struct Settings {
-    batch_window: Option<Duration>,
-    batch_max_wait: Option<Duration>,
-    batch_max: Option<usize>,
+    quiet: Option<Duration>,
+    max_wait: Option<Duration>,
+    max_files: Option<usize>,
     pipelines: Option<Vec<String>>,
     vars: BTreeMap<String, Value>,
     unit: Option<Unit>,
@@ -205,7 +205,7 @@ impl Watch {
                     watch.definitions.insert(name.clone(), pipeline.clone());
                 }
             }
-            watch.batch_max = folder.batch_max.unwrap_or(watch.batch_max);
+            watch.max_files = folder.max_files.unwrap_or(watch.max_files);
         }
         watch
     }
@@ -229,29 +229,29 @@ impl FolderConfig {
 
         let vars = read_vars(&mut reader)?;
         let pipelines = read_pipelines(reader.table("pipeline")?.unwrap_or_default())?;
-        let batch_max = read_batch_max(&mut reader)?;
+        let max_files = read_max_files(&mut reader)?;
         reader.finish()?;
         Ok(FolderConfig {
             vars,
             pipelines,
-            batch_max,
+            max_files,
         })
     }
 }
 
 fn read_settings(mut reader: Reader<String>) -> Result<Settings, ConfigError> {
-    let batch_window = reader.duration("batch_window")?;
-    let batch_max_wait = reader.duration("batch_max_wait")?;
-    let batch_max = read_batch_max(&mut reader)?;
+    let quiet = reader.duration("quiet")?;
+    let max_wait = reader.duration("max_wait")?;
+    let max_files = read_max_files(&mut reader)?;
     let pipelines = reader.strings("pipelines")?;
     let dry_run = reader.boolean("dry_run")?;
     let vars = read_vars(&mut reader)?;
     let unit = read_unit(&mut reader)?;
     reader.finish()?;
     Ok(Settings {
-        batch_window,
-        batch_max_wait,
-        batch_max,
+        quiet,
+        max_wait,
+        max_files,
         pipelines,
         vars,
         unit,
@@ -313,19 +313,16 @@ fn build_watch(
     definitions: &BTreeMap<String, Pipeline>,
 ) -> Result<Watch, ConfigError> {
     let scope = format!("watch.{name}");
-    let batch_window = settings
-        .batch_window
-        .or(default.batch_window)
-        .unwrap_or(DEFAULT_BATCH_WINDOW);
-    let batch_max_wait = settings
-        .batch_max_wait
-        .or(default.batch_max_wait)
-        .unwrap_or(DEFAULT_BATCH_MAX_WAIT);
-    if batch_max_wait < batch_window {
+    let quiet = settings.quiet.or(default.quiet).unwrap_or(DEFAULT_QUIET);
+    let max_wait = settings
+        .max_wait
+        .or(default.max_wait)
+        .unwrap_or(DEFAULT_MAX_WAIT);
+    if max_wait < quiet {
         return Err(invalid(
             &scope,
-            "batch_max_wait",
-            "may not be shorter than `batch_window`",
+            "max_wait",
+            "may not be shorter than `quiet`",
         ));
     }
     let pipeline_names = settings
@@ -354,12 +351,12 @@ fn build_watch(
             .or_else(|| default.unit.clone())
             .unwrap_or(Unit::Directory),
         vars,
-        batch_window,
-        batch_max_wait,
-        batch_max: settings
-            .batch_max
-            .or(default.batch_max)
-            .unwrap_or(DEFAULT_BATCH_MAX),
+        quiet,
+        max_wait,
+        max_files: settings
+            .max_files
+            .or(default.max_files)
+            .unwrap_or(DEFAULT_MAX_FILES),
         dry_run: settings.dry_run.or(default.dry_run).unwrap_or(false),
         pipeline_names,
         definitions: definitions.clone(),
@@ -430,10 +427,10 @@ fn check_apart(
 }
 
 /// The batch limit a table says, which may not be more than the ceiling.
-fn read_batch_max(reader: &mut Reader<String>) -> Result<Option<usize>, ConfigError> {
-    match reader.positive("batch_max")? {
+fn read_max_files(reader: &mut Reader<String>) -> Result<Option<usize>, ConfigError> {
+    match reader.positive("max_files")? {
         Some(limit) if limit > MAX_BATCH_FILES => Err(reader.invalid(
-            "batch_max",
+            "max_files",
             format!("may not be more than {MAX_BATCH_FILES}"),
         )),
         limit => Ok(limit),

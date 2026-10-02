@@ -89,20 +89,20 @@ fn should_merge_the_variables_of_the_default_and_the_watch_by_name() {
 
 // @behavior CFG-005
 #[test]
-fn should_default_the_batch_window_to_five_minutes() {
-    assert_eq!(series("").batch_window, Duration::from_secs(300));
+fn should_default_the_quiet_to_five_minutes() {
+    assert_eq!(series("").quiet, Duration::from_secs(300));
 }
 
 // @behavior CFG-006
 #[test]
 fn should_default_the_maximum_wait_to_thirty_minutes() {
-    assert_eq!(series("").batch_max_wait, Duration::from_secs(1800));
+    assert_eq!(series("").max_wait, Duration::from_secs(1800));
 }
 
 // @behavior CFG-007
 #[test]
-fn should_default_to_a_batch_limit_of_a_thousand() {
-    assert_eq!(series("").batch_max, 1000);
+fn should_default_to_a_file_limit_of_a_thousand() {
+    assert_eq!(series("").max_files, 1000);
 }
 
 // @behavior CFG-008
@@ -114,29 +114,24 @@ fn should_default_to_no_dry_run() {
 // @behavior CFG-009
 #[test]
 fn should_read_durations_in_seconds_minutes_and_hours() {
-    let watch = series("batch_window = \"90s\"\nbatch_max_wait = \"2h\"");
+    let watch = series("quiet = \"90s\"\nmax_wait = \"2h\"");
 
-    assert_eq!(watch.batch_window, Duration::from_secs(90));
-    assert_eq!(watch.batch_max_wait, Duration::from_secs(7200));
+    assert_eq!(watch.quiet, Duration::from_secs(90));
+    assert_eq!(watch.max_wait, Duration::from_secs(7200));
 }
 
 // @behavior CFG-010
 #[test]
 fn should_refuse_a_duration_without_a_unit() {
-    assert!(names(
-        &refused(&with_watch("batch_window = \"5\"")),
-        "batch_window"
-    ));
+    assert!(names(&refused(&with_watch("quiet = \"5\"")), "quiet"));
 }
 
 // @behavior CFG-011
 #[test]
-fn should_refuse_a_maximum_wait_shorter_than_the_window() {
-    let error = refused(&with_watch(
-        "batch_window = \"10m\"\nbatch_max_wait = \"5m\"",
-    ));
+fn should_refuse_a_maximum_wait_shorter_than_the_quiet_period() {
+    let error = refused(&with_watch("quiet = \"10m\"\nmax_wait = \"5m\""));
 
-    assert!(names(&error, "batch_max_wait"));
+    assert!(names(&error, "max_wait"));
 }
 
 // @behavior CFG-012
@@ -229,8 +224,8 @@ fn should_let_a_watch_without_a_target_rename_in_place() {
 
 // @behavior CFG-022
 #[test]
-fn should_refuse_a_batch_limit_that_is_not_positive() {
-    assert!(names(&refused(&with_watch("batch_max = 0")), "batch_max"));
+fn should_refuse_a_file_limit_that_is_not_positive() {
+    assert!(names(&refused(&with_watch("max_files = 0")), "max_files"));
 }
 
 // @behavior CFG-023
@@ -272,17 +267,17 @@ fn should_refuse_a_default_that_holds_a_source() {
 
 // @behavior CFG-028
 #[test]
-fn should_refuse_a_batch_limit_above_the_ceiling() {
+fn should_refuse_a_file_limit_above_the_ceiling() {
     assert!(names(
-        &refused(&with_watch("batch_max = 100001")),
-        "batch_max"
+        &refused(&with_watch("max_files = 100001")),
+        "max_files"
     ));
 }
 
 // @behavior CFG-029
 #[test]
-fn should_accept_the_ceiling_as_the_batch_limit() {
-    assert_eq!(series("batch_max = 100000").batch_max, 100_000);
+fn should_accept_the_ceiling_as_the_file_limit() {
+    assert_eq!(series("max_files = 100000").max_files, 100_000);
 }
 
 // @behavior CFG-030

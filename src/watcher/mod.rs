@@ -63,7 +63,7 @@ enum Waiting {
 /// kept in order, and whether a unit is held open is counted rather than asked of every hold.
 pub struct Machine {
     unit: Unit,
-    window: Duration,
+    quiet: Duration,
     max_wait: Duration,
     pending: BTreeMap<PathBuf, Pending>,
     touched: BTreeMap<PathBuf, SystemTime>,
@@ -73,12 +73,12 @@ pub struct Machine {
 }
 
 impl Machine {
-    /// Starts a machine for a watch, with its unit, window and maximum wait.
+    /// Starts a machine for a watch, with its unit, quiet period and maximum wait.
     pub fn new(watch: &Watch) -> Machine {
         Machine {
             unit: watch.unit.clone(),
-            window: watch.batch_window,
-            max_wait: watch.batch_max_wait,
+            quiet: watch.quiet,
+            max_wait: watch.max_wait,
             pending: BTreeMap::new(),
             touched: BTreeMap::new(),
             holds: BTreeMap::new(),
@@ -195,7 +195,7 @@ impl Machine {
             return;
         }
         let modified = modified.min(now);
-        let quiet_at = modified + self.window;
+        let quiet_at = modified + self.quiet;
         if now >= quiet_at {
             self.settle(path, modified);
         } else {
@@ -212,14 +212,14 @@ impl Machine {
         self.holds.contains_key(file) || self.pending.get(&self.unit.of(file)).is_some_and(settled)
     }
 
-    /// A file found at start settles once its window has passed with no writes; a hold that has not
+    /// A file found at start settles once its quiet period has passed with no writes; a hold that has not
     /// resolved for the maximum wait is dropped.
     fn resolve_hold(&mut self, file: &Path, now: SystemTime) {
         let Some(hold) = self.holds.get(file) else {
             return;
         };
         match hold.due {
-            Some(due) if now >= due => self.settle(file.to_path_buf(), due - self.window),
+            Some(due) if now >= due => self.settle(file.to_path_buf(), due - self.quiet),
             _ => {
                 let unit = hold.unit.clone();
                 self.change(&unit, |machine| {
@@ -296,7 +296,7 @@ impl Machine {
     }
 
     fn quiet_at(&self, unit: &Path, pending: &Pending) -> SystemTime {
-        self.touched.get(unit).copied().unwrap_or(pending.first) + self.window
+        self.touched.get(unit).copied().unwrap_or(pending.first) + self.quiet
     }
 
     /// When a pending unit is due: at its maximum wait, or sooner once it is quiet with nothing held.
