@@ -44,10 +44,6 @@
     "useDefault": "改回沿用預設",
     "override": "在資料夾覆寫",
     "chooseFolder": "選擇資料夾",
-    "after": "跑完這個階段的檔案",
-    "none": "沒有檔案跑到這個階段。",
-    "taken_one": "另有 {{count}} 個檔案由目錄設定的同名管線處理。",
-    "taken_other": "另有 {{count}} 個檔案由目錄設定的同名管線處理。",
     "route": "{{watch}} 的第 {{position}} 條路線",
     "removeRoute": "移除路線",
     "target": "目標 {{name}}",
@@ -82,7 +78,15 @@
     "why": "原因",
     "claimed": "由 {{pipeline}} 認領",
     "claimedRejected": "由失敗路線認領",
-    "steps": "{{file}} 的處理步驟"
+    "steps": "{{file}} 的處理步驟",
+    "stage": "{{stage}} 之後",
+    "field": "欄位",
+    "before": "改前",
+    "after": "改後",
+    "none": "沒有檔案跑到這個階段。",
+    "unchanged": "沒有改變",
+    "taken_one": "另有 {{count}} 個檔案由目錄設定的同名管線處理。",
+    "taken_other": "另有 {{count}} 個檔案由目錄設定的同名管線處理。"
   },
   "what": {
     "moved": "已搬移",

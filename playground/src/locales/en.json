@@ -44,10 +44,6 @@
     "useDefault": "Follow the default",
     "override": "Override in a folder",
     "chooseFolder": "Choose a folder",
-    "after": "Files after this stage",
-    "none": "No file reached this stage.",
-    "taken_one": "{{count}} file ran this pipeline as a folder configuration replaced it.",
-    "taken_other": "{{count}} files ran this pipeline as folder configurations replaced it.",
     "route": "Route {{position}} of {{watch}}",
     "removeRoute": "Remove route",
     "target": "Target {{name}}",
@@ -82,7 +78,15 @@
     "why": "Why",
     "claimed": "Claimed by {{pipeline}}",
     "claimedRejected": "Claimed by the rejected route",
-    "steps": "Steps of {{file}}"
+    "steps": "Steps of {{file}}",
+    "stage": "After {{stage}}",
+    "field": "Field",
+    "before": "Before",
+    "after": "After",
+    "none": "No file reached this stage.",
+    "unchanged": "nothing changed",
+    "taken_one": "{{count}} file ran this pipeline as a folder configuration replaced it.",
+    "taken_other": "{{count}} files ran this pipeline as folder configurations replaced it."
   },
   "what": {
     "moved": "moved",

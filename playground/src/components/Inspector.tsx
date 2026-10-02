@@ -9,7 +9,6 @@ import { KIND_ICONS, stageIcon } from '@/components/kinds'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
-  type Stage,
   type Table,
   addStage,
   asTable,
@@ -31,9 +30,8 @@ import {
   targetsOf,
   withRoutes,
 } from '../config'
-import { type Kind, type Simulation, builtIns, read, stages } from '../core'
+import { type Kind, builtIns, read, stages } from '../core'
 import type { Selected } from '../graph'
-import { afterStage } from '../steps'
 import { StageForm } from './StageForm'
 
 function Field({ label, children, error }: { label: string; children: React.ReactNode; error?: string }) {
@@ -53,44 +51,6 @@ function Section({ title, icon: Icon, children }: { title: React.ReactNode; icon
       {children}
     </section>
   )
-}
-
-/** The files a triggered simulation ran through a stage, each as the stage left it. */
-function FilesAfter({ simulation, pipeline, index, folder, claims }: {
-  simulation: Simulation
-  pipeline: string
-  index: number
-  folder: string | null
-  claims: boolean
-}) {
-  const { t } = useTranslation()
-  const { ran, taken } = afterStage(simulation.outcomes, pipeline, index, folder, claims)
-  return (
-    <section aria-label={t('inspector.after')} className="grid gap-1.5 border-t pt-3">
-      <h3 className="text-xs font-semibold">{t('inspector.after')}</h3>
-      {ran.length === 0 && <p className="text-xs text-muted-foreground">{t('inspector.none')}</p>}
-      <ul className="grid gap-1.5">
-        {ran.map(({ origin, step, changes }) => (
-          <li key={origin} className="grid font-mono text-xs">
-            <span className="truncate text-muted-foreground" title={origin}>{origin}</span>
-            {step.stop !== null ? (
-              <span className="text-destructive">{step.stop}</span>
-            ) : (
-              changes.map((change) => <span key={change.key}>{change.key}: {change.to}</span>)
-            )}
-          </li>
-        ))}
-      </ul>
-      {taken.length > 0 && (
-        <p className="text-xs text-muted-foreground">{t('inspector.taken', { count: taken.length })}</p>
-      )}
-    </section>
-  )
-}
-
-/** Whether a stage stands for the claim: it and every stage before it are filters. */
-function claims(stages: Stage[], index: number): boolean {
-  return stages.slice(0, index + 1).every((one) => stageName(one) === 'filter')
 }
 
 /** A route's own form, with its place among the watch's routes and its removal. */
@@ -147,15 +107,11 @@ function TargetInspector({ config, name, onChange, onSelect }: {
   )
 }
 
-/** A built-in pipeline, or one of its stages: copied in or overridden in a folder to be changed, and a stage still
- * lists the files after it. */
-function BuiltInInspector({ config, pipeline, stage, folders, simulation, folder, onChange, onOverride }: {
+/** A built-in pipeline, or one of its stages, copied in or overridden in a folder to be changed. */
+function BuiltInInspector({ config, pipeline, folders, onChange, onOverride }: {
   config: Table
   pipeline: string
-  stage: number | null
   folders: string[]
-  simulation: Simulation | null
-  folder: string | null
   onChange: (config: Table) => void
   onOverride?: (pipeline: string, folder: string) => void
 }) {
@@ -173,8 +129,6 @@ function BuiltInInspector({ config, pipeline, stage, folders, simulation, folder
             onChange={(one) => onOverride(pipeline, one)} />
         </Field>
       )}
-      {simulation && stage !== null && <FilesAfter simulation={simulation} pipeline={pipeline} index={stage} folder={folder}
-        claims={claims(stagesOf({ pipeline: builtIns() }, pipeline), stage)} />}
     </Section>
   )
 }
@@ -222,12 +176,10 @@ function PipelineInspector({ config, name: pipeline, folders, onChange, onSelect
   )
 }
 
-/** A stage of a pipeline the configuration defines: its form, its place, its removal and the files after it. */
-function StageInspector({ config, selected, simulation, folder, onChange, onSelect }: {
+/** A stage of a pipeline the configuration defines: its form, its place and its removal. */
+function StageInspector({ config, selected, onChange, onSelect }: {
   config: Table
   selected: { kind: 'stage'; pipeline: string; index: number }
-  simulation: Simulation | null
-  folder: string | null
   onChange: (config: Table) => void
   onSelect: (selected: Selected | null) => void
 }) {
@@ -254,8 +206,6 @@ function StageInspector({ config, selected, simulation, folder, onChange, onSele
           <Trash2 />{t('inspector.remove')}
         </Button>
       </div>
-      {simulation && <FilesAfter simulation={simulation} pipeline={selected.pipeline} index={selected.index} folder={folder}
-        claims={claims(pipelineStages, selected.index)} />}
     </Section>
   )
 }
@@ -292,13 +242,10 @@ function WatchInspector({ config, name, onChange, onSelect }: {
   )
 }
 
-export function Inspector({ config, kind, selected, folders = [], simulation = null, folder = null, onChange, onSelect, onOverride }: {
+export function Inspector({ config, kind, selected, folders = [], onChange, onSelect, onOverride }: {
   config: Table
   kind: Kind
   selected: Selected | null
-  simulation?: Simulation | null
-  /** The folder whose configuration is edited, relative to the source; null for the global configuration. */
-  folder?: string | null
   /** The source folders a global pipeline can be overridden in. */
   folders?: string[]
   onChange: (config: Table) => void
@@ -318,8 +265,7 @@ export function Inspector({ config, kind, selected, folders = [], simulation = n
   // A built-in pipeline and its stages are changed only once copied in as the configuration's own.
   const pipeline = selected.kind === 'pipeline' ? selected.name : selected.pipeline
   if (!(pipeline in asTable(config.pipeline))) {
-    return <BuiltInInspector config={config} pipeline={pipeline} stage={selected.kind === 'stage' ? selected.index : null}
-      folders={folders} simulation={simulation} folder={folder} onChange={onChange} onOverride={onOverride} />
+    return <BuiltInInspector config={config} pipeline={pipeline} folders={folders} onChange={onChange} onOverride={onOverride} />
   }
 
   if (selected.kind === 'pipeline') {
@@ -327,6 +273,5 @@ export function Inspector({ config, kind, selected, folders = [], simulation = n
       onOverride={onOverride} />
   }
 
-  return <StageInspector config={config} selected={selected} simulation={simulation} folder={folder} onChange={onChange}
-    onSelect={onSelect} />
+  return <StageInspector config={config} selected={selected} onChange={onChange} onSelect={onSelect} />
 }

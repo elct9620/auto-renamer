@@ -552,7 +552,7 @@ The playground page draws a configuration for people who do not read TOML: each 
 | --- | --- |
 | Given | the opening example triggered |
 | When | the format stage of `video` is selected |
-| Then | the inspector lists each file with the name the format gave it |
+| Then | the panel shows the stage's tab, listing each file with each field the format changed, before and after |
 
 ## `PGE-069` Editing the configuration clears the simulation
 
@@ -801,3 +801,11 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the source tree shown in the panel |
 | When | the watch is triggered |
 | Then | the panel shows where each file went |
+
+## `PGE-100` A stage's tab leaves with the stage
+
+| Step | Statement |
+| --- | --- |
+| Given | the opening example triggered and its format stage selected |
+| When | the canvas is clicked where nothing is drawn |
+| Then | the stage's tab is gone and the panel shows the results |

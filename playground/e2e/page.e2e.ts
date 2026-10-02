@@ -373,9 +373,22 @@ test('a selected stage shows the files after it', async ({ page }) => {
 
   await title(page, 'format').click()
 
-  const after = page.getByRole('region', { name: 'Files after this stage' })
-  await expect(after.getByRole('listitem')).toHaveCount(6)
-  await expect(after.getByText('name: Alpha s01e12', { exact: true })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'After format', selected: true })).toBeVisible()
+  const row = page.getByRole('row').filter({ hasText: 'Alpha/[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv' })
+  await expect(row.getByRole('cell')).toHaveText([
+    'Alpha/[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv', 'name', '[Team] Alpha - 12 [1080p HEVC-10bit AAC]', 'Alpha s01e12',
+  ])
+})
+
+// @behavior PGE-100
+test('a stage\'s tab leaves with the stage', async ({ page }) => {
+  await page.getByRole('button', { name: 'Trigger' }).click()
+  await title(page, 'format').click()
+
+  await page.locator('.react-flow__pane').click({ position: { x: 5, y: 5 } })
+
+  await expect(page.getByRole('tab', { name: 'After format' })).toHaveCount(0)
+  await expect(page.getByRole('tab', { name: 'Results', selected: true })).toBeVisible()
 })
 
 // @behavior PGE-069
