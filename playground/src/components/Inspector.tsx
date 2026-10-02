@@ -9,6 +9,7 @@ import { KIND_ICONS, stageIcon } from '@/components/kinds'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
+  type Stage,
   type Table,
   addStage,
   asTable,
@@ -87,141 +88,150 @@ function FilesAfter({ simulation, pipeline, index, folder, claims }: {
   )
 }
 
-export function Inspector({ config, kind, selected, folders = [], simulation = null, folder = null, onChange, onSelect, onOverride }: {
+/** Whether a stage stands for the claim: it and every stage before it are filters. */
+function claims(stages: Stage[], index: number): boolean {
+  return stages.slice(0, index + 1).every((one) => stageName(one) === 'filter')
+}
+
+/** A route's own form, with its place among the watch's routes and its removal. */
+function RouteInspector({ config, selected, onChange, onSelect }: {
   config: Table
-  kind: Kind
-  selected: Selected | null
-  simulation?: Simulation | null
-  /** The folder whose configuration is edited, relative to the source; null for the global configuration. */
-  folder?: string | null
-  /** The source folders a global pipeline can be overridden in. */
-  folders?: string[]
+  selected: { kind: 'route'; watch: string; index: number }
+  onChange: (config: Table) => void
+  onSelect: (selected: Selected | null) => void
+}) {
+  const { t } = useTranslation()
+  const { watch, index } = selected
+  const routes = routesOf(config, watch)
+  const route = routes[index]
+  if (route === undefined) return null
+  const at = (to: number) => onSelect({ ...selected, index: to })
+  return (
+    <Section icon={KIND_ICONS.route} title={t('inspector.route', { position: index + 1, watch })}>
+      {asTable(asTable(config.watch)[watch]).routes === undefined && (
+        <p className="text-xs text-muted-foreground">{t('inspector.followsDefault')}</p>
+      )}
+      <RouteForm key={`${watch}-${index}`} route={route} pipelines={Object.keys(routable(config, builtIns()))}
+        targets={Object.keys(targetsOf(config))}
+        onChange={(next) => onChange(withRoutes(config, watch, (all) => all.map((one, place) => (place === index ? next : one))))} />
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" disabled={index === 0} onClick={() => {
+          onChange(moveRoute(config, watch, index, -1)); at(index - 1)
+        }}><ArrowUp />{t('inspector.earlier')}</Button>
+        <Button variant="outline" size="sm" disabled={index === routes.length - 1} onClick={() => {
+          onChange(moveRoute(config, watch, index, 1)); at(index + 1)
+        }}><ArrowDown />{t('inspector.later')}</Button>
+        <Button variant="destructive" size="sm" onClick={() => { onChange(removeRoute(config, watch, index)); onSelect(null) }}>
+          <Trash2 />{t('inspector.removeRoute')}
+        </Button>
+      </div>
+    </Section>
+  )
+}
+
+/** A target's path and its removal, which takes every move to it along. */
+function TargetInspector({ config, name, onChange, onSelect }: {
+  config: Table
+  name: string
+  onChange: (config: Table) => void
+  onSelect: (selected: Selected | null) => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <Section icon={KIND_ICONS.target} title={t('inspector.target', { name })}>
+      <SettingsForm config={config} scope="target" path={['target', name]} onChange={onChange} />
+      <Button variant="destructive" size="sm" onClick={() => { onChange(removeTarget(config, name)); onSelect(null) }}>
+        <Trash2 />{t('inspector.removeTarget')}
+      </Button>
+    </Section>
+  )
+}
+
+/** A built-in pipeline, or one of its stages: copied in or overridden in a folder to be changed, and a stage still
+ * lists the files after it. */
+function BuiltInInspector({ config, pipeline, stage, folders, simulation, folder, onChange, onOverride }: {
+  config: Table
+  pipeline: string
+  stage: number | null
+  folders: string[]
+  simulation: Simulation | null
+  folder: string | null
+  onChange: (config: Table) => void
+  onOverride?: (pipeline: string, folder: string) => void
+}) {
+  const { t } = useTranslation()
+  if (!(pipeline in builtIns())) return null
+  return (
+    <Section icon={KIND_ICONS.pipeline} title={t('inspector.pipeline', { name: pipeline })}>
+      <p className="text-xs text-muted-foreground">{t('inspector.builtIn')}</p>
+      <Button variant="outline" size="sm" onClick={() => onChange(ownPipeline(config, builtIns(), pipeline))}>
+        <Copy />{t('inspector.copyBuiltIn')}
+      </Button>
+      {onOverride && (
+        <Field label={t('inspector.override')}>
+          <Choice value="" placeholder={t('inspector.chooseFolder')} options={folders.map((one) => ({ value: one, label: one }))}
+            onChange={(one) => onOverride(pipeline, one)} />
+        </Field>
+      )}
+      {simulation && stage !== null && <FilesAfter simulation={simulation} pipeline={pipeline} index={stage} folder={folder}
+        claims={claims(stagesOf({ pipeline: builtIns() }, pipeline), stage)} />}
+    </Section>
+  )
+}
+
+/** A pipeline the configuration defines: its name, a stage to add, an override in a folder, and its removal. */
+function PipelineInspector({ config, name: pipeline, folders, onChange, onSelect, onOverride }: {
+  config: Table
+  name: string
+  folders: string[]
   onChange: (config: Table) => void
   onSelect: (selected: Selected | null) => void
   onOverride?: (pipeline: string, folder: string) => void
 }) {
   const { t } = useTranslation()
   const [nameError, setNameError] = useState('')
-
-  if (selected === null) {
-    return (
-      <Section icon={Settings2} title={kind === 'global' ? t('inspector.defaults') : t('inspector.folder')}>
-        <p className="text-xs text-muted-foreground">{t('inspector.hint')}</p>
-        <SettingsForm config={config} scope={kind === 'global' ? 'default' : 'folder'} path={kind === 'global' ? ['default'] : []}
-          onChange={onChange} />
-        {kind === 'global' && <TargetsForm config={config} onChange={onChange} />}
-      </Section>
-    )
-  }
-
-  if (selected.kind === 'watch') {
-    const path = ['watch', selected.name]
-    return (
-      <Section icon={KIND_ICONS.watch} title={t('inspector.watch', { name: selected.name })}>
-        <SettingsForm config={config} scope="watch" path={path} onChange={onChange} />
-        <Button variant="destructive" size="sm" onClick={() => { onChange(setIn(config, path, undefined)); onSelect(null) }}>
-          <Trash2 />{t('inspector.removeWatch')}
-        </Button>
-      </Section>
-    )
-  }
-
-  if (selected.kind === 'route') {
-    const { watch, index } = selected
-    const routes = routesOf(config, watch)
-    const route = routes[index]
-    if (route === undefined) return null
-    const at = (to: number) => onSelect({ ...selected, index: to })
-    return (
-      <Section icon={KIND_ICONS.route} title={t('inspector.route', { position: index + 1, watch })}>
-        {asTable(asTable(config.watch)[watch]).routes === undefined && (
-          <p className="text-xs text-muted-foreground">{t('inspector.followsDefault')}</p>
-        )}
-        <RouteForm key={`${watch}-${index}`} route={route} pipelines={Object.keys(routable(config, builtIns()))}
-          targets={Object.keys(targetsOf(config))}
-          onChange={(next) => onChange(withRoutes(config, watch, (all) => all.map((one, place) => (place === index ? next : one))))} />
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled={index === 0} onClick={() => {
-            onChange(moveRoute(config, watch, index, -1)); at(index - 1)
-          }}><ArrowUp />{t('inspector.earlier')}</Button>
-          <Button variant="outline" size="sm" disabled={index === routes.length - 1} onClick={() => {
-            onChange(moveRoute(config, watch, index, 1)); at(index + 1)
-          }}><ArrowDown />{t('inspector.later')}</Button>
-          <Button variant="destructive" size="sm" onClick={() => { onChange(removeRoute(config, watch, index)); onSelect(null) }}>
-            <Trash2 />{t('inspector.removeRoute')}
-          </Button>
-        </div>
-      </Section>
-    )
-  }
-
-  if (selected.kind === 'target') {
-    return (
-      <Section icon={KIND_ICONS.target} title={t('inspector.target', { name: selected.name })}>
-        <SettingsForm config={config} scope="target" path={['target', selected.name]} onChange={onChange} />
-        <Button variant="destructive" size="sm" onClick={() => { onChange(removeTarget(config, selected.name)); onSelect(null) }}>
-          <Trash2 />{t('inspector.removeTarget')}
-        </Button>
-      </Section>
-    )
-  }
-
-  // A built-in pipeline and its stages are changed only once copied in as the configuration's own.
-  const builtIn = selected.kind === 'pipeline' ? selected.name : selected.pipeline
-  if (!(builtIn in asTable(config.pipeline))) {
-    if (!(builtIn in builtIns())) return null
-    const builtInStages = stagesOf({ pipeline: builtIns() }, builtIn)
-    return (
-      <Section icon={KIND_ICONS.pipeline} title={t('inspector.pipeline', { name: builtIn })}>
-        <p className="text-xs text-muted-foreground">{t('inspector.builtIn')}</p>
-        <Button variant="outline" size="sm" onClick={() => onChange(ownPipeline(config, builtIns(), builtIn))}>
-          <Copy />{t('inspector.copyBuiltIn')}
-        </Button>
-        {onOverride && (
-          <Field label={t('inspector.override')}>
-            <Choice value="" placeholder={t('inspector.chooseFolder')} options={folders.map((folder) => ({ value: folder, label: folder }))}
-              onChange={(folder) => onOverride(builtIn, folder)} />
-          </Field>
-        )}
-        {simulation && selected.kind === 'stage' && <FilesAfter simulation={simulation} pipeline={builtIn} index={selected.index}
-          folder={folder} claims={builtInStages.slice(0, selected.index + 1).every((one) => stageName(one) === 'filter')} />}
-      </Section>
-    )
-  }
-
-  if (selected.kind === 'pipeline') {
-    return (
-      <Section icon={KIND_ICONS.pipeline} title={t('inspector.pipeline', { name: selected.name })}>
-        <Field label={t('inspector.name')} error={nameError}>
-          <Input key={selected.name} className="h-8 font-mono text-xs" defaultValue={selected.name} onBlur={(event) => {
-            const name = event.target.value.trim()
-            if (name === selected.name) return
-            if (name === '' || name in asTable(config.pipeline)) {
-              setNameError(name === '' ? t('inspector.nameMissing') : t('inspector.nameTaken', { name }))
-              return
-            }
-            setNameError('')
-            onChange(renamePipeline(config, selected.name, name))
-            onSelect({ kind: 'pipeline', name })
-          }} />
+  return (
+    <Section icon={KIND_ICONS.pipeline} title={t('inspector.pipeline', { name: pipeline })}>
+      <Field label={t('inspector.name')} error={nameError}>
+        <Input key={pipeline} className="h-8 font-mono text-xs" defaultValue={pipeline} onBlur={(event) => {
+          const name = event.target.value.trim()
+          if (name === pipeline) return
+          if (name === '' || name in asTable(config.pipeline)) {
+            setNameError(name === '' ? t('inspector.nameMissing') : t('inspector.nameTaken', { name }))
+            return
+          }
+          setNameError('')
+          onChange(renamePipeline(config, pipeline, name))
+          onSelect({ kind: 'pipeline', name })
+        }} />
+      </Field>
+      <Field label={t('inspector.addStage')}>
+        <Choice value="" placeholder={t('inspector.choose')} options={stages().map(({ name }) => ({ value: name, label: name }))}
+          onChange={(name) => onChange(addStage(config, pipeline, newStage(name, stages(), read)))} />
+      </Field>
+      {onOverride && (
+        <Field label={t('inspector.override')}>
+          <Choice value="" placeholder={t('inspector.chooseFolder')} options={folders.map((folder) => ({ value: folder, label: folder }))}
+            onChange={(folder) => onOverride(pipeline, folder)} />
         </Field>
-        <Field label={t('inspector.addStage')}>
-          <Choice value="" placeholder={t('inspector.choose')} options={stages().map(({ name }) => ({ value: name, label: name }))}
-            onChange={(name) => onChange(addStage(config, selected.name, newStage(name, stages(), read)))} />
-        </Field>
-        {onOverride && (
-          <Field label={t('inspector.override')}>
-            <Choice value="" placeholder={t('inspector.chooseFolder')} options={folders.map((folder) => ({ value: folder, label: folder }))}
-              onChange={(folder) => onOverride(selected.name, folder)} />
-          </Field>
-        )}
-        <Button variant="destructive" size="sm" onClick={() => { onChange(removePipeline(config, selected.name)); onSelect(null) }}>
-          <Trash2 />{t('inspector.removePipeline')}
-        </Button>
-      </Section>
-    )
-  }
+      )}
+      <Button variant="destructive" size="sm" onClick={() => { onChange(removePipeline(config, pipeline)); onSelect(null) }}>
+        <Trash2 />{t('inspector.removePipeline')}
+      </Button>
+    </Section>
+  )
+}
 
+/** A stage of a pipeline the configuration defines: its form, its place, its removal and the files after it. */
+function StageInspector({ config, selected, simulation, folder, onChange, onSelect }: {
+  config: Table
+  selected: { kind: 'stage'; pipeline: string; index: number }
+  simulation: Simulation | null
+  folder: string | null
+  onChange: (config: Table) => void
+  onSelect: (selected: Selected | null) => void
+}) {
+  const { t } = useTranslation()
   const pipelineStages = stagesOf(config, selected.pipeline)
   const stage = pipelineStages[selected.index]
   if (stage === undefined) return null
@@ -245,7 +255,78 @@ export function Inspector({ config, kind, selected, folders = [], simulation = n
         </Button>
       </div>
       {simulation && <FilesAfter simulation={simulation} pipeline={selected.pipeline} index={selected.index} folder={folder}
-        claims={pipelineStages.slice(0, selected.index + 1).every((one) => stageName(one) === 'filter')} />}
+        claims={claims(pipelineStages, selected.index)} />}
     </Section>
   )
+}
+
+/** With nothing selected: the defaults and the targets of the global configuration, or a folder configuration's
+ * own settings. */
+function DefaultsInspector({ config, kind, onChange }: { config: Table; kind: Kind; onChange: (config: Table) => void }) {
+  const { t } = useTranslation()
+  const global = kind === 'global'
+  return (
+    <Section icon={Settings2} title={global ? t('inspector.defaults') : t('inspector.folder')}>
+      <p className="text-xs text-muted-foreground">{t('inspector.hint')}</p>
+      <SettingsForm config={config} scope={global ? 'default' : 'folder'} path={global ? ['default'] : []} onChange={onChange} />
+      {global && <TargetsForm config={config} onChange={onChange} />}
+    </Section>
+  )
+}
+
+function WatchInspector({ config, name, onChange, onSelect }: {
+  config: Table
+  name: string
+  onChange: (config: Table) => void
+  onSelect: (selected: Selected | null) => void
+}) {
+  const { t } = useTranslation()
+  const path = ['watch', name]
+  return (
+    <Section icon={KIND_ICONS.watch} title={t('inspector.watch', { name })}>
+      <SettingsForm config={config} scope="watch" path={path} onChange={onChange} />
+      <Button variant="destructive" size="sm" onClick={() => { onChange(setIn(config, path, undefined)); onSelect(null) }}>
+        <Trash2 />{t('inspector.removeWatch')}
+      </Button>
+    </Section>
+  )
+}
+
+export function Inspector({ config, kind, selected, folders = [], simulation = null, folder = null, onChange, onSelect, onOverride }: {
+  config: Table
+  kind: Kind
+  selected: Selected | null
+  simulation?: Simulation | null
+  /** The folder whose configuration is edited, relative to the source; null for the global configuration. */
+  folder?: string | null
+  /** The source folders a global pipeline can be overridden in. */
+  folders?: string[]
+  onChange: (config: Table) => void
+  onSelect: (selected: Selected | null) => void
+  onOverride?: (pipeline: string, folder: string) => void
+}) {
+  if (selected === null) return <DefaultsInspector config={config} kind={kind} onChange={onChange} />
+
+  if (selected.kind === 'watch') return <WatchInspector config={config} name={selected.name} onChange={onChange} onSelect={onSelect} />
+
+  if (selected.kind === 'route') return <RouteInspector config={config} selected={selected} onChange={onChange} onSelect={onSelect} />
+
+  if (selected.kind === 'target') {
+    return <TargetInspector config={config} name={selected.name} onChange={onChange} onSelect={onSelect} />
+  }
+
+  // A built-in pipeline and its stages are changed only once copied in as the configuration's own.
+  const pipeline = selected.kind === 'pipeline' ? selected.name : selected.pipeline
+  if (!(pipeline in asTable(config.pipeline))) {
+    return <BuiltInInspector config={config} pipeline={pipeline} stage={selected.kind === 'stage' ? selected.index : null}
+      folders={folders} simulation={simulation} folder={folder} onChange={onChange} onOverride={onOverride} />
+  }
+
+  if (selected.kind === 'pipeline') {
+    return <PipelineInspector config={config} name={selected.name} folders={folders} onChange={onChange} onSelect={onSelect}
+      onOverride={onOverride} />
+  }
+
+  return <StageInspector config={config} selected={selected} simulation={simulation} folder={folder} onChange={onChange}
+    onSelect={onSelect} />
 }
