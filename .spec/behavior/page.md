@@ -705,3 +705,19 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | a route whose pipeline refuses a file, and whose rejected route runs no pipeline |
 | When | the watch is simulated |
 | Then | the file's timeline says the rejected route claimed it, rather than a pipeline without a name |
+
+## `PGE-088` Routes whose order changed are drawn in their order
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch whose second route was moved by hand |
+| When | its routes are put in another order |
+| Then | each of its routes is drawn where its order places it |
+
+## `PGE-089` A default route is edited in full in the defaults form
+
+| Step | Statement |
+| --- | --- |
+| Given | the target `conflict` declared and nothing selected |
+| When | a route of `series-video` is added to the default's routes and set to move to `conflict` |
+| Then | the default's route of `series-video` moves to `conflict` |

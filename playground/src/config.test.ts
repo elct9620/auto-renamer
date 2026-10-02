@@ -206,6 +206,18 @@ describe('layout', () => {
     const ordered = toGraph(after).nodes.filter((node) => node.id.startsWith('stage:video:'))
     expect(ordered.map((node) => positionOf(after, kept, node.id))).toEqual(ordered.map((node) => node.position))
   })
+
+  // @behavior PGE-088
+  it('draws the routes of a watch whose order changed in their order', () => {
+    const before = read(CONFIG)
+    const layout = { [routeId('series', 1)]: { x: 40, y: 300 } }
+
+    const after = moveRoute(before, 'series', 1, -1)
+    const kept = relaid(layout, before, after)
+
+    const ordered = toGraph(after).nodes.filter((node) => node.id.startsWith('route:series:'))
+    expect(ordered.map((node) => positionOf(after, kept, node.id))).toEqual(ordered.map((node) => node.position))
+  })
 })
 
 describe('editing', () => {

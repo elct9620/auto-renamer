@@ -438,3 +438,15 @@ test('a route that cleans up keeps the folders it lists', async ({ page }) => {
 
   expect(await configText(page)).toMatch(/\[watch\.series\.routes\.cleanup\]\s+keep = \["Extras"\]/)
 })
+
+// @behavior PGE-089
+test('a default route is edited in full in the defaults form', async ({ page }) => {
+  await declareTarget(page, 'conflict')
+
+  await page.getByRole('combobox', { name: 'Add a pipeline' }).click()
+  await page.getByRole('option', { name: 'series-video' }).click()
+  await page.getByRole('combobox', { name: 'Move to', exact: true }).click()
+  await page.getByRole('option', { name: 'conflict' }).click()
+
+  expect(await configText(page)).toMatch(/\[\[default\.routes\]\]\s+move = "conflict"\s+pipeline = "series-video"/)
+})
