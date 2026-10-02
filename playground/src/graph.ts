@@ -158,6 +158,13 @@ export function toGraph(config: Table, builtIns: Table = {}): { nodes: Node<Node
       return pipeline ? [{ name, ...pipeline }] : []
     })
   const drawn = new Set(pipelines.map(({ name }) => name))
+  // A pipeline whose routes move to different targets labels each joint with its route, since they share one end.
+  const movesOf = new Map<string, Set<unknown>>()
+  for (const route of watches.flatMap((name) => routesOf(config, name))) {
+    if (typeof route.pipeline !== 'string' || typeof route.move !== 'string') continue
+    movesOf.set(route.pipeline, (movesOf.get(route.pipeline) ?? new Set()).add(route.move))
+  }
+  const sharedTargets = new Set([...movesOf].filter(([, moves]) => moves.size > 1).map(([pipeline]) => pipeline))
   // Rows are laid out in turn, each below the one before it; the pipelines start right of the watches and the
   // targets right of the widest pipeline.
   const tops = (heights: number[]) => heights.map((_, index) => heights.slice(0, index).reduce((sum, one) => sum + one + GAP / 2, 0))
@@ -202,18 +209,23 @@ export function toGraph(config: Table, builtIns: Table = {}): { nodes: Node<Node
           data: { watch: name, pipeline } satisfies Joint,
         })
       }
+      // Effects follow the pipeline that planned the files, so their joints leave the end of its row rather than
+      // crossing the stages; a route whose pipeline is not drawn keeps them.
+      const from = (planned: string) => (drawn.has(planned) ? { source: pipelineId(planned), sourceHandle: 'end' } : { source: id, sourceHandle: 'effects' })
+      const named = sharedTargets.has(pipeline) ? `${name} ${index + 1}` : undefined
       if (typeof route.move === 'string' && targets.includes(route.move)) {
-        edges.push({ id: `${id}->${targetId(route.move)}`, source: id, sourceHandle: 'effects', target: targetId(route.move),
+        edges.push({ id: `${id}->${targetId(route.move)}`, ...from(pipeline), target: targetId(route.move), label: named,
           style: followed ? FOLLOWED : undefined, data: { watch: name, index } satisfies Move })
       }
       const rejected = asTable(route.rejected)
+      const refusedBy = typeof rejected.pipeline === 'string' && drawn.has(rejected.pipeline) ? rejected.pipeline : pipeline
       if (typeof rejected.pipeline === 'string' && drawn.has(rejected.pipeline)) {
-        edges.push({ id: `${id}->${pipelineId(rejected.pipeline)}:rejected`, source: id, target: pipelineId(rejected.pipeline),
-          style: REJECTED, deletable: false })
+        edges.push({ id: `${id}->${pipelineId(rejected.pipeline)}:rejected`, ...from(pipeline), target: pipelineId(rejected.pipeline),
+          label: named, style: REJECTED, deletable: false })
       }
       if (typeof rejected.move === 'string' && targets.includes(rejected.move)) {
-        edges.push({ id: `${id}->${targetId(rejected.move)}:rejected`, source: id, sourceHandle: 'effects',
-          target: targetId(rejected.move), style: REJECTED, deletable: false })
+        edges.push({ id: `${id}->${targetId(rejected.move)}:rejected`, ...from(refusedBy), target: targetId(rejected.move),
+          label: named, style: REJECTED, deletable: false })
       }
     })
   })

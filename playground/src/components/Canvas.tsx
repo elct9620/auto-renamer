@@ -123,6 +123,7 @@ const nodeTypes = {
     <>
       <ConfigGroup data={data} kind="pipeline" />
       <Handle type="target" position={Position.Left} />
+      <Handle type="source" id="end" position={Position.Right} isConnectable={false} />
     </>
   ),
   stage: ({ data }: NodeProps<Node<NodeData>>) => (

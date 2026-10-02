@@ -592,7 +592,7 @@ The playground page draws a configuration for people who do not read TOML: each 
 | --- | --- |
 | Given | a configuration declaring the target `dst`, whose watch has a route moving to `dst` |
 | When | it is drawn |
-| Then | `dst` is drawn and the route leads to it |
+| Then | `dst` is drawn, and the end of the route's pipeline leads to it on the route's behalf |
 
 ## `PGE-074` A rejected route is joined apart from its route
 
@@ -600,7 +600,7 @@ The playground page draws a configuration for people who do not read TOML: each 
 | --- | --- |
 | Given | a route whose rejected route runs `fallback` and moves to `conflict` |
 | When | it is drawn |
-| Then | the route leads to `fallback` and to `conflict` by dashed joints |
+| Then | the end of the route's pipeline leads to `fallback`, and the end of `fallback` to `conflict`, by dashed joints |
 
 ## `PGE-075` A built-in pipeline a route names is drawn locked with its stages
 
@@ -841,3 +841,11 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | a stage of a pipeline the configuration defines |
 | When | it is dropped away from every pipeline |
 | Then | it is drawn where it was and the configuration is as it was |
+
+## `PGE-105` A pipeline moving to several targets names the route of each joint
+
+| Step | Statement |
+| --- | --- |
+| Given | two routes of `video`, one moving to `dst` and one to `other` |
+| When | it is drawn |
+| Then | each joint from `video` to a target is labelled with the route it stands for |

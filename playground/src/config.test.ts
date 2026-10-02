@@ -123,7 +123,7 @@ describe('drawing', () => {
     const config = read(CONFIG)
 
     expect(nodeOf(config, targetId('dst'))).toBeDefined()
-    expect(edgeBetween(config, routeId('series', 0), targetId('dst'))).toBeDefined()
+    expect(edgeBetween(config, pipelineId('video'), targetId('dst'))?.data).toEqual({ watch: 'series', index: 0 })
   })
 
   // @behavior PGE-074
@@ -140,10 +140,26 @@ source = "/clash"
 routes = [{ pipeline = "video", rejected = { pipeline = "fallback", move = "conflict" } }]
 `)
 
-    const dashed = (target: string) => edgeBetween(config, routeId('clash', 0), target)?.style?.strokeDasharray
-    expect(dashed(pipelineId('fallback'))).toBeDefined()
-    expect(dashed(targetId('conflict'))).toBeDefined()
+    const dashed = (source: string, target: string) => edgeBetween(config, source, target)?.style?.strokeDasharray
+    expect(dashed(pipelineId('video'), pipelineId('fallback'))).toBeDefined()
+    expect(dashed(pipelineId('fallback'), targetId('conflict'))).toBeDefined()
     expect(edgeBetween(config, routeId('clash', 0), pipelineId('video'))?.style).toBeUndefined()
+  })
+
+  // @behavior PGE-105
+  it('names the route of each joint from a pipeline moving to several targets', () => {
+    const config = read(`${CONFIG}
+[target.other]
+path = "/other"
+
+[watch.clash]
+source = "/clash"
+routes = [{ pipeline = "video", move = "other" }]
+`)
+
+    expect(edgeBetween(config, pipelineId('video'), targetId('dst'))?.label).toBe('series 1')
+    expect(edgeBetween(config, pipelineId('video'), targetId('other'))?.label).toBe('clash 1')
+    expect(edgeBetween(read(CONFIG), pipelineId('video'), targetId('dst'))?.label).toBeUndefined()
   })
 
   // @behavior PGE-075
