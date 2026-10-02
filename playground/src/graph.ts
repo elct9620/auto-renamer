@@ -1,6 +1,7 @@
 import type { Edge, Node, XYPosition } from '@xyflow/react'
 
 import { type Stage, type Table, asTable, routesOf, stageName, stagesOf, targetsOf } from './config'
+import { claims } from './steps'
 
 export type Selected =
   | { kind: 'watch'; name: string }
@@ -17,6 +18,8 @@ export interface NodeData extends Record<string, unknown> {
   locked?: boolean
   /** A route a watch follows from the default rather than lists itself. */
   followed?: boolean
+  /** A stage that stands for its pipeline's claim, being a filter with only filters before it. */
+  claims?: boolean
 }
 
 /** How wide a watch is drawn, and a route or a stage inside a group; what a group holds is inset by `PAD`. */
@@ -263,6 +266,7 @@ export function toGraph(config: Table, builtIns: Table = {}): { nodes: Node<Node
           label: stageName(stage),
           detail: stageDetail(stage),
           locked,
+          claims: claims(stages, index),
           selected: { kind: 'stage', pipeline, index },
         },
       })

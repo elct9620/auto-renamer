@@ -6,6 +6,7 @@ import {
   type Edge,
   type EdgeProps,
   Handle,
+  NodeToolbar,
   type Node,
   type NodeProps,
   Position,
@@ -17,12 +18,14 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { LayoutGrid, Lock, X } from 'lucide-react'
-import { type DragEvent, useEffect, useMemo, useState } from 'react'
+import { type DragEvent, createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { BaseNode, BaseNodeContent, BaseNodeHeader, BaseNodeHeaderTitle } from '@/components/base-node'
 import { ButtonEdge } from '@/components/button-edge'
 import { GroupNode } from '@/components/labeled-group-node'
+import { NodeAppendix } from '@/components/node-appendix'
+import { StageFiles } from '@/components/StageFiles'
 import { StageName } from '@/components/Fields'
 import {
   AlertDialog,
@@ -53,8 +56,9 @@ import {
   setIn,
   transferStage,
 } from '../config'
-import { builtIns, read, stages } from '../core'
+import { type Simulation, builtIns, read, stages } from '../core'
 import { type Joint, type Layout, type Move, type NodeData, type Selected, absolute, dropAt, laidOut, relaid, routeAt, toGraph } from '../graph'
+import { afterStage } from '../steps'
 
 /** The type a stage dragged from the palette carries its name under. */
 export const STAGE_DRAG = 'application/x-auto-renamer-stage'
@@ -86,6 +90,36 @@ function ConfigNode({ data, kind }: { data: NodeData; kind: Kind }) {
         </BaseNodeContent>
       )}
     </BaseNode>
+  )
+}
+
+/** How far below a selected stage, on screen, the middle of the canvas falls, so the files listed under it fit. */
+const LISTED_BELOW = 140
+
+/** The simulation the canvas shows on its stages, and the folder whose configuration is edited. */
+const Run = createContext<{ simulation: Simulation | null; folder: string | null }>({ simulation: null, folder: null })
+
+/** A stage, which once a simulation ran tells how many files it ran on and, while selected, lists them beside it. */
+function StageNode({ data }: NodeProps<Node<NodeData>>) {
+  const { t } = useTranslation()
+  const { simulation, folder } = useContext(Run)
+  const at = data.selected.kind === 'stage' ? data.selected : null
+  const stage = at && { pipeline: at.pipeline, index: at.index, name: data.label, folder, claims: data.claims ?? false }
+  const ran = simulation && stage ? afterStage(simulation.outcomes, stage.pipeline, stage.index, folder, stage.claims).ran.length : null
+  return (
+    <>
+      <Handle type="target" position={Position.Left} isConnectable={false} />
+      <ConfigNode data={data} kind="stage" />
+      <Handle type="source" position={Position.Right} isConnectable={false} />
+      {ran !== null && <NodeAppendix position="bottom" className="text-xs text-muted-foreground">{t('canvas.ran', { count: ran })}</NodeAppendix>}
+      {simulation && stage && (
+        <NodeToolbar position={Position.Bottom} offset={28}>
+          <section aria-label={t('canvas.after', { stage: data.label })} className="max-h-60 w-[32rem] overflow-auto rounded-md border bg-popover p-2 shadow-md">
+            <StageFiles simulation={simulation} stage={stage} />
+          </section>
+        </NodeToolbar>
+      )}
+    </>
   )
 }
 
@@ -126,13 +160,7 @@ const nodeTypes = {
       <Handle type="source" id="end" position={Position.Right} isConnectable={false} />
     </>
   ),
-  stage: ({ data }: NodeProps<Node<NodeData>>) => (
-    <>
-      <Handle type="target" position={Position.Left} isConnectable={false} />
-      <ConfigNode data={data} kind="stage" />
-      <Handle type="source" position={Position.Right} isConnectable={false} />
-    </>
-  ),
+  stage: StageNode,
   target: ({ data }: NodeProps<Node<NodeData>>) => (
     <>
       <Handle type="target" position={Position.Left} isConnectable={false} />
@@ -200,7 +228,8 @@ function Flow({ config, onChange, onSelect }: {
   const shown = useMemo(() => laidOut(graph.nodes, layout), [graph, layout])
   const [nodes, setNodes, onNodesChange] = useNodesState(shown)
   const [edges, setEdges, onEdgesChange] = useEdgesState(graph.edges)
-  const { screenToFlowPosition } = useReactFlow()
+  const { screenToFlowPosition, setCenter, getZoom } = useReactFlow()
+  const { simulation } = useContext(Run)
   useEffect(() => {
     setNodes((current) => shown.map((node) => ({ ...node, selected: current.find((one) => one.id === node.id)?.selected })))
     setEdges(graph.edges)
@@ -280,7 +309,16 @@ function Flow({ config, onChange, onSelect }: {
         if (event.dataTransfer.types.includes(STAGE_DRAG)) event.preventDefault()
       }}
       onDrop={drop}
-      onNodeClick={(_, node) => onSelect((node.data as NodeData).selected)}
+      onNodeClick={(_, node) => {
+        const one = node as Node<NodeData>
+        onSelect(one.data.selected)
+        // The files after a stage are listed below it, so the stage is brought to the upper middle to leave them room.
+        if (one.data.selected.kind === 'stage' && simulation) {
+          const at = absolute(shown, one)
+          const zoom = getZoom()
+          setCenter(at.x + (one.measured?.width ?? 0) / 2, at.y + LISTED_BELOW / zoom, { zoom, duration: 200 })
+        }
+      }}
       onPaneClick={() => onSelect(null)}>
       <Background />
       <Controls>
@@ -309,14 +347,20 @@ function Flow({ config, onChange, onSelect }: {
   )
 }
 
-export function Canvas(props: {
+export function Canvas({ simulation, folder, ...props }: {
   config: Table
+  simulation: Simulation | null
+  /** The folder whose configuration is edited, relative to the source; null for the global configuration. */
+  folder: string | null
   onChange: (config: Table) => void
   onSelect: (selected: Selected | null) => void
 }) {
+  const run = useMemo(() => ({ simulation, folder }), [simulation, folder])
   return (
     <ReactFlowProvider>
-      <Flow {...props} />
+      <Run.Provider value={run}>
+        <Flow {...props} />
+      </Run.Provider>
     </ReactFlowProvider>
   )
 }

@@ -1,8 +1,7 @@
 // What each step of a file's planning changed, for the page to show only that.
 
-import { type Stage, type Table, stageName, stagesOf } from './config'
+import { type Stage, stageName } from './config'
 import type { Outcome, SimulatedStep } from './core'
-import type { Selected } from './graph'
 
 /** The pipeline that claimed a file at a step; none when a rejected route without a pipeline claimed it. */
 export function claimedBy(step: SimulatedStep): string | null {
@@ -76,13 +75,4 @@ export interface StageView {
   /** The folder whose configuration is edited, relative to the source; null for the global configuration. */
   folder: string | null
   claims: boolean
-}
-
-/** The stage a selection stands for among `pipelines`, by name; none when no stage is selected. */
-export function stageOf(pipelines: Table, selected: Selected | null, folder: string | null): StageView | null {
-  if (selected?.kind !== 'stage') return null
-  const stages = stagesOf({ pipeline: pipelines }, selected.pipeline)
-  const stage = stages[selected.index]
-  if (stage === undefined) return null
-  return { pipeline: selected.pipeline, index: selected.index, name: stageName(stage), folder, claims: claims(stages, selected.index) }
 }

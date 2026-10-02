@@ -14,7 +14,7 @@ export function ButtonEdge({
   targetY,
   sourcePosition,
   targetPosition,
-  style = {},
+  style,
   markerEnd,
   children,
   labelStyle,

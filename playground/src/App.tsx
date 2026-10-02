@@ -16,7 +16,6 @@ import { type Entry, type Kind, type Simulation, builtIns, check, read, render, 
 import { type Example, EXAMPLES, FIRST } from './examples'
 import type { Selected } from './graph'
 import { LANGUAGES } from './i18n'
-import { stageOf } from './steps'
 import { FOLDER_CONFIGURATION, changedUnder, foldersUnder, marksOf, rootsOf, startConfiguration, writeFile } from './tree'
 
 // The values the configuration switcher gives the global configuration and a folder still to be configured.
@@ -171,13 +170,6 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
     open(value)
   }
 
-  // A stage selected after a simulation shows its files in the panel; the tab leaves with the selection.
-  const select = (next: Selected | null) => {
-    setSelected(next)
-    if (next?.kind === 'stage' && simulation) setTab('stage')
-  }
-  const stageView = stageOf(routable(edited, builtIns()), selected, folder ? folderOf(folder.path).slice(roots.source.length + 1) : null)
-
   const run = () => {
     try {
       setSimulation(simulate(globalText, watch, entries))
@@ -215,15 +207,16 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
           <Palette global={!folder} onAdd={add} />
         </aside>
         <div className="min-h-0">
-          <Canvas key={editing ?? ''} config={edited} onChange={edit} onSelect={select} />
+          <Canvas key={editing ?? ''} config={edited} simulation={simulation}
+            folder={folder ? folderOf(folder.path).slice(roots.source.length + 1) : null} onChange={edit} onSelect={setSelected} />
         </div>
         <aside className="min-h-0 overflow-auto border-l p-3">
-          <Inspector config={edited} kind={kind} selected={selected} folders={folders} onChange={edit} onSelect={select}
+          <Inspector config={edited} kind={kind} selected={selected} folders={folders} onChange={edit} onSelect={setSelected}
             onOverride={folder ? undefined : override} />
         </aside>
       </main>
 
-      <Dock tab={tab} onTab={setTab} stage={stageView} fileName={fileName} text={text} status={status} simulation={simulation}
+      <Dock tab={tab} onTab={setTab} fileName={fileName} text={text} status={status} simulation={simulation}
         trees={[
           {
             value: 'source', label: t('tree.source'), changed: simulation && changedUnder(simulation, roots.source, roots.source),

@@ -79,7 +79,6 @@
     "claimed": "Claimed by {{pipeline}}",
     "claimedRejected": "Claimed by the rejected route",
     "steps": "Steps of {{file}}",
-    "stage": "After {{stage}}",
     "field": "Field",
     "before": "Before",
     "after": "After",
@@ -104,7 +103,10 @@
     "transfer": "Move {{stage}} to {{pipeline}}?",
     "transferHint": "It leaves {{from}} and runs in the other pipeline from where it was dropped.",
     "move": "Move",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "ran_one": "{{count}} file",
+    "ran_other": "{{count}} files",
+    "after": "Files after {{stage}}"
   },
   "examples": {
     "label": "Examples",

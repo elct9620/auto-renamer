@@ -79,7 +79,6 @@
     "claimed": "由 {{pipeline}} 認領",
     "claimedRejected": "由失敗路線認領",
     "steps": "{{file}} 的處理步驟",
-    "stage": "{{stage}} 之後",
     "field": "欄位",
     "before": "改前",
     "after": "改後",
@@ -104,7 +103,10 @@
     "transfer": "把 {{stage}} 移到 {{pipeline}}？",
     "transferHint": "它會離開 {{from}}，改在另一條管線放下的位置執行。",
     "move": "移動",
-    "cancel": "取消"
+    "cancel": "取消",
+    "ran_one": "{{count}} 個檔案",
+    "ran_other": "{{count}} 個檔案",
+    "after": "{{stage}} 之後的檔案"
   },
   "examples": {
     "label": "範例",

@@ -373,22 +373,22 @@ test('a selected stage shows the files after it', async ({ page }) => {
 
   await title(page, 'format').click()
 
-  await expect(page.getByRole('tab', { name: 'After format', selected: true })).toBeVisible()
-  const row = page.getByRole('row').filter({ hasText: 'Alpha/[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv' })
+  const beside = page.getByRole('region', { name: 'Files after format' })
+  const row = beside.getByRole('row').filter({ hasText: 'Alpha/[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv' })
   await expect(row.getByRole('cell')).toHaveText([
     'Alpha/[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv', 'name', '[Team] Alpha - 12 [1080p HEVC-10bit AAC]', 'Alpha s01e12',
   ])
 })
 
 // @behavior PGE-100
-test('a stage\'s tab leaves with the stage', async ({ page }) => {
+test('the files beside a stage leave with the selection', async ({ page }) => {
   await page.getByRole('button', { name: 'Trigger' }).click()
   await title(page, 'format').click()
+  await expect(page.getByRole('region', { name: 'Files after format' })).toBeVisible()
 
   await page.locator('.react-flow__pane').click({ position: { x: 5, y: 5 } })
 
-  await expect(page.getByRole('tab', { name: 'After format' })).toHaveCount(0)
-  await expect(page.getByRole('tab', { name: 'Results', selected: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Files after format' })).toHaveCount(0)
 })
 
 // @behavior PGE-069
@@ -582,4 +582,11 @@ test('a stage dropped where it means nothing goes back', async ({ page }) => {
 
   await expect.poll(inPipeline).toBeCloseTo(offset, 0)
   expect(await configText(page)).toBe(before)
+})
+
+// @behavior PGE-106
+test('after a simulation each stage shows how many files it ran on', async ({ page }) => {
+  await page.getByRole('button', { name: 'Trigger' }).click()
+
+  await expect(node(page, 'format').getByText('6 files', { exact: true })).toBeVisible()
 })

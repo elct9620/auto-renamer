@@ -552,7 +552,7 @@ The playground page draws a configuration for people who do not read TOML: each 
 | --- | --- |
 | Given | the opening example triggered |
 | When | the format stage of `video` is selected |
-| Then | the panel shows the stage's tab, listing each file with each field the format changed, before and after |
+| Then | a panel beside the stage lists each file with each field the format changed, before and after |
 
 ## `PGE-069` Editing the configuration clears the simulation
 
@@ -802,13 +802,13 @@ The playground page draws a configuration for people who do not read TOML: each 
 | When | the watch is triggered |
 | Then | the panel shows where each file went |
 
-## `PGE-100` A stage's tab leaves with the stage
+## `PGE-100` The files beside a stage leave with the selection
 
 | Step | Statement |
 | --- | --- |
 | Given | the opening example triggered and its format stage selected |
 | When | the canvas is clicked where nothing is drawn |
-| Then | the stage's tab is gone and the panel shows the results |
+| Then | the files beside the stage are no longer shown |
 
 ## `PGE-101` The whole drawing is in view on opening
 
@@ -849,3 +849,11 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | two routes of `video`, one moving to `dst` and one to `other` |
 | When | it is drawn |
 | Then | each joint from `video` to a target is labelled with the route it stands for |
+
+## `PGE-106` After a simulation each stage shows how many files it ran on
+
+| Step | Statement |
+| --- | --- |
+| Given | the opening example |
+| When | its watch is triggered |
+| Then | the format stage shows the number of files it ran on |
