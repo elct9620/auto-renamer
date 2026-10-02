@@ -10,9 +10,9 @@ The examples of the design, each run through the pipeline it gives. They show th
 
 | Step | Statement |
 | --- | --- |
-| Given | the series pipeline, `show` Zeta-Show, and the file `Series/Zeta-Show/Season 03/[Team³] 示範作品 第3季 Zeta-Show! S03 ｜ 10 [繁中] 1080p h.265 OPUS 2.0.mkv` |
+| Given | the `series-video` pipeline, `show` Zeta-Show, and the file `Zeta-Show/Season 03/[Team³] 示範作品 第3季 Zeta-Show! S03 ｜ 10 [繁中] 1080p h.265 OPUS 2.0.mkv` |
 | When | the pipeline is planned |
-| Then | the plan is `Series/Zeta-Show/Season 03/Zeta-Show s03e10.mkv` |
+| Then | the plan is `Zeta-Show/Season 03/Zeta-Show s03e10.mkv` |
 
 ## `EX-007` A tag is removed from a movie
 
@@ -42,32 +42,32 @@ The examples of the design, each run through the pipeline it gives. They show th
 
 | Step | Statement |
 | --- | --- |
-| Given | the series pipeline, `show` Alpha, and the file `Series/Alpha/[Team] Alpha [01].mkv` |
+| Given | the `series-video` pipeline, `show` Alpha, and the file `Alpha/[Team] Alpha [01].mkv` |
 | When | the pipeline is planned |
-| Then | the plan is `Series/Alpha/Alpha s01e01.mkv` |
+| Then | the plan is `Alpha/Season 01/Alpha s01e01.mkv` |
 
 ## `EX-013` A number that cannot be told falls back to the next one
 
 | Step | Statement |
 | --- | --- |
-| Given | the series pipeline, `show` Eta Show, an empty target, and the file `Series/Eta Show/Season 17/[Team-7][Eta Show 17][03][x264 1080p][TC].mp4` |
+| Given | the `series-video` pipeline, `show` Eta Show, an empty target, and the file `Eta Show/Season 17/[Team-7][Eta Show 17][03][x264 1080p][TC].mp4` |
 | When | the pipeline is planned |
-| Then | the plan is `Series/Eta Show/Season 17/Eta Show s17e01.mp4` |
+| Then | the plan is `Eta Show/Season 17/Eta Show s17e01.mp4` |
 
 
 ## `EX-015` The number follows the folder the file is lifted into
 
 | Step | Statement |
 | --- | --- |
-| Given | the series pipeline, `show` Show, a target folder `Series/Show/Season 01` holding `Show s01e05.mkv` and a target folder `Series/Show/Season 02` holding `Show s02e09.mkv`, and the file `Series/Show/Season 01/[Rel]/new.mkv` |
+| Given | the `series-video` pipeline, `show` Show, a target folder `Show/Season 01` holding `Show s01e05.mkv` and a target folder `Show/Season 02` holding `Show s02e09.mkv`, and the file `Show/Season 01/[Rel]/new.mkv` |
 | When | the pipeline is planned |
-| Then | the plan is `Series/Show/Season 01/Show s01e06.mkv` |
+| Then | the plan is `Show/Season 01/Show s01e06.mkv` |
 
 ## `EX-016` Two episodes and their subtitles in one batch
 
 | Step | Statement |
 | --- | --- |
-| Given | the video and subtitle pipelines of the design, and in `Series/Show/Season 01/` the files `Show 27.mkv`, `Show 27.cht.ass`, `Show 27.chs.ass`, `Show 28.mkv` and `Show 28.cht.ass`, with `show` Show |
+| Given | the `series-video` and `series-subtitle` pipelines, and in `Show/Season 01/` the files `Show 27.mkv`, `Show 27.cht.ass`, `Show 27.chs.ass`, `Show 28.mkv` and `Show 28.cht.ass`, with `show` Show |
 | When | the batch is planned |
 | Then | the plans are `Show s01e27.mkv`, `Show s01e27.zh.01.ass`, `Show s01e27.zh.02.ass`, `Show s01e28.mkv` and `Show s01e28.zh.ass`, all in `Season 01` |
 
@@ -76,7 +76,7 @@ The examples of the design, each run through the pipeline it gives. They show th
 
 | Step | Statement |
 | --- | --- |
-| Given | the video and subtitle pipelines of the design, `show` Show, and the files `Series/Show/Season 01/[Rel 05]/Show 05.mkv` and `Series/Show/Season 01/[Rel 05]/Subs/Show 05.cht.ass` |
+| Given | the `series-video` and `series-subtitle` pipelines, `show` Show, and the files `Show/Season 01/[Rel 05]/Show 05.mkv` and `Show/Season 01/[Rel 05]/Subs/Show 05.cht.ass` |
 | When | the batch is planned |
 | Then | the plans are `Show s01e05.mkv` and `Show s01e05.zh.ass`, both in `Season 01` |
 
@@ -85,8 +85,14 @@ The examples of the design, each run through the pipeline it gives. They show th
 
 | Step | Statement |
 | --- | --- |
-| Given | the video pipeline of the design, `show` Show, a target folder `Series/Show` holding `Show s01e01.mkv` and `Show s01e02.mkv`, and the files `Show new a.mkv`, `Show new b.mkv` and `Show 07.mkv` in `Series/Show/` |
+| Given | the `series-video` pipeline, `show` Show, a target folder `Show/Season 01` holding `Show s01e01.mkv` and `Show s01e02.mkv`, and the files `Show new a.mkv`, `Show new b.mkv` and `Show 07.mkv` in `Show/` |
 | When | the batch is planned |
-| Then | the plans are `Show s01e07.mkv`, `Show s01e03.mkv` and `Show s01e04.mkv` in that order |
+| Then | the plans are `Show s01e07.mkv`, `Show s01e03.mkv` and `Show s01e04.mkv` in that order, all in `Show/Season 01` |
 
+## `EX-020` A folder per episode ends up in its season folder
 
+| Step | Statement |
+| --- | --- |
+| Given | the `series-video` and `series-subtitle` pipelines, `show` Alpha, and the files `Alpha/[Team] Alpha - 01 [1080p]/Alpha 01.mkv` and `Alpha/[Team] Alpha - 01 [1080p]/Alpha 01.cht.ass` |
+| When | they are planned in one batch |
+| Then | the plans are `Alpha/Season 01/Alpha s01e01.mkv` and `Alpha/Season 01/Alpha s01e01.zh.ass` |

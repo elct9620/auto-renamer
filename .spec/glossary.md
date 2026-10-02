@@ -86,6 +86,18 @@ One watched folder with where its files go, how they are grouped into units, and
 
 - `Job` - Watch is what the design calls it.
 
+### Route
+
+One entry of a watch's routes: the pipeline that claims and names files, joined to the effects carried out on what it planned, and the route a rejected file takes instead. Routes claim in the order they are listed.
+
+#### Rejected
+
+- `Rule` - Route is what the design calls it.
+
+### Target
+
+A named root files are moved to, declared only in the global configuration and referred to by name from a route.
+
 ### Folder configuration
 
 The `auto-renamer.toml` a folder carries for the exceptions of what lies in it. It comes from downloaded content, so it may change how files are named and never where they come from, go, or how they are grouped.
