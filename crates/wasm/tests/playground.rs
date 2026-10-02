@@ -214,9 +214,9 @@ fn should_carry_every_step_of_a_file() {
         .expect("the file is reported")
         .steps;
     let places: Vec<_> = steps.iter().map(|step| step.stage).collect();
-    assert_eq!(places, [None, Some(0), Some(1)]);
+    assert_eq!(places, [None, Some(0), Some(1), Some(2)]);
     let names: Vec<_> = steps.iter().map(|step| step.name).collect();
-    assert_eq!(names, [None, Some("number"), Some("format")]);
+    assert_eq!(names, [None, Some("number"), Some("format"), Some("move")]);
     assert_eq!(
         steps[1].fields.get("episode").map(String::as_str),
         Some("7")

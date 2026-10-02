@@ -116,7 +116,7 @@ The playground checks, reads and writes a configuration, and simulates a watch o
 | --- | --- |
 | Given | a pipeline of a number and a format, and a file it claims |
 | When | the watch is simulated |
-| Then | the file's outcome lists the claim, the number with its episode, and the format with its name, in that order |
+| Then | the file's outcome lists the claim, the number with its episode, the format with its name, and the move that claims its plan, in that order |
 
 ## `PLG-015` A file a replaced pipeline planned is marked as such
 

@@ -1,7 +1,10 @@
 mod common;
 
 use auto_renamer::{Flow, Value, Verdict, plan_batch, plan_batch_observed};
-use common::{Files, number, pipelines, planned_batch, planned_record, record, verdict, with};
+use common::{
+    Files, assert_refused_by, number, pipelines, planned_batch, planned_record, record, verdict,
+    with,
+};
 
 fn kind_of(judged: &[auto_renamer::Judged], origin: &str) -> Option<String> {
     match planned_record(judged, origin).field("kind") {
@@ -193,7 +196,15 @@ fn should_tell_each_step_of_every_file() {
     let told = steps(&list, vec![record("Show 07.mkv")]);
 
     let stages: Vec<_> = told.iter().map(|(stage, _)| *stage).collect();
-    assert_eq!(stages, [None, Some((1, "number")), Some((2, "format"))]);
+    assert_eq!(
+        stages,
+        [
+            None,
+            Some((1, "number")),
+            Some((2, "format")),
+            Some((3, "move"))
+        ]
+    );
     assert_eq!(field(&told[0].1, "episode"), None);
     assert_eq!(field(&told[1].1, "episode"), Some(Value::Number(7)));
     assert_eq!(
@@ -215,4 +226,46 @@ fn should_tell_a_stopped_file_no_further_than_the_stage_that_stopped_it() {
     let (stage, flow) = told.last().expect("the file was told");
     assert_eq!(*stage, Some((0, "format")));
     assert!(matches!(flow, Err(stop) if stop.stage == "format"));
+}
+
+// @behavior BAT-014
+#[test]
+fn should_refuse_a_plan_the_target_already_holds() {
+    let files = Files::of(&[("", &["a.mkv"])]);
+
+    let judged = plan_batch(
+        &pipelines(&[("p", r#"[{ format = "a" }]"#)]),
+        vec![record("x.mkv")],
+        &files,
+    );
+
+    assert_refused_by(&judged, "x.mkv", "move");
+}
+
+// @behavior BAT-015
+#[test]
+fn should_refuse_the_later_of_two_files_planned_onto_one_path() {
+    let judged = planned_batch(
+        &[("p", r#"[{ format = "a" }]"#)],
+        vec![record("y.mkv"), record("x.mkv")],
+    );
+
+    assert_eq!(
+        planned_record(&judged, "x.mkv").plan(),
+        std::path::Path::new("a.mkv")
+    );
+    assert_refused_by(&judged, "y.mkv", "move");
+}
+
+// @behavior BAT-016
+#[test]
+fn should_not_let_a_file_left_where_it_is_take_its_own_place() {
+    let files = Files::of(&[("", &["a.mkv"])]);
+
+    let judged = plan_batch(&pipelines(&[("p", "[]")]), vec![record("a.mkv")], &files);
+
+    assert_eq!(
+        planned_record(&judged, "a.mkv").plan(),
+        std::path::Path::new("a.mkv")
+    );
 }

@@ -1,6 +1,6 @@
 # Batch
 
-A batch is planned as a whole: files are put in name order, each is claimed by the first pipeline whose leading filters accept it, and the stages of every pipeline run over all of its files one stage at a time. One file being refused never stops the others.
+A batch is planned as a whole: files are put in name order, each is claimed by the first pipeline whose leading filters accept it, and the stages of every pipeline run over all of its files one stage at a time. A plan is then claimed in its target, so no file is planned onto a file there or onto the plan of a file before it. One file being refused never stops the others.
 
 ## Includes
 
@@ -84,7 +84,7 @@ A batch is planned as a whole: files are put in name order, each is claimed by t
 | --- | --- |
 | Given | a pipeline of a filter, a number and a format, and a file it claims |
 | When | the batch is planned and its steps are asked for |
-| Then | the file is told once claimed, then after the number with its episode, then after the format with its name |
+| Then | the file is told once claimed, then after the number with its episode, then after the format with its name, then after its plan is claimed by `move` |
 
 ## `BAT-013` A stopped file is told no further than the stage that stopped it
 
@@ -93,3 +93,27 @@ A batch is planned as a whole: files are put in name order, each is claimed by t
 | Given | a pipeline whose format refuses a file missing a field |
 | When | the batch is planned and its steps are asked for |
 | Then | the last step told for the file is the format, holding the refusal |
+
+## `BAT-014` A plan the target already holds is refused while planning
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline that formats the name as `a`, a target holding `a.mkv`, and the file `x.mkv` |
+| When | the batch is planned |
+| Then | `x.mkv` is refused, naming the stage `move` |
+
+## `BAT-015` Of two files planned onto one path, the later is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline that formats the name as `a`, an empty target, and the files `x.mkv` and `y.mkv` |
+| When | the batch is planned |
+| Then | `x.mkv` is planned as `a.mkv` and `y.mkv` is refused, naming the stage `move` |
+
+## `BAT-016` A file left where it is does not take its own place
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline that changes nothing, a target that is where the file `a.mkv` already is, and that file |
+| When | the batch is planned |
+| Then | `a.mkv` is planned where it is |

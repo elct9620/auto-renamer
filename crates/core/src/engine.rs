@@ -136,7 +136,7 @@ pub(crate) fn plan(
         };
         let claimed = Batch::new(claimed);
         tell(&claimed, None, &mut observe);
-        let files = rest
+        let staged = rest
             .iter()
             .enumerate()
             .fold(claimed, |batch, (index, stage)| {
@@ -147,8 +147,14 @@ pub(crate) fn plan(
                     &mut observe,
                 );
                 batch
-            })
-            .into_files();
+            });
+        let placed = staged.each(|record| take_place(record, &mut context));
+        tell(
+            &placed,
+            Some((filters.len() + rest.len(), "move")),
+            &mut observe,
+        );
+        let files = placed.into_files();
 
         for file in files {
             let (planned, stopped) = match file.flow {
@@ -193,6 +199,20 @@ pub(crate) fn plan(
     judged.extend(unclaimed(waiting));
     judged.sort_by(|a, b| a.origin.cmp(&b.origin));
     judged
+}
+
+/// Claims the plan of a file in its target, refusing it when the target holds a file there or a file
+/// before it in the batch was planned there. A file left where it is takes no place but its own.
+fn take_place(record: Record, context: &mut Context) -> Flow {
+    let free = context.claim(record.plan());
+    if free || record.plan() == record.origin() {
+        Ok(record)
+    } else {
+        Err(Stop::rejected(
+            "move",
+            format!("`{}` is already taken", record.plan().display()),
+        ))
+    }
 }
 
 fn unclaimed(records: Vec<Record>) -> Vec<Judged> {

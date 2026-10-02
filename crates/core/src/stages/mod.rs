@@ -35,7 +35,7 @@ pub struct Stop {
 }
 
 impl Stop {
-    fn rejected(stage: &str, reason: impl Into<String>) -> Stop {
+    pub(crate) fn rejected(stage: &str, reason: impl Into<String>) -> Stop {
         Stop {
             stage: stage.to_string(),
             reason: reason.into(),

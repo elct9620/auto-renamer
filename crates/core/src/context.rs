@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use crate::record::Record;
@@ -27,6 +27,7 @@ pub struct Context<'a> {
     target: &'a dyn Target,
     listed: BTreeMap<PathBuf, Vec<String>>,
     handed_out: BTreeMap<(PathBuf, String), u64>,
+    claimed: BTreeSet<PathBuf>,
     earlier: Vec<Earlier>,
 }
 
@@ -37,6 +38,7 @@ impl<'a> Context<'a> {
             target,
             listed: BTreeMap::new(),
             handed_out: BTreeMap::new(),
+            claimed: BTreeSet::new(),
             earlier: Vec::new(),
         }
     }
@@ -60,6 +62,16 @@ impl<'a> Context<'a> {
     pub(crate) fn hand_out(&mut self, folder: &Path, pattern: &str, number: u64) {
         let key = self.key(folder, pattern);
         self.handed_out.insert(key, number);
+    }
+
+    /// Takes a plan in the running target for one file, answering whether it was free: neither a file the
+    /// target holds nor the plan of a file before it in the batch.
+    pub(crate) fn claim(&mut self, plan: &Path) -> bool {
+        let folder = plan.parent().unwrap_or(Path::new(""));
+        let name = plan.file_name().and_then(|name| name.to_str());
+        let held = name.is_some_and(|name| self.files_in(folder).iter().any(|file| file == name));
+        let first = self.claimed.insert(self.target.root().join(plan));
+        first && !held
     }
 
     fn key(&self, folder: &Path, pattern: &str) -> (PathBuf, String) {
