@@ -374,10 +374,8 @@ test('a selected stage shows the files after it', async ({ page }) => {
   await title(page, 'format').click()
 
   const beside = page.getByRole('region', { name: 'Files after format' })
-  const row = beside.getByRole('row').filter({ hasText: 'Alpha/[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv' })
-  await expect(row.getByRole('cell')).toHaveText([
-    'Alpha/[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv', 'name', '[Team] Alpha - 12 [1080p HEVC-10bit AAC]', 'Alpha s01e12',
-  ])
+  const file = beside.getByRole('listitem', { name: 'Alpha/[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv' })
+  await expect(file.getByRole('listitem')).toHaveText(['name[Team] Alpha - 12 [1080p HEVC-10bit AAC]→Alpha s01e12'])
 })
 
 // @behavior PGE-100
