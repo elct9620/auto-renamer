@@ -142,6 +142,14 @@ A pipeline is declared as a list of stages, each a bare name or a table with one
 | When | the pipeline is read |
 | Then | the pipeline is refused, naming the parameter `to` |
 
+## `DEC-038` A lift naming both a pattern and folders to keep is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | the stage list `[{ lift = { to = "Season *", keep = 1 } }]` |
+| When | the pipeline is read |
+| Then | the pipeline is refused, naming the stage `lift` |
+
 ## `DEC-020` Ranking needs the fields that make a group
 
 | Step | Statement |

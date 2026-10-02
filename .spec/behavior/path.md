@@ -46,6 +46,22 @@ Stages that move a file to another folder of its plan, up or down, without touch
 | When | the stage is applied |
 | Then | the plan is `Series/Alpha/x.mkv` |
 
+## `LIFT-006` Keeping a number of folders drops the folders below them
+
+| Step | Statement |
+| --- | --- |
+| Given | a lift keeping 1 folder and a record for `Alpha/[Rel] 01/Subs/x.ass` |
+| When | the stage is applied |
+| Then | the plan is `Alpha/x.ass` |
+
+## `LIFT-007` A plan with no more folders than kept is unchanged
+
+| Step | Statement |
+| --- | --- |
+| Given | a lift keeping 1 folder and a record for `Alpha/x.mkv` |
+| When | the stage is applied |
+| Then | the plan is `Alpha/x.mkv` |
+
 ## `FLD-002` A template that cannot be rendered is refused
 
 | Step | Statement |

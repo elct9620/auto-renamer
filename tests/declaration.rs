@@ -173,6 +173,14 @@ fn should_refuse_a_lift_target_that_is_not_a_name_pattern() {
     assert_invalid(error, "lift", Some("to"));
 }
 
+// @behavior DEC-038
+#[test]
+fn should_refuse_a_lift_naming_both_a_pattern_and_folders_to_keep() {
+    let error = refused_declaration(r#"[{ lift = { to = "Season *", keep = 1 } }]"#);
+
+    assert_invalid(error, "lift", None);
+}
+
 // @behavior DEC-020
 #[test]
 fn should_refuse_ranking_without_the_fields_that_make_a_group() {

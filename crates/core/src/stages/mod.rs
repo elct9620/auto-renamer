@@ -286,6 +286,7 @@ pub struct Strip {
 pub enum Lift {
     Levels(usize),
     To(GlobMatcher),
+    Keep(usize),
 }
 
 #[derive(Debug, Clone)]

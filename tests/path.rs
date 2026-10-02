@@ -53,6 +53,22 @@ fn should_leave_a_plan_with_no_matching_folder() {
     assert_eq!(plan, Path::new("Series/Alpha/x.mkv"));
 }
 
+// @behavior LIFT-006
+#[test]
+fn should_keep_only_the_first_folders_under_the_source() {
+    let plan = plan_after("{ lift = { keep = 1 } }", "Alpha/[Rel] 01/Subs/x.ass");
+
+    assert_eq!(plan, Path::new("Alpha/x.ass"));
+}
+
+// @behavior LIFT-007
+#[test]
+fn should_leave_a_plan_with_no_more_folders_than_kept() {
+    let plan = plan_after("{ lift = { keep = 1 } }", "Alpha/x.mkv");
+
+    assert_eq!(plan, Path::new("Alpha/x.mkv"));
+}
+
 // @behavior FLD-002
 #[test]
 fn should_refuse_a_folder_template_that_cannot_be_rendered() {

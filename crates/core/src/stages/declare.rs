@@ -176,7 +176,7 @@ static DECLARATIONS: &[Declaration] = &[
     },
     Declaration {
         value: Some(Integer),
-        ..stage("lift", &[must("to", Text)], "1", lift)
+        ..stage("lift", &[may("to", Text), may("keep", Integer)], "1", lift)
     },
     stage(
         "next",
@@ -527,10 +527,18 @@ fn lift(value: Option<&Toml>) -> Result<Declared, DeclareError> {
         Some(Toml::Integer(_)) => Err(invalid("lift", None, "lifts at least one level")),
         Some(other) => {
             let mut args = parameters("lift", other)?;
-            let source = args.required_string("to")?;
-            let matcher = glob(&args, "to", &source)?;
+            let to = args.string("to")?;
+            let keep = args.integer("keep")?;
+            let lift = match (to, keep) {
+                (Some(source), None) => Lift::To(glob(&args, "to", &source)?),
+                (None, Some(keep)) => Lift::Keep(
+                    usize::try_from(keep)
+                        .map_err(|_| args.invalid("keep", "counts folders from 0"))?,
+                ),
+                _ => return Err(invalid("lift", None, "takes either `to` or `keep`")),
+            };
             args.finish()?;
-            Ok(Declared::Lift(Lift::To(matcher)))
+            Ok(Declared::Lift(lift))
         }
     }
 }

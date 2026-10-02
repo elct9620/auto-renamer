@@ -51,6 +51,8 @@ fn lift(lift: &Lift, mut record: Record) -> Flow {
             Some(nearest) => nearest + 1,
             None => return Ok(record),
         },
+        Lift::Keep(kept) if *kept < folders.len() => *kept,
+        Lift::Keep(_) => return Ok(record),
     };
 
     let mut lifted: PathBuf = folders[..kept].iter().collect();

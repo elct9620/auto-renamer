@@ -259,6 +259,10 @@
         "to": {
           "name": "Lift to",
           "about": "A folder name pattern; lifts to the nearest folder that matches."
+        },
+        "keep": {
+          "name": "Keep folders",
+          "about": "How many folders under the source to keep; the folders below them are dropped. Give either this or Lift to."
         }
       },
       "value": {
