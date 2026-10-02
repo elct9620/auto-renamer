@@ -127,3 +127,14 @@ fn should_not_take_from_a_pipeline_that_has_not_run_yet() {
 
     assert_refused_by(&judged, "Show 27.cht.ass", "take");
 }
+
+// @behavior TAK-009
+#[test]
+fn should_take_fields_from_the_video_of_the_same_name() {
+    let judged = planned_batch(
+        &[("video", VIDEO), ("subtitle", SUBTITLE)],
+        vec![video("Show 27.mkv", 27), record("Show 27.ass")],
+    );
+
+    assert_eq!(episode_of(&judged, "Show 27.ass"), Some(27));
+}

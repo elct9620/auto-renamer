@@ -229,3 +229,26 @@ fn should_refuse_a_date_field_as_the_source() {
 
     assert_rejected_by(outcome, "number");
 }
+
+// @behavior NUM-031
+#[test]
+fn should_use_a_strong_marker_even_when_it_equals_an_excluded_field() {
+    let found = episode(
+        r#", exclude = ["season"]"#,
+        with(record("Show S02E02.mkv"), "season", Value::Number(2)),
+    );
+
+    assert_eq!(found, Some(2));
+}
+
+// @behavior NUM-032
+#[test]
+fn should_not_count_a_season_written_in_chinese() {
+    assert_eq!(episode_of("Show 第3季 [10].mkv"), Some(10));
+}
+
+// @behavior NUM-033
+#[test]
+fn should_not_count_an_ordinal() {
+    assert_eq!(episode_of("Show 2nd [10].mkv"), Some(10));
+}

@@ -274,3 +274,19 @@ fn should_plan_a_built_in_pipeline_written_out_as_the_built_in() {
     assert_eq!(copy.outcomes[0].to, built_in.outcomes[0].to);
     assert!(offered.contains_key("series-video"));
 }
+
+// @behavior PLG-017
+#[test]
+fn should_end_the_steps_of_a_refused_file_at_the_stage_that_refused_it() {
+    let stages =
+        r#"[{ number = { into = "episode" } }, { format = "{missing}" }, { format = "{show}" }]"#;
+
+    let simulation = run(&config(stages, ""), vec![file("/src/Show/x 07.mkv")]);
+
+    let steps = &outcome(&simulation, "Show/x 07.mkv")
+        .expect("the file is reported")
+        .steps;
+    let names: Vec<_> = steps.iter().map(|step| step.name).collect();
+    assert_eq!(names, [None, Some("number"), Some("format")]);
+    assert!(steps[2].stop.is_some());
+}

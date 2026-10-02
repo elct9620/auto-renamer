@@ -450,3 +450,48 @@ test('a default route is edited in full in the defaults form', async ({ page }) 
 
   expect(await configText(page)).toMatch(/\[\[default\.routes\]\]\s+move = "conflict"\s+pipeline = "series-video"/)
 })
+
+// @behavior PGE-092
+test('an imported global configuration replaces the one being edited', async ({ page }) => {
+  await page.locator('input[type=file]').setInputFiles({
+    name: 'config.toml',
+    mimeType: 'application/toml',
+    buffer: Buffer.from('[pipeline.p]\nstages = []\n\n[watch.movies]\nsource = "/movies"\nroutes = [{ pipeline = "p" }]\n'),
+  })
+
+  const text = await configText(page)
+  expect(text).toContain('[watch.movies]')
+  expect(text).not.toContain('[watch.series]')
+})
+
+// @behavior PGE-093
+test('a removed watch is written nowhere', async ({ page }) => {
+  await title(page, 'series').click()
+
+  await page.getByRole('button', { name: 'Remove watch' }).click()
+
+  expect(await configText(page)).not.toContain('[watch.series]')
+})
+
+// @behavior PGE-094
+test('a selected target\'s path is edited in its form', async ({ page }) => {
+  await declareTarget(page, 'conflict')
+  await title(page, 'conflict').click()
+  const path = page.getByRole('textbox', { name: /^Path/ })
+
+  await path.fill('/clash')
+  await path.blur()
+
+  expect(await configText(page)).toMatch(/\[target\.conflict\]\s+path = "\/clash"/)
+})
+
+// @behavior PGE-095
+test('a refused file moves into a target picked from those declared', async ({ page }) => {
+  await declareTarget(page, 'conflict')
+  await title(page, FIRST_ROUTE).click()
+
+  await page.getByRole('combobox', { name: 'Refused files move to' }).click()
+  await page.getByRole('option', { name: 'conflict' }).click()
+
+  expect(await configText(page)).toMatch(/\[watch\.series\.routes\.rejected\]\s+move = "conflict"/)
+})

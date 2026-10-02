@@ -237,3 +237,27 @@ A number stage reads one number out of a field and writes it into another. A mar
 | Given | a number stage reading from `mtime` and a record for `Show 12.mkv` |
 | When | the stage is applied |
 | Then | the record is refused, naming the stage `number` |
+
+## `NUM-031` A strong marker is used even when it equals an excluded field
+
+| Step | Statement |
+| --- | --- |
+| Given | a number into `episode` excluding `season`, and `Show S02E02.mkv` whose `season` is 2 |
+| When | the stage runs |
+| Then | `episode` is 2 |
+
+## `NUM-032` A season written in Chinese is not counted
+
+| Step | Statement |
+| --- | --- |
+| Given | the file `Show 第3季 [10].mkv` |
+| When | a number into `episode` runs |
+| Then | `episode` is 10 |
+
+## `NUM-033` An ordinal is not counted
+
+| Step | Statement |
+| --- | --- |
+| Given | the file `Show 2nd [10].mkv` |
+| When | a number into `episode` runs |
+| Then | `episode` is 10 |

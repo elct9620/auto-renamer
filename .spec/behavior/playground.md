@@ -133,3 +133,11 @@ The playground checks, reads and writes a configuration, and simulates a watch o
 | Given | a watch routing `series-video`, and the same watch with the pipeline the page is offered for `series-video` written into the configuration |
 | When | each is simulated over `Alpha/Alpha - 12.mkv` |
 | Then | both move the file to the same place |
+
+## `PLG-017` A refused file's steps end at the stage that refused it
+
+| Step | Statement |
+| --- | --- |
+| Given | a pipeline of a number, a format naming a field no stage gives, and a format after it, and a file it claims |
+| When | the watch is simulated |
+| Then | the file's steps are the claim, the number and the format that refused it, which says why |

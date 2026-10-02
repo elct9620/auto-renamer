@@ -70,3 +70,11 @@ A take stage copies fields from the file a name belongs with, found among what e
 | When | the batch is planned |
 | Then | `Show 27.cht.ass` is refused, naming the stage `take` |
 
+
+## `TAK-009` A file named as the video it follows takes its fields
+
+| Step | Statement |
+| --- | --- |
+| Given | pipeline `video` planning `Show 27.mkv` with `episode` 27, a pipeline `subtitle` taking `episode`, and the file `Show 27.ass` |
+| When | the batch is planned |
+| Then | `Show 27.ass` has `episode` 27 |

@@ -666,7 +666,7 @@ The playground page draws a configuration for people who do not read TOML: each 
 | When | its joint to `dst` is removed |
 | Then | the route has no move |
 
-## `PGE-083` A refused file is sent through a pipeline picked from those defined
+## `PGE-083` A refused file is sent through a pipeline picked from those defined or built in
 
 | Step | Statement |
 | --- | --- |
@@ -721,3 +721,51 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the target `conflict` declared and nothing selected |
 | When | a route of `series-video` is added to the default's routes and set to move to `conflict` |
 | Then | the default's route of `series-video` moves to `conflict` |
+
+## `PGE-090` The target of a rejected route is a root of the virtual tree
+
+| Step | Statement |
+| --- | --- |
+| Given | a route moving to `video` whose rejected route moves to `conflict` |
+| When | the roots of the watch are taken |
+| Then | the targets are the roots of `video` and `conflict` |
+
+## `PGE-091` A folder configuration already there is opened as it is
+
+| Step | Statement |
+| --- | --- |
+| Given | `Alpha/auto-renamer.toml` giving `show` as Beta |
+| When | a folder configuration is started in `Alpha` |
+| Then | its text is unchanged |
+
+## `PGE-092` An imported global configuration replaces the one being edited
+
+| Step | Statement |
+| --- | --- |
+| Given | the global configuration being edited |
+| When | a `config.toml` declaring the watch `movies` is imported |
+| Then | the configuration declares `movies` |
+
+## `PGE-093` A removed watch is written nowhere
+
+| Step | Statement |
+| --- | --- |
+| Given | the watch `series` selected |
+| When | it is removed |
+| Then | the configuration has no watch `series` |
+
+## `PGE-094` A selected target's path is edited in its form
+
+| Step | Statement |
+| --- | --- |
+| Given | the target `conflict` declared and selected |
+| When | its path is set to `/clash` |
+| Then | the target `conflict` has the path `/clash` |
+
+## `PGE-095` A refused file moves into a target picked from those declared
+
+| Step | Statement |
+| --- | --- |
+| Given | the target `conflict` declared and the first route of the watch `series` selected |
+| When | `conflict` is picked as where its refused files move |
+| Then | the route's rejected route moves into `conflict` |

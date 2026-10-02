@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import './setup.test-helper'
 import type { Entry } from './core'
 import { read, simulate } from './core'
-import { foldersUnder, marksOf, removeEntry, renameEntry, rootsOf, treeOf } from './tree'
+import { foldersUnder, marksOf, removeEntry, renameEntry, rootsOf, startConfiguration, treeOf } from './tree'
 
 function file(path: string): Entry {
   return { path, folder: false, modified: 0, text: '' }
@@ -23,6 +23,22 @@ describe('drawing the tree', () => {
     expect(treeOf(entries, source).map((node) => node.path)).toEqual(['/downloads/x.mkv'])
     expect(targets).toEqual(['/video'])
     expect(treeOf(entries, targets[0]).map((node) => node.path)).toEqual(['/video/y.mkv'])
+  })
+
+  // @behavior PGE-090
+  it('takes the target of a rejected route as a root', () => {
+    const config = read('[pipeline.p]\nstages = []\n\n[target.video]\npath = "/video"\n\n[target.conflict]\npath = "/conflict"\n\n[watch.series]\nsource = "/downloads"\nroutes = [{ pipeline = "p", move = "video", rejected = { move = "conflict" } }]')
+
+    expect(rootsOf(config, 'series').targets).toEqual(['/video', '/conflict'])
+  })
+
+  // @behavior PGE-091
+  it('opens a folder configuration already there as it is', () => {
+    const existing = { path: '/downloads/Alpha/auto-renamer.toml', folder: false, modified: 0, text: 'vars = { show = "Beta" }\n' }
+
+    const entries = startConfiguration([existing], '/downloads/Alpha', 'vars = { show = "Alpha" }\n')
+
+    expect(entries).toEqual([existing])
   })
 
   // @behavior PGE-018
