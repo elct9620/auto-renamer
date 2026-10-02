@@ -73,6 +73,10 @@ function heightOf(count: number): number {
   return HEADER + STEP * count + PAD
 }
 
+/** The class of a group's title, the only part a watch or a pipeline is dragged by, so a drag inside its box takes
+ * the route or stage there rather than the whole group. */
+export const DRAG_HANDLE = 'group-handle'
+
 /** Room under a stage for the count of files a simulation ran through it. */
 export const APPENDIX = 32
 
@@ -186,6 +190,7 @@ export function toGraph(config: Table, builtIns: Table = {}): { nodes: Node<Node
     nodes.push({
       id: watchId(name),
       type: 'watch',
+      dragHandle: `.${DRAG_HANDLE}`,
       position: { x: 0, y: watchTops[row] },
       style: { width: GROUP, height: heightOf(routes.length) },
       data: {
@@ -249,6 +254,7 @@ export function toGraph(config: Table, builtIns: Table = {}): { nodes: Node<Node
     nodes.push({
       id: pipelineId(pipeline),
       type: 'pipeline',
+      dragHandle: `.${DRAG_HANDLE}`,
       position: { x: pipelinesLeft, y: pipelineTops[row] },
       style: { width: widthOf(stages.length), height: PIPELINE_HEIGHT },
       deletable: !locked,
@@ -263,7 +269,6 @@ export function toGraph(config: Table, builtIns: Table = {}): { nodes: Node<Node
         parentId: pipelineId(pipeline),
         position: beside(index),
         style: { width: CHILD },
-        draggable: !locked,
         deletable: !locked,
         data: {
           label: stageName(stage),

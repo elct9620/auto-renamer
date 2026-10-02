@@ -45,7 +45,6 @@ import {
   insertStage,
   joinPipeline,
   moveRoute,
-  moveStage,
   newStage,
   partPipeline,
   removePipeline,
@@ -54,10 +53,10 @@ import {
   removeTarget,
   routeTo,
   setIn,
-  transferStage,
+  droppedStage,
 } from '../config'
 import { type Simulation, builtIns, read, stages } from '../core'
-import { APPENDIX, type Joint, type Layout, type Move, type NodeData, type Selected, absolute, dropAt, laidOut, relaid, routeAt, toGraph } from '../graph'
+import { APPENDIX, DRAG_HANDLE, type Joint, type Layout, type Move, type NodeData, type Selected, absolute, dropAt, laidOut, relaid, routeAt, toGraph } from '../graph'
 import { afterStage } from '../steps'
 
 /** The type a stage dragged from the palette carries its name under. */
@@ -112,9 +111,10 @@ function StageNode({ data }: NodeProps<Node<NodeData>>) {
       <ConfigNode data={data} kind="stage" />
       <Handle type="source" position={Position.Right} isConnectable={false} />
       {ran !== null && <NodeAppendix position="bottom" className="text-xs text-muted-foreground">{t('canvas.ran', { count: ran })}</NodeAppendix>}
+      {/* The list scrolls and is read, so the wheel and the pointer over it leave the canvas alone. */}
       {simulation && stage && (
         <NodeToolbar position={Position.Bottom} offset={APPENDIX + 16}>
-          <section aria-label={t('canvas.after', { stage: data.label })} className="max-h-60 w-[32rem] overflow-auto rounded-md border bg-popover p-2 shadow-md">
+          <section aria-label={t('canvas.after', { stage: data.label })} className="nowheel nodrag nopan max-h-60 w-[32rem] overflow-auto rounded-md border bg-popover p-2 shadow-md">
             <StageFiles simulation={simulation} stage={stage} />
           </section>
         </NodeToolbar>
@@ -129,7 +129,7 @@ function ConfigGroup({ data, kind }: { data: NodeData; kind: 'watch' | 'pipeline
   return (
     <GroupNode className={cn('text-sm', tones[kind], data.locked && 'opacity-70')}
       label={
-        <span className="flex items-center gap-1.5 font-medium">
+        <span className={cn(DRAG_HANDLE, 'flex cursor-grab items-center gap-1.5 font-medium')}>
           <Icon className="size-3.5 shrink-0 text-muted-foreground" />{data.label}
           {data.locked && <Lock className="size-3.5 shrink-0 text-muted-foreground" />}
         </span>
@@ -235,8 +235,8 @@ function Flow({ config, onChange, onSelect }: {
     setEdges(graph.edges)
   }, [shown, graph, setNodes, setEdges])
 
-  // A stage dropped on another pipeline waits here until the move is confirmed.
-  const [transfer, setTransfer] = useState<{ stage: { pipeline: string; index: number }; to: { pipeline: string; index: number }; name: string } | null>(null)
+  // A drop that removes something, moves a stage away or copies a built-in pipeline waits here until confirmed.
+  const [ask, setAsk] = useState<{ title: string; hint: string; action: string; apply: () => void } | null>(null)
   const goBack = (id: string) => {
     const drawnAt = shown.find((one) => one.id === id)?.position
     if (drawnAt) setNodes((current) => current.map((one) => (one.id === id ? { ...one, position: drawnAt } : one)))
@@ -259,26 +259,41 @@ function Flow({ config, onChange, onSelect }: {
       onEdgesChange={onEdgesChange}
       onNodeDragStop={(_, node) => {
         const moved = (node.data as NodeData).selected
-        const place = dropAt(shown.filter((other) => other.id !== node.id), absolute(shown, node as Node<NodeData>))
+        const others = shown.filter((other) => other.id !== node.id)
+        // A route or a stage stays where its list places it: dropped, it goes back while what the drop means is
+        // applied, or asked about first.
+        if (node.parentId) goBack(node.id)
         if (moved.kind === 'route') {
-          const index = routeAt(shown.filter((other) => other.id !== node.id), moved.watch, node.position)
-          if (index !== null && index !== moved.index) {
+          const index = routeAt(others, moved.watch, node.position)
+          if (index === null) {
+            setAsk({
+              title: t('canvas.removeRoute', { position: moved.index + 1, watch: moved.watch }), hint: t('canvas.removeHint'),
+              action: t('canvas.remove'), apply: () => { onChange(removeRoute(config, moved.watch, moved.index)); onSelect(null) },
+            })
+          } else if (index !== moved.index) {
             onChange(moveRoute(config, moved.watch, moved.index, index - moved.index))
             onSelect({ ...moved, index })
-            return
           }
-        }
-        if (moved.kind === 'stage' && place?.pipeline === moved.pipeline && place.index !== moved.index) {
-          onChange(moveStage(config, moved.pipeline, moved.index, place.index - moved.index))
-          onSelect({ ...moved, index: place.index })
           return
         }
-        // A route or a stage stays where its list places it; dropped anywhere else, it goes back.
-        if (node.parentId) {
-          if (moved.kind === 'stage' && place && place.pipeline !== moved.pipeline) {
-            setTransfer({ stage: moved, to: place, name: (node.data as NodeData).label })
+        if (moved.kind === 'stage') {
+          const drop = droppedStage(config, builtIns(), moved, dropAt(others, absolute(shown, node as Node<NodeData>)))
+          if (drop === null) return
+          const apply = () => {
+            onChange(drop.config)
+            onSelect(drop.at && { kind: 'stage', ...drop.at })
           }
-          goBack(node.id)
+          if (drop.kind === 'order' && !drop.copied) return apply()
+          const stage = (node.data as NodeData).label
+          const asked = {
+            remove: { title: t('canvas.removeStage', { stage, pipeline: moved.pipeline }), hint: t('canvas.removeHint'), action: t('canvas.remove') },
+            transfer: { title: t('canvas.transfer', { stage, pipeline: drop.at?.pipeline }), hint: t('canvas.transferHint', { from: moved.pipeline }), action: t('canvas.move') },
+            order: { title: t('canvas.reorder', { stage }), hint: '', action: t('canvas.move') },
+          }[drop.kind]
+          // Changing a built-in pipeline copies it in first, which is what the question then tells.
+          setAsk(drop.copied
+            ? { ...asked, hint: t('canvas.copyHint', { pipeline: moved.pipeline }), action: t('canvas.copyAndApply'), apply }
+            : { ...asked, apply })
           return
         }
         setLayout({ ...layout, [node.id]: node.position })
@@ -327,19 +342,15 @@ function Flow({ config, onChange, onSelect }: {
         </ControlButton>
       </Controls>
     </ReactFlow>
-    <AlertDialog open={transfer !== null} onOpenChange={(open) => { if (!open) setTransfer(null) }}>
+    <AlertDialog open={ask !== null} onOpenChange={(open) => { if (!open) setAsk(null) }}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{t('canvas.transfer', { stage: transfer?.name, pipeline: transfer?.to.pipeline })}</AlertDialogTitle>
-          <AlertDialogDescription>{t('canvas.transferHint', { from: transfer?.stage.pipeline })}</AlertDialogDescription>
+          <AlertDialogTitle>{ask?.title}</AlertDialogTitle>
+          <AlertDialogDescription>{ask?.hint}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>{t('canvas.cancel')}</AlertDialogCancel>
-          <AlertDialogAction onClick={() => {
-            if (!transfer) return
-            onChange(transferStage(config, transfer.stage.pipeline, transfer.stage.index, transfer.to.pipeline, transfer.to.index))
-            onSelect({ kind: 'stage', pipeline: transfer.to.pipeline, index: transfer.to.index })
-          }}>{t('canvas.move')}</AlertDialogAction>
+          <AlertDialogAction onClick={() => ask?.apply()}>{ask?.action}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

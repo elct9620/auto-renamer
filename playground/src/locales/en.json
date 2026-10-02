@@ -103,7 +103,14 @@
     "cancel": "Cancel",
     "ran_one": "{{count}} file",
     "ran_other": "{{count}} files",
-    "after": "Files after {{stage}}"
+    "after": "Files after {{stage}}",
+    "removeStage": "Remove {{stage}} from {{pipeline}}?",
+    "removeRoute": "Remove route {{position}} from {{watch}}?",
+    "removeHint": "It was dropped away from where it belongs.",
+    "remove": "Remove",
+    "reorder": "Move {{stage}} within its pipeline?",
+    "copyHint": "{{pipeline}} is built in, so it is copied in as your own pipeline before the change.",
+    "copyAndApply": "Copy and apply"
   },
   "examples": {
     "label": "Examples",

@@ -28,6 +28,7 @@ import {
   replaceStage,
   stageName,
   stagesOf,
+  droppedStage,
   transferStage,
   withParameter,
 } from './config'
@@ -171,7 +172,7 @@ routes = [{ pipeline = "video", move = "other" }]
     expect(pipeline.data.locked).toBe(true)
     expect(pipeline.deletable).toBe(false)
     expect(stage.data.label).toBe(stageName(stagesOf({ pipeline: builtIns() }, 'series-video')[0]))
-    expect([stage.draggable, stage.deletable]).toEqual([false, false])
+    expect(stage.deletable).toBe(false)
   })
 
   // @behavior PGE-076
@@ -491,5 +492,30 @@ describe('moving a stage across pipelines', () => {
     const { nodes } = toGraph(read(CONFIG), builtIns())
 
     expect(routeAt(nodes, 'series', { x: 600, y: 50 })).toBeNull()
+  })
+})
+
+describe('dropping a stage', () => {
+  const builtIn = read('[watch.series]\nsource = "/src"\nroutes = [{ pipeline = "series-video" }]\n')
+
+  // @behavior PGE-104
+  it('removes a stage dropped away from every pipeline', () => {
+    const drop = droppedStage(read(CONFIG), {}, { pipeline: 'video', index: 1 }, null)!
+
+    expect(drop.kind).toBe('remove')
+    expect(names(drop.config)).toEqual(['filter', 'strip'])
+  })
+
+  // @behavior PGE-108
+  it('copies a built-in pipeline in to reorder its stages', () => {
+    const drop = droppedStage(builtIn, builtIns(), { pipeline: 'series-video', index: 0 }, { pipeline: 'series-video', index: 1 })!
+    const original = stagesOf({ pipeline: builtIns() }, 'series-video').map(stageName)
+
+    expect(drop.copied).toBe(true)
+    expect(names(drop.config, 'series-video')).toEqual([original[1], original[0], ...original.slice(2)])
+  })
+
+  it('does nothing for a stage dropped where it was', () => {
+    expect(droppedStage(read(CONFIG), {}, { pipeline: 'video', index: 1 }, { pipeline: 'video', index: 1 })).toBeNull()
   })
 })

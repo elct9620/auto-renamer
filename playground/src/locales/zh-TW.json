@@ -103,7 +103,14 @@
     "cancel": "取消",
     "ran_one": "{{count}} 個檔案",
     "ran_other": "{{count}} 個檔案",
-    "after": "{{stage}} 之後的檔案"
+    "after": "{{stage}} 之後的檔案",
+    "removeStage": "從 {{pipeline}} 移除 {{stage}}？",
+    "removeRoute": "從 {{watch}} 移除第 {{position}} 條路線？",
+    "removeHint": "它被放到所屬位置之外。",
+    "remove": "移除",
+    "reorder": "在管線內移動 {{stage}}？",
+    "copyHint": "{{pipeline}} 是內建管線，會先複製成自訂管線再套用這次修改。",
+    "copyAndApply": "複製並套用"
   },
   "examples": {
     "label": "範例",

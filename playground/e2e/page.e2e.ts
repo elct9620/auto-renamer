@@ -565,21 +565,62 @@ test('a stage dropped on another pipeline moves there once confirmed', async ({ 
 })
 
 // @behavior PGE-104
-test('a stage dropped where it means nothing goes back', async ({ page }) => {
+test('a stage dropped away from every pipeline is removed once confirmed', async ({ page }) => {
   await ownSeriesVideo(page)
   const format = node(page, 'format')
   const pipeline = node(page, 'series-video')
-  // A drag near the edge pans the view, so the stage is placed against its pipeline rather than the page.
   const inPipeline = async () => (await format.boundingBox())!.y - (await pipeline.boundingBox())!.y
   const before = await configText(page)
   const offset = await inPipeline()
-  const at = (await format.boundingBox())!
-  const canvas = (await page.locator('.react-flow').boundingBox())!
+  const away = async () => {
+    const at = (await format.boundingBox())!
+    const canvas = (await page.locator('.react-flow').boundingBox())!
+    await dragOnto(page, format, { x: at.x + at.width / 2, y: canvas.y + canvas.height - 20 })
+  }
 
-  await dragOnto(page, format, { x: at.x + at.width / 2, y: canvas.y + canvas.height - 20 })
-
+  await away()
+  await page.getByRole('button', { name: 'Cancel' }).click()
   await expect.poll(inPipeline).toBeCloseTo(offset, 0)
   expect(await configText(page)).toBe(before)
+  await away()
+  await page.getByRole('button', { name: 'Remove', exact: true }).click()
+
+  await expect(format).toHaveCount(0)
+})
+
+// @behavior PGE-107
+test('a route dropped away from its watch is removed once confirmed', async ({ page }) => {
+  const route = node(page, FIRST_ROUTE)
+  const at = (await route.boundingBox())!
+
+  await dragOnto(page, route, { x: at.x + at.width / 2 + 300, y: at.y + at.height / 2 })
+  await page.getByRole('button', { name: 'Remove', exact: true }).click()
+
+  expect(await configText(page)).toContain('routes = []')
+})
+
+// @behavior PGE-108
+test('a stage of a built-in pipeline is changed by dragging once the pipeline is copied', async ({ page }) => {
+  const filter = node(page, 'filter')
+  const regex = (await node(page, 'regex').boundingBox())!
+
+  await dragOnto(page, filter, { x: regex.x + regex.width * 0.9, y: regex.y + regex.height / 2 })
+  await page.getByRole('button', { name: 'Copy and apply' }).click()
+
+  expect(await configText(page)).toMatch(/\[\[pipeline\.series-video\.stages\]\]\s+\[pipeline\.series-video\.stages\.regex\]/)
+})
+
+// @behavior PGE-109
+test('a watch or a pipeline is dragged by its title only', async ({ page }) => {
+  const watch = node(page, 'series')
+  const before = (await watch.boundingBox())!
+
+  await page.mouse.move(before.x + before.width - 6, before.y + before.height - 6)
+  await page.mouse.down()
+  await page.mouse.move(before.x + before.width + 100, before.y + before.height + 100, { steps: 8 })
+  await page.mouse.up()
+
+  expect((await watch.boundingBox())!.x).toBeCloseTo(before.x, 0)
 })
 
 // @behavior PGE-106
@@ -587,4 +628,29 @@ test('after a simulation each stage shows how many files it ran on', async ({ pa
   await page.getByRole('button', { name: 'Trigger' }).click()
 
   await expect(node(page, 'format').getByText('6 files', { exact: true })).toBeVisible()
+})
+
+// @behavior PGE-110
+test('the files beside a stage scroll without zooming the canvas', async ({ page }) => {
+  await chooseExample(page, 'Every series case together')
+  await page.getByRole('button', { name: 'Trigger' }).click()
+  await title(page, 'format').first().click()
+  const list = page.getByRole('region', { name: 'Files after format' }).first()
+  const zoom = () => page.locator('.react-flow__viewport').evaluate((viewport) => /scale\(([^)]+)\)/.exec(viewport.getAttribute('style') ?? '')?.[1])
+  await expect(list).toBeVisible()
+  // Selecting the stage brings it into view with a short animation, which has to end before the zoom is read.
+  let before = await zoom()
+  let unchanged = 0
+  await expect.poll(async () => {
+    const now = await zoom()
+    unchanged = now === before ? unchanged + 1 : 0
+    before = now
+    return unchanged
+  }, { intervals: [300] }).toBeGreaterThanOrEqual(3)
+
+  await list.hover()
+  await page.mouse.wheel(0, 200)
+
+  await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+  expect(await zoom()).toBe(before)
 })

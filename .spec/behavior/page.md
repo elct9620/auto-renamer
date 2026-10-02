@@ -608,7 +608,7 @@ The playground page draws a configuration for people who do not read TOML: each 
 | --- | --- |
 | Given | a route of `series-video`, which the configuration does not define |
 | When | it is drawn |
-| Then | `series-video` is drawn with the stages the core builds in, and can be neither changed nor removed on the canvas |
+| Then | `series-video` is drawn with the stages the core builds in, marked as built in, and neither it nor its stages can be deleted |
 
 ## `PGE-076` A pipeline defined under a built-in's name is drawn as its own
 
@@ -834,13 +834,13 @@ The playground page draws a configuration for people who do not read TOML: each 
 | When | a stage of one is dropped on the other and the move is confirmed |
 | Then | the stage is written in the other pipeline, and asking alone changed nothing |
 
-## `PGE-104` A stage or route dropped where it means nothing goes back
+## `PGE-104` A stage dropped away from every pipeline is removed once confirmed
 
 | Step | Statement |
 | --- | --- |
 | Given | a stage of a pipeline the configuration defines |
-| When | it is dropped away from every pipeline |
-| Then | it is drawn where it was and the configuration is as it was |
+| When | it is dropped away from every pipeline, first declining and then confirming its removal |
+| Then | declining leaves it drawn where it was with the configuration as it was, and confirming removes it |
 
 ## `PGE-105` A pipeline moving to several targets names the route of each joint
 
@@ -857,3 +857,35 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the opening example |
 | When | its watch is triggered |
 | Then | the format stage shows the number of files it ran on |
+
+## `PGE-107` A route dropped away from its watch is removed once confirmed
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch with a route |
+| When | the route is dropped away from the watch and its removal confirmed |
+| Then | the watch no longer has that route |
+
+## `PGE-108` A stage of a built-in pipeline is changed by dragging once the pipeline is copied
+
+| Step | Statement |
+| --- | --- |
+| Given | a route of the built-in `series-video` |
+| When | one of its stages is dragged to another place in it and copying the pipeline is confirmed |
+| Then | the configuration defines `series-video` with the stages in their new order |
+
+## `PGE-109` A watch or a pipeline is dragged by its title only
+
+| Step | Statement |
+| --- | --- |
+| Given | a drawn watch |
+| When | a part of its box other than its title is dragged |
+| Then | the watch stays where it was |
+
+## `PGE-110` The files beside a stage scroll without zooming the canvas
+
+| Step | Statement |
+| --- | --- |
+| Given | the files beside a selected stage, more than fit |
+| When | the wheel is turned over them |
+| Then | the list scrolls and the canvas keeps its zoom |

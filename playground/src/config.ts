@@ -93,6 +93,29 @@ export function removeStage(config: Table, pipeline: string, index: number): Tab
   )
 }
 
+/** What dropping a stage does: placed elsewhere in its pipeline, moved into another, or removed when dropped away
+ * from every pipeline, a built-in pipeline being copied in first. None when it was dropped where it was. */
+export interface StageDrop {
+  kind: 'order' | 'transfer' | 'remove'
+  config: Table
+  /** Whether the stage's built-in pipeline was copied in to be changed. */
+  copied: boolean
+  /** Where the stage now is; none once removed. */
+  at: { pipeline: string; index: number } | null
+}
+
+export function droppedStage(config: Table, builtIns: Table, stage: { pipeline: string; index: number },
+  place: { pipeline: string; index: number } | null): StageDrop | null {
+  const copied = !(stage.pipeline in asTable(config.pipeline))
+  const own = copied ? ownPipeline(config, builtIns, stage.pipeline) : config
+  if (place === null) return { kind: 'remove', config: removeStage(own, stage.pipeline, stage.index), copied, at: null }
+  if (place.pipeline !== stage.pipeline) {
+    return { kind: 'transfer', config: transferStage(own, stage.pipeline, stage.index, place.pipeline, place.index), copied, at: place }
+  }
+  if (place.index === stage.index) return null
+  return { kind: 'order', config: moveStage(own, stage.pipeline, stage.index, place.index - stage.index), copied, at: place }
+}
+
 /** Moves the stage at `index` of `from` into `to`, placed at `at`. */
 export function transferStage(config: Table, from: string, index: number, to: string, at: number): Table {
   const stage = stagesOf(config, from)[index]
