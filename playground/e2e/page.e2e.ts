@@ -527,3 +527,15 @@ test('triggering a watch shows its results', async ({ page }) => {
 
   await expect(page.getByRole('cell', { name: 'Alpha/[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv' })).toBeVisible()
 })
+
+// @behavior PGE-101
+test('the whole drawing is in view on opening', async ({ page }) => {
+  await chooseExample(page, 'Every series case together')
+
+  const canvas = (await page.locator('.react-flow').boundingBox())!
+  await expect.poll(async () => {
+    const boxes = await page.locator('.react-flow__node').evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().toJSON()))
+    return boxes.every((box) => box.left >= canvas.x - 1 && box.right <= canvas.x + canvas.width + 1
+      && box.top >= canvas.y - 1 && box.bottom <= canvas.y + canvas.height + 1)
+  }).toBe(true)
+})

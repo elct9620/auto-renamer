@@ -809,3 +809,11 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the opening example triggered and its format stage selected |
 | When | the canvas is clicked where nothing is drawn |
 | Then | the stage's tab is gone and the panel shows the results |
+
+## `PGE-101` The whole drawing is in view on opening
+
+| Step | Statement |
+| --- | --- |
+| Given | the full example, whose pipelines are wider than the canvas |
+| When | it is opened |
+| Then | every node is drawn inside the canvas |
