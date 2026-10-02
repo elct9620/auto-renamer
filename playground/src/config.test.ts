@@ -13,18 +13,18 @@ import {
   moveStage,
   newStage,
   partPipeline,
-  pipelinesOf,
   readStage,
   removePipeline,
   removeStage,
   renamePipeline,
+  routesOf,
   replaceStage,
   stageName,
   stagesOf,
   withParameter,
 } from './config'
-import { check, read, render, stages } from './core'
-import { dropAt, laidOut, pipelineId, relaid, stageId, toGraph, watchId } from './graph'
+import { builtIns, check, read, render, stages } from './core'
+import { absolute, dropAt, laidOut, pipelineId, relaid, routeId, stageId, targetId, toGraph, watchId } from './graph'
 
 const CONFIG = `
 [default]
@@ -48,12 +48,21 @@ vars = { show = "Alpha" }
 source = "/movies"
 `
 
+/** The pipelines a watch's routes run, in the order the routes claim. */
+function pipelinesOf(config: Table, watch: string): unknown[] {
+  return routesOf(config, watch).map((route) => route.pipeline)
+}
+
 function names(config: Table, pipeline = 'video'): string[] {
   return stagesOf(config, pipeline).map(stageName)
 }
 
 function edgeBetween(config: Table, source: string, target: string) {
-  return toGraph(config).edges.find((edge) => edge.source === source && edge.target === target)
+  return toGraph(config, builtIns()).edges.find((edge) => edge.source === source && edge.target === target)
+}
+
+function nodeOf(config: Table, id: string) {
+  return toGraph(config, builtIns()).nodes.find((node) => node.id === id)
 }
 
 describe('drawing', () => {
@@ -61,7 +70,7 @@ describe('drawing', () => {
   it('draws a pipeline as its stages in order', () => {
     const config = read(CONFIG)
 
-    expect(edgeBetween(config, pipelineId('video'), stageId('video', 0))).toBeDefined()
+    expect(nodeOf(config, stageId('video', 0))?.parentId).toBe(pipelineId('video'))
     expect(edgeBetween(config, stageId('video', 0), stageId('video', 1))).toBeDefined()
     expect(edgeBetween(config, stageId('video', 1), stageId('video', 2))).toBeDefined()
     expect(names(config)).toEqual(['filter', 'format', 'strip'])
@@ -71,9 +80,12 @@ describe('drawing', () => {
   it('joins a watch to the pipelines of its routes, in order', () => {
     const config = read(CONFIG)
 
-    expect(edgeBetween(config, watchId('series'), pipelineId('video'))?.label).toBe('1')
-    expect(edgeBetween(config, watchId('series'), pipelineId('subtitle'))?.label).toBe('2')
-    const x = (id: string) => toGraph(config).nodes.find((node) => node.id === id)!.position.x
+    const [first, second] = [nodeOf(config, routeId('series', 0))!, nodeOf(config, routeId('series', 1))!]
+    expect([first.parentId, second.parentId]).toEqual([watchId('series'), watchId('series')])
+    expect(first.position.y).toBeLessThan(second.position.y)
+    expect(edgeBetween(config, routeId('series', 0), pipelineId('video'))).toBeDefined()
+    expect(edgeBetween(config, routeId('series', 1), pipelineId('subtitle'))).toBeDefined()
+    const x = (id: string) => nodeOf(config, id)!.position.x
     expect(x(pipelineId('video'))).toBeLessThan(x(pipelineId('subtitle')))
   })
 
@@ -81,19 +93,79 @@ describe('drawing', () => {
   it('joins a watch without its own routes to the default ones', () => {
     const config = read(CONFIG)
 
-    expect(edgeBetween(config, watchId('movies'), pipelineId('video'))).toBeDefined()
-    expect(edgeBetween(config, watchId('movies'), pipelineId('subtitle'))).toBeUndefined()
+    expect(edgeBetween(config, routeId('movies', 0), pipelineId('video'))).toBeDefined()
+    expect(nodeOf(config, routeId('movies', 0))?.data.followed).toBe(true)
+    expect(nodeOf(config, routeId('movies', 1))).toBeUndefined()
   })
 
   // @behavior PGE-056
   it('stacks the stages of a pipeline below it in order', () => {
     const { nodes } = toGraph(read(CONFIG))
-    const column = ['pipeline:video', 'stage:video:0', 'stage:video:1', 'stage:video:2']
-      .map((id) => nodes.find((node) => node.id === id)!.position)
+    const column = ['stage:video:0', 'stage:video:1', 'stage:video:2'].map((id) => nodes.find((node) => node.id === id)!)
 
-    expect(new Set(column.map(({ x }) => x)).size).toBe(1)
-    expect(column.map(({ y }) => y)).toEqual([...column.map(({ y }) => y)].sort((a, b) => a - b))
-    expect(new Set(column.map(({ y }) => y)).size).toBe(column.length)
+    expect(column.every((node) => node.parentId === pipelineId('video'))).toBe(true)
+    expect(new Set(column.map(({ position }) => position.x)).size).toBe(1)
+    const ys = column.map(({ position }) => position.y)
+    expect(ys).toEqual([...ys].sort((a, b) => a - b))
+    expect(new Set(ys).size).toBe(column.length)
+  })
+
+  // @behavior PGE-073
+  it('joins a route to the target it moves to', () => {
+    const config = read(CONFIG)
+
+    expect(nodeOf(config, targetId('dst'))).toBeDefined()
+    expect(edgeBetween(config, routeId('series', 0), targetId('dst'))).toBeDefined()
+  })
+
+  // @behavior PGE-074
+  it('joins a rejected route apart from its route', () => {
+    const config = read(`${CONFIG}
+[pipeline.fallback]
+stages = ["strip"]
+
+[target.conflict]
+path = "/conflict"
+
+[watch.clash]
+source = "/clash"
+routes = [{ pipeline = "video", rejected = { pipeline = "fallback", move = "conflict" } }]
+`)
+
+    const dashed = (target: string) => edgeBetween(config, routeId('clash', 0), target)?.style?.strokeDasharray
+    expect(dashed(pipelineId('fallback'))).toBeDefined()
+    expect(dashed(targetId('conflict'))).toBeDefined()
+    expect(edgeBetween(config, routeId('clash', 0), pipelineId('video'))?.style).toBeUndefined()
+  })
+
+  // @behavior PGE-075
+  it('draws a built-in pipeline a route names locked, with its stages', () => {
+    const config = read('[watch.series]\nsource = "/src"\nroutes = [{ pipeline = "series-video" }]\n')
+
+    const pipeline = nodeOf(config, pipelineId('series-video'))!
+    const stage = nodeOf(config, stageId('series-video', 0))!
+    expect(pipeline.data.locked).toBe(true)
+    expect(pipeline.deletable).toBe(false)
+    expect(stage.data.label).toBe(stageName(stagesOf({ pipeline: builtIns() }, 'series-video')[0]))
+    expect([stage.draggable, stage.deletable]).toEqual([false, false])
+  })
+
+  // @behavior PGE-076
+  it('draws a pipeline defined under a built-in name as its own', () => {
+    const config = read('[pipeline.series-video]\nstages = ["strip"]\n\n[watch.series]\nsource = "/src"\nroutes = [{ pipeline = "series-video" }]\n')
+
+    expect(nodeOf(config, pipelineId('series-video'))?.data.locked).toBe(false)
+    expect(nodeOf(config, stageId('series-video', 0))?.data.label).toBe('strip')
+    expect(nodeOf(config, stageId('series-video', 1))).toBeUndefined()
+  })
+
+  // @behavior PGE-077
+  it('adds no stage dropped on a built-in pipeline', () => {
+    const config = read('[watch.series]\nsource = "/src"\nroutes = [{ pipeline = "series-video" }]\n')
+    const { nodes } = toGraph(config, builtIns())
+    const pipeline = nodes.find((node) => node.id === pipelineId('series-video'))!
+
+    expect(dropAt(nodes, { x: pipeline.position.x + 50, y: pipeline.position.y + 100 })).toBeNull()
   })
 })
 
@@ -181,7 +253,9 @@ describe('editing', () => {
     const { nodes } = toGraph(config)
     const [, second] = nodes.filter((node) => node.id.startsWith('stage:video:'))
 
-    expect(dropAt(nodes, { x: second.position.x, y: second.position.y + 10 })).toEqual({ pipeline: 'video', index: 1 })
+    const at = absolute(nodes, second)
+
+    expect(dropAt(nodes, { x: at.x, y: at.y + 10 })).toEqual({ pipeline: 'video', index: 1 })
   })
 
   // @behavior PGE-016

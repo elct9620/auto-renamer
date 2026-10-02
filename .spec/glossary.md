@@ -54,6 +54,14 @@ The ordered stages a route applies to the files it claims.
 
 - `Workflow` - Pipeline is what the design calls it.
 
+### Built-in pipeline
+
+A pipeline the core builds in, which a route may name without the configuration defining it; a pipeline the configuration defines under the same name replaces it.
+
+#### Rejected
+
+- `Preset` - a built-in pipeline is a pipeline like any other, not a set of settings.
+
 ### Record
 
 One file as it moves through a pipeline: a plan path together with named fields.

@@ -118,7 +118,10 @@ export function Inspector({ config, kind, selected, folders = [], simulation = n
     )
   }
 
+  if (selected.kind === 'route' || selected.kind === 'target') return null
+
   if (selected.kind === 'pipeline') {
+    if (!(selected.name in asTable(config.pipeline))) return null
     return (
       <Section icon={KIND_ICONS.pipeline} title={t('inspector.pipeline', { name: selected.name })}>
         <Field label={t('inspector.name')} error={nameError}>

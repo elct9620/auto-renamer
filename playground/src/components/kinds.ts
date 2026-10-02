@@ -6,6 +6,7 @@ import {
   Equal,
   Eraser,
   Eye,
+  FolderInput,
   FolderTree,
   Funnel,
   Hash,
@@ -16,11 +17,12 @@ import {
   PenLine,
   Regex,
   Replace,
+  Route,
   Workflow,
 } from 'lucide-react'
 
 /** The icon each kind of node carries wherever it is drawn, offered or edited. */
-export const KIND_ICONS = { watch: Eye, pipeline: Workflow, stage: Layers }
+export const KIND_ICONS = { watch: Eye, route: Route, pipeline: Workflow, stage: Layers, target: FolderInput }
 
 const STAGE_ICONS: Record<string, LucideIcon> = {
   filter: Funnel,

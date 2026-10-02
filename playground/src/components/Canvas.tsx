@@ -19,7 +19,7 @@ import {
   useReactFlow,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { LayoutGrid, X } from 'lucide-react'
+import { LayoutGrid, Lock, X } from 'lucide-react'
 import { type DragEvent, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -39,46 +39,86 @@ import {
   removeStage,
   setIn,
 } from '../config'
-import { read, stages } from '../core'
-import { type Joint, type Layout, type NodeData, type Selected, dropAt, head, laidOut, relaid, toGraph } from '../graph'
+import { builtIns, read, stages } from '../core'
+import { type Joint, type Layout, type NodeData, type Selected, absolute, dropAt, head, laidOut, relaid, toGraph } from '../graph'
 
 /** The type a stage dragged from the palette carries its name under. */
 export const STAGE_DRAG = 'application/x-auto-renamer-stage'
 
 const tones = {
-  watch: 'border-sky-500/60 bg-sky-50 dark:bg-sky-950',
-  pipeline: 'border-amber-500/60 bg-amber-50 dark:bg-amber-950',
+  watch: 'border-sky-500/60 bg-sky-50/60 dark:bg-sky-950/60',
+  route: 'border-sky-500/60',
+  pipeline: 'border-amber-500/60 bg-amber-50/60 dark:bg-amber-950/60',
   stage: 'cursor-grab',
+  target: 'border-emerald-500/60 bg-emerald-50 dark:bg-emerald-950',
 }
 
-function ConfigNode({ data, kind, joins }: { data: NodeData; kind: keyof typeof tones; joins: 'source' | 'target' | null }) {
+type Kind = keyof typeof tones
+
+/** A node's header and detail; a watch or a pipeline is drawn as a box holding its routes or stages. */
+function ConfigNode({ data, kind }: { data: NodeData; kind: Kind }) {
   const Icon = kind === 'stage' ? stageIcon(data.label) : KIND_ICONS[kind]
+  const holds = kind === 'watch' || kind === 'pipeline'
   return (
-    <BaseNode className={cn('min-w-36 text-sm', tones[kind])}>
-      <Handle type="target" position={Position.Top} isConnectable={joins === 'target'} />
+    <BaseNode className={cn('text-sm', holds ? 'size-full' : 'min-w-36', tones[kind], data.followed && 'border-dashed',
+      data.locked && 'opacity-70', data.locked && kind === 'stage' && 'cursor-default')}>
       <BaseNodeHeader className="justify-start">
         <Icon className="size-3.5 shrink-0 text-muted-foreground" />
-        <BaseNodeHeaderTitle className="text-sm font-medium">{kind === 'stage' ? <StageName name={data.label} /> : data.label}</BaseNodeHeaderTitle>
+        <BaseNodeHeaderTitle className="truncate text-sm font-medium">{kind === 'stage' ? <StageName name={data.label} /> : data.label}</BaseNodeHeaderTitle>
+        {data.locked && kind === 'pipeline' && <Lock className="ml-auto size-3.5 shrink-0 text-muted-foreground" />}
       </BaseNodeHeader>
-      {data.detail && (
+      {data.detail && !holds && (
         <BaseNodeContent className="pt-0">
           <small className="max-w-48 truncate font-mono text-xs text-muted-foreground">{data.detail}</small>
         </BaseNodeContent>
       )}
-      <Handle type="source" position={Position.Bottom} isConnectable={joins === 'source'} />
     </BaseNode>
   )
 }
 
-// Everything flows down: a watch is joined to pipelines by its handle; stages follow each other only by order.
+// A watch is joined to pipelines by its handle, and each of its routes to its pipeline below and its targets
+// beside; stages follow each other only by order.
 const nodeTypes = {
-  watch: ({ data }: NodeProps<Node<NodeData>>) => <ConfigNode data={data} kind="watch" joins="source" />,
-  pipeline: ({ data }: NodeProps<Node<NodeData>>) => <ConfigNode data={data} kind="pipeline" joins="target" />,
-  stage: ({ data }: NodeProps<Node<NodeData>>) => <ConfigNode data={data} kind="stage" joins={null} />,
+  watch: ({ data }: NodeProps<Node<NodeData>>) => (
+    <>
+      <ConfigNode data={data} kind="watch" />
+      <Handle type="source" position={Position.Bottom} />
+    </>
+  ),
+  route: ({ data }: NodeProps<Node<NodeData>>) => (
+    <>
+      <ConfigNode data={data} kind="route" />
+      <Handle type="source" position={Position.Bottom} isConnectable={false} />
+      <Handle type="source" id="effects" position={Position.Right} isConnectable={false} />
+    </>
+  ),
+  pipeline: ({ data }: NodeProps<Node<NodeData>>) => (
+    <>
+      <ConfigNode data={data} kind="pipeline" />
+      <Handle type="target" position={Position.Top} />
+    </>
+  ),
+  stage: ({ data }: NodeProps<Node<NodeData>>) => (
+    <>
+      <Handle type="target" position={Position.Top} isConnectable={false} />
+      <ConfigNode data={data} kind="stage" />
+      <Handle type="source" position={Position.Bottom} isConnectable={false} />
+    </>
+  ),
+  target: ({ data }: NodeProps<Node<NodeData>>) => (
+    <>
+      <Handle type="target" position={Position.Left} isConnectable={false} />
+      <ConfigNode data={data} kind="target" />
+    </>
+  ),
 }
 
-/** A joint shows its place in the watch's list and a button removing it, the way deleting the edge would. */
-function JointEdge({ id, label, data, ...path }: EdgeProps<Edge<Joint>>) {
+// A joint leaves a node held by a watch, so React Flow draws it above the nodes; its button is lifted above every
+// joint, where a joint's pointer area cannot cover it.
+const ABOVE_JOINTS = 1001
+
+/** A joint of a route to its pipeline, with a button removing the route, the way deleting the edge would. */
+function JointEdge({ id, data, ...path }: EdgeProps<Edge<Joint>>) {
   const { t } = useTranslation()
   const { deleteElements } = useReactFlow()
   const [line, x, y] = getBezierPath(path)
@@ -86,9 +126,8 @@ function JointEdge({ id, label, data, ...path }: EdgeProps<Edge<Joint>>) {
     <>
       <BaseEdge id={id} path={line} style={path.style} />
       <EdgeLabelRenderer>
-        <div className="nodrag nopan pointer-events-auto absolute flex items-center gap-0.5 rounded-full border bg-background pl-2 text-xs"
-          style={{ transform: `translate(-50%, -50%) translate(${x}px, ${y}px)` }}>
-          {label}
+        <div className="nodrag nopan pointer-events-auto absolute rounded-full border bg-background text-xs"
+          style={{ transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`, zIndex: ABOVE_JOINTS }}>
           <Button variant="ghost" size="icon-xs" className="rounded-full"
             aria-label={t('canvas.part', { watch: data?.watch, pipeline: data?.pipeline })}
             onClick={() => deleteElements({ edges: [{ id }] })}>
@@ -125,7 +164,7 @@ function Flow({ config, onChange, onSelect }: {
   onSelect: (selected: Selected | null) => void
 }) {
   const { t } = useTranslation()
-  const graph = useMemo(() => toGraph(config), [config])
+  const graph = useMemo(() => toGraph(config, builtIns()), [config])
   const [layout, setLayout] = useState<Layout>({})
   const [drawn, setDrawn] = useState(config)
   if (drawn !== config) {
@@ -156,7 +195,7 @@ function Flow({ config, onChange, onSelect }: {
       onEdgesChange={onEdgesChange}
       onNodeDragStop={(_, node) => {
         const moved = (node.data as NodeData).selected
-        const place = dropAt(shown.filter((other) => other.id !== node.id), node.position)
+        const place = dropAt(shown.filter((other) => other.id !== node.id), absolute(shown, node as Node<NodeData>))
         if (moved.kind === 'stage' && place?.pipeline === moved.pipeline && place.index !== moved.index) {
           onChange(moveStage(config, moved.pipeline, moved.index, place.index - moved.index))
           onSelect({ ...moved, index: place.index })

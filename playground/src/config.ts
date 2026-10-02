@@ -34,11 +34,6 @@ function asRoutes(value: Value | undefined): Table[] {
   return Array.isArray(value) ? value.map((route) => asTable(route)) : []
 }
 
-/** The pipelines a watch's routes run, in the order the routes claim. */
-export function pipelinesOf(config: Table, watch: string): string[] {
-  return routesOf(config, watch).flatMap((route) => (typeof route.pipeline === 'string' ? [route.pipeline] : []))
-}
-
 /** The targets the configuration declares, by name, with the root each stands for. */
 export function targetsOf(config: Table): Record<string, string> {
   return Object.fromEntries(

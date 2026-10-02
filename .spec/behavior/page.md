@@ -13,15 +13,15 @@ The playground page draws a configuration for people who do not read TOML: each 
 | --- | --- |
 | Given | a configuration whose pipeline `video` has the stages filter, format and strip |
 | When | it is drawn |
-| Then | the pipeline leads to the filter, the filter to the format, and the format to the strip |
+| Then | the pipeline holds the filter leading to the format, and the format leading to the strip |
 
-## `PGE-002` A watch is joined to the pipelines of its routes
+## `PGE-002` A watch holds its routes in order, each joined to its pipeline
 
 | Step | Statement |
 | --- | --- |
 | Given | a configuration whose watch `series` has routes of `video` and `subtitle` |
 | When | it is drawn |
-| Then | the watch leads to `video` first and to `subtitle` second |
+| Then | the watch holds a route of `video` above a route of `subtitle`, each leading to its pipeline |
 
 ## `PGE-003` A watch without its own routes is joined to the default's
 
@@ -29,7 +29,7 @@ The playground page draws a configuration for people who do not read TOML: each 
 | --- | --- |
 | Given | a configuration whose default has a route of `video` and whose watch has none |
 | When | it is drawn |
-| Then | the watch leads to `video` |
+| Then | the watch holds a route of `video`, drawn as followed from the default |
 
 ## `PGE-004` A stage added to a pipeline goes after the others
 
@@ -450,13 +450,13 @@ The playground page draws a configuration for people who do not read TOML: each 
 | When | the trees are shown |
 | Then | the source holds the single-episode files of each show, named by its folder |
 
-## `PGE-056` A pipeline's stages are stacked below it in order
+## `PGE-056` A pipeline's stages are stacked inside it in order
 
 | Step | Statement |
 | --- | --- |
 | Given | a pipeline `video` with the stages filter, format and strip |
 | When | it is drawn |
-| Then | each stage is drawn in the pipeline's column, below the one before it |
+| Then | each stage is drawn inside the pipeline, below the one before it |
 
 ## `PGE-057` Every example moves its files where the cases say
 
@@ -585,3 +585,43 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the target `conflict` declared and the watch `series` selected |
 | When | `conflict` is picked as where its route moves |
 | Then | the route moves into `conflict` |
+
+## `PGE-073` A route is joined to the target it moves to
+
+| Step | Statement |
+| --- | --- |
+| Given | a configuration declaring the target `dst`, whose watch has a route moving to `dst` |
+| When | it is drawn |
+| Then | `dst` is drawn and the route leads to it |
+
+## `PGE-074` A rejected route is joined apart from its route
+
+| Step | Statement |
+| --- | --- |
+| Given | a route whose rejected route runs `fallback` and moves to `conflict` |
+| When | it is drawn |
+| Then | the route leads to `fallback` and to `conflict` by dashed joints |
+
+## `PGE-075` A built-in pipeline a route names is drawn locked with its stages
+
+| Step | Statement |
+| --- | --- |
+| Given | a route of `series-video`, which the configuration does not define |
+| When | it is drawn |
+| Then | `series-video` is drawn with the stages the core builds in, and can be neither changed nor removed on the canvas |
+
+## `PGE-076` A pipeline defined under a built-in's name is drawn as its own
+
+| Step | Statement |
+| --- | --- |
+| Given | a configuration defining `series-video` itself |
+| When | it is drawn |
+| Then | `series-video` is drawn with the stages the configuration gives it, open to change |
+
+## `PGE-077` A stage dropped on a built-in pipeline is not added
+
+| Step | Statement |
+| --- | --- |
+| Given | a drawn built-in pipeline |
+| When | a stage is dropped on it |
+| Then | no pipeline is chosen to take the stage |

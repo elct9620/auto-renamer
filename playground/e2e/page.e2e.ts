@@ -4,6 +4,11 @@ function node(page: Page, name: string) {
   return page.locator('.react-flow__node').filter({ has: page.getByText(name, { exact: true }) })
 }
 
+// A watch or a pipeline holds other nodes, so it is chosen by its title rather than its middle.
+function title(page: Page, name: string) {
+  return node(page, name).getByText(name, { exact: true })
+}
+
 // The configuration tab is named after whatever is being edited, so it is found by its place.
 async function configText(page: Page): Promise<string> {
   await page.getByRole('tab').nth(1).click()
@@ -62,7 +67,7 @@ test('a reset layout draws every node where its order places it', async ({ page 
 // @behavior PGE-034
 test('choosing the example again brings back its configuration and tree', async ({ page }) => {
   const before = await configText(page)
-  await node(page, 'format').click()
+  await title(page, 'format').click()
   await page.getByRole('button', { name: 'Remove', exact: true }).click()
   const path = page.getByRole('combobox', { name: 'Path of a new file or folder' }).first()
   await path.fill('Omega/01.mkv')
@@ -85,10 +90,10 @@ test('adding in a folder starts the new path from that folder', async ({ page })
 
 // @behavior PGE-036
 test('a parameter limited to some values offers them in a list', async ({ page }) => {
-  await node(page, 'series-video').click()
+  await title(page, 'series-video').click()
   await page.getByRole('combobox', { name: 'Add a stage' }).click()
   await page.getByRole('option', { name: 'case' }).click()
-  await node(page, 'case').click()
+  await title(page, 'case').click()
 
   await page.getByRole('combobox', { name: /^Case/ }).click()
 
@@ -97,10 +102,10 @@ test('a parameter limited to some values offers them in a list', async ({ page }
 
 // @behavior PGE-037
 test('a required parameter left empty is pointed out', async ({ page }) => {
-  await node(page, 'series-video').click()
+  await title(page, 'series-video').click()
   await page.getByRole('combobox', { name: 'Add a stage' }).click()
   await page.getByRole('option', { name: 'rank' }).click()
-  await node(page, 'rank').click()
+  await title(page, 'rank').click()
   const into = page.getByRole('textbox', { name: /^Target field into/ })
   await into.fill('')
 
@@ -130,7 +135,7 @@ test('the language chosen in the header is the one the page speaks', async ({ pa
 
 // @behavior PGE-040
 test('a watch offers the settings for when a unit is processed', async ({ page }) => {
-  await node(page, 'series').click()
+  await title(page, 'series').click()
 
   await expect(page.getByRole('textbox', { name: 'Quiet for quiet' })).toBeVisible()
   await expect(page.getByRole('textbox', { name: 'Wait at most max_wait' })).toBeVisible()
@@ -140,7 +145,7 @@ test('a watch offers the settings for when a unit is processed', async ({ page }
 // @behavior PGE-041
 test('a watch routes pipelines picked from those defined', async ({ page }) => {
   await page.getByRole('button', { name: 'Add pipeline' }).click()
-  await node(page, 'series').click()
+  await title(page, 'series').click()
 
   await page.getByRole('combobox', { name: 'Add a pipeline' }).click()
   await page.getByRole('option', { name: 'new_pipeline' }).click()
@@ -152,7 +157,7 @@ test('a watch routes pipelines picked from those defined', async ({ page }) => {
 
 // @behavior PGE-042
 test('a unit is chosen among its three forms', async ({ page }) => {
-  await node(page, 'series').click()
+  await title(page, 'series').click()
 
   await page.getByRole('combobox', { name: 'Unit' }).click()
 
@@ -161,7 +166,7 @@ test('a unit is chosen among its three forms', async ({ page }) => {
 
 // @behavior PGE-043
 test('a yes-or-no setting is a switch', async ({ page }) => {
-  await node(page, 'series').click()
+  await title(page, 'series').click()
 
   const dryRun = page.getByRole('switch', { name: 'Dry run dry_run' })
 
@@ -173,7 +178,7 @@ test('a key is labelled in the page\'s language beside the CLI\'s key', async ({
   await page.getByRole('combobox', { name: 'Language' }).click()
   await page.getByRole('option', { name: '繁體中文' }).click()
 
-  await node(page, 'series').click()
+  await title(page, 'series').click()
 
   await expect(page.getByRole('switch', { name: '試運行 dry_run' })).toBeVisible()
 })
@@ -328,7 +333,7 @@ test('a folder configuration added from the header is started and opened', async
 
 // @behavior PGE-064
 test('overriding a pipeline in a folder opens that folder\'s configuration', async ({ page }) => {
-  await node(page, 'series-video').click()
+  await title(page, 'series-video').click()
 
   await page.getByRole('combobox', { name: /Override in a folder/ }).click()
   await page.getByRole('option', { name: '/downloads/Alpha', exact: true }).click()
@@ -354,7 +359,7 @@ test('choosing a result shows how its file was planned', async ({ page }) => {
 test('a selected stage shows the files after it', async ({ page }) => {
   await page.getByRole('button', { name: 'Trigger' }).click()
 
-  await node(page, 'format').click()
+  await title(page, 'format').click()
 
   const after = page.getByRole('region', { name: 'Files after this stage' })
   await expect(after.getByRole('listitem')).toHaveCount(6)
@@ -366,7 +371,7 @@ test('editing the configuration clears the simulation', async ({ page }) => {
   await page.getByRole('button', { name: 'Trigger' }).click()
   await expect(page.getByText('Trigger the watch to see where each file goes.')).toHaveCount(0)
 
-  await node(page, 'format').click()
+  await title(page, 'format').click()
   await page.getByRole('button', { name: 'Remove', exact: true }).click()
 
   await expect(page.getByText('Trigger the watch to see where each file goes.')).toBeVisible()
@@ -388,7 +393,7 @@ test('a target added in the defaults form is declared', async ({ page }) => {
 // @behavior PGE-072
 test('a route moves into a target picked from those declared', async ({ page }) => {
   await declareTarget(page, 'conflict')
-  await node(page, 'series').click()
+  await title(page, 'series').click()
 
   await page.getByRole('combobox', { name: 'Move to', exact: true }).click()
   await page.getByRole('option', { name: 'conflict' }).click()
