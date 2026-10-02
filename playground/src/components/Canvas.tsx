@@ -32,15 +32,19 @@ import {
   type Table,
   insertStage,
   joinPipeline,
+  moveRoute,
   moveStage,
   newStage,
   partPipeline,
   removePipeline,
+  removeRoute,
   removeStage,
+  removeTarget,
+  routeTo,
   setIn,
 } from '../config'
 import { builtIns, read, stages } from '../core'
-import { type Joint, type Layout, type NodeData, type Selected, absolute, dropAt, head, laidOut, relaid, toGraph } from '../graph'
+import { type Joint, type Layout, type Move, type NodeData, type Selected, absolute, dropAt, head, laidOut, relaid, routeAt, toGraph } from '../graph'
 
 /** The type a stage dragged from the palette carries its name under. */
 export const STAGE_DRAG = 'application/x-auto-renamer-stage'
@@ -89,7 +93,7 @@ const nodeTypes = {
     <>
       <ConfigNode data={data} kind="route" />
       <Handle type="source" position={Position.Bottom} isConnectable={false} />
-      <Handle type="source" id="effects" position={Position.Right} isConnectable={false} />
+      <Handle type="source" id="effects" position={Position.Right} />
     </>
   ),
   pipeline: ({ data }: NodeProps<Node<NodeData>>) => (
@@ -141,17 +145,22 @@ function JointEdge({ id, data, ...path }: EdgeProps<Edge<Joint>>) {
 
 const edgeTypes = { joint: JointEdge }
 
+/** A watch is joined to a pipeline to route it, and a route to a target to move there. */
 function isJoint(connection: Connection | Edge): boolean {
-  return connection.source.startsWith('watch:') && connection.target.startsWith('pipeline:')
+  return (connection.source.startsWith('watch:') && connection.target.startsWith('pipeline:'))
+    || (connection.source.startsWith('route:') && connection.target.startsWith('target:'))
 }
 
-/** Removes what was deleted on the canvas: stages from the last, so earlier positions stay valid. */
+/** Removes what was deleted on the canvas: routes and stages from the last, so earlier positions stay valid. */
 function removeNodes(config: Table, nodes: Node[]): Table {
   const chosen = nodes.map((node) => (node.data as NodeData).selected)
   let next = config
+  const routes = chosen.flatMap((one) => (one.kind === 'route' ? [one] : []))
+  for (const one of routes.sort((a, b) => b.index - a.index)) next = removeRoute(next, one.watch, one.index)
   for (const one of chosen) {
     if (one.kind === 'watch') next = setIn(next, ['watch', one.name], undefined)
     if (one.kind === 'pipeline') next = removePipeline(next, one.name)
+    if (one.kind === 'target') next = removeTarget(next, one.name)
   }
   const stagesChosen = chosen.flatMap((one) => (one.kind === 'stage' ? [one] : []))
   for (const one of stagesChosen.sort((a, b) => b.index - a.index)) next = removeStage(next, one.pipeline, one.index)
@@ -196,6 +205,14 @@ function Flow({ config, onChange, onSelect }: {
       onNodeDragStop={(_, node) => {
         const moved = (node.data as NodeData).selected
         const place = dropAt(shown.filter((other) => other.id !== node.id), absolute(shown, node as Node<NodeData>))
+        if (moved.kind === 'route') {
+          const index = routeAt(shown.filter((other) => other.id !== node.id), moved.watch, node.position.y)
+          if (index !== moved.index) {
+            onChange(moveRoute(config, moved.watch, moved.index, index - moved.index))
+            onSelect({ ...moved, index })
+            return
+          }
+        }
         if (moved.kind === 'stage' && place?.pipeline === moved.pipeline && place.index !== moved.index) {
           onChange(moveStage(config, moved.pipeline, moved.index, place.index - moved.index))
           onSelect({ ...moved, index: place.index })
@@ -205,16 +222,21 @@ function Flow({ config, onChange, onSelect }: {
       }}
       isValidConnection={isJoint}
       onConnect={(connection) => {
-        const watch = graph.nodes.find((node) => node.id === connection.source)?.data.selected
-        const pipeline = graph.nodes.find((node) => node.id === connection.target)?.data.selected
-        if (watch?.kind === 'watch' && pipeline?.kind === 'pipeline') onChange(joinPipeline(config, watch.name, pipeline.name))
+        const from = graph.nodes.find((node) => node.id === connection.source)?.data.selected
+        const to = graph.nodes.find((node) => node.id === connection.target)?.data.selected
+        if (from?.kind === 'watch' && to?.kind === 'pipeline') onChange(joinPipeline(config, from.name, to.name))
+        if (from?.kind === 'route' && to?.kind === 'target') onChange(routeTo(config, from.watch, from.index, to.name))
       }}
       onDelete={({ nodes: removed, edges }) => {
         let next = removeNodes(config, removed)
         for (const edge of edges) {
-          const joint = edge.data as Joint | undefined
-          if (joint && !removed.some((node) => node.id === edge.source || node.id === edge.target)) {
+          if (removed.some((node) => node.id === edge.source || node.id === edge.target)) continue
+          if (edge.type === 'joint') {
+            const joint = edge.data as Joint
             next = partPipeline(next, joint.watch, joint.pipeline)
+          } else if (edge.data) {
+            const move = edge.data as Move
+            next = routeTo(next, move.watch, move.index, undefined)
           }
         }
         onChange(next)

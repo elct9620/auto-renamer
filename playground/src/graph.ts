@@ -55,6 +55,12 @@ export interface Joint extends Record<string, unknown> {
   pipeline: string
 }
 
+/** A joint of a route to the target it moves to. */
+export interface Move extends Record<string, unknown> {
+  watch: string
+  index: number
+}
+
 const REJECTED = { strokeDasharray: '4 4', stroke: 'var(--destructive)' }
 const FOLLOWED = { strokeDasharray: '6 4' }
 
@@ -87,6 +93,15 @@ export function dropAt(nodes: Node<NodeData>[], point: XYPosition): { pipeline: 
     return one.kind === 'stage' && one.pipeline === pipeline && absolute(nodes, node).y + STEP / 2 <= point.y
   }).length
   return { pipeline, index }
+}
+
+/** Where a route moved to a height inside its watch goes: after each other route of the watch whose middle is
+ * above it. `nodes` are as drawn, without the route being moved. */
+export function routeAt(nodes: Node<NodeData>[], watch: string, y: number): number {
+  return nodes.filter((node) => {
+    const one = node.data.selected
+    return one.kind === 'route' && one.watch === watch && node.position.y + STEP / 2 <= y
+  }).length
 }
 
 function stageDetail(stage: Stage): string | undefined {
@@ -155,7 +170,6 @@ export function toGraph(config: Table, builtIns: Table = {}): { nodes: Node<Node
         extent: 'parent',
         position: inside(index),
         style: { width: GROUP - PAD * 2 },
-        deletable: false,
         data: { label: `${index + 1} · ${pipeline}`, followed, selected: { kind: 'route', watch: name, index } },
       })
       if (drawn.has(pipeline)) {
@@ -170,7 +184,7 @@ export function toGraph(config: Table, builtIns: Table = {}): { nodes: Node<Node
       }
       if (typeof route.move === 'string' && targets.includes(route.move)) {
         edges.push({ id: `${id}->${targetId(route.move)}`, source: id, sourceHandle: 'effects', target: targetId(route.move),
-          style: followed ? FOLLOWED : undefined, deletable: false })
+          style: followed ? FOLLOWED : undefined, data: { watch: name, index } satisfies Move })
       }
       const rejected = asTable(route.rejected)
       if (typeof rejected.pipeline === 'string' && drawn.has(rejected.pipeline)) {
@@ -189,7 +203,6 @@ export function toGraph(config: Table, builtIns: Table = {}): { nodes: Node<Node
       id: targetId(name),
       type: 'target',
       position: { x: watches.length * COLUMN, y: row * TARGET_ROW },
-      deletable: false,
       data: { label: name, detail: targetsOf(config)[name], selected: { kind: 'target', name } },
     })
   })

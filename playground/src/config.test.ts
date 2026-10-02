@@ -15,16 +15,21 @@ import {
   partPipeline,
   readStage,
   removePipeline,
+  moveRoute,
+  removeRoute,
   removeStage,
+  removeTarget,
   renamePipeline,
+  routeTo,
   routesOf,
+  setIn,
   replaceStage,
   stageName,
   stagesOf,
   withParameter,
 } from './config'
 import { builtIns, check, read, render, stages } from './core'
-import { absolute, dropAt, laidOut, pipelineId, relaid, routeId, stageId, targetId, toGraph, watchId } from './graph'
+import { absolute, dropAt, laidOut, pipelineId, relaid, routeAt, routeId, stageId, targetId, toGraph, watchId } from './graph'
 
 const CONFIG = `
 [default]
@@ -306,6 +311,59 @@ describe('joining', () => {
     const config = partPipeline(read(CONFIG), 'series', 'video')
 
     expect(pipelinesOf(config, 'series')).toEqual(['subtitle'])
+  })
+})
+
+describe('routes and targets', () => {
+  // @behavior PGE-078
+  it('claims first with a route moved above another', () => {
+    const config = read(CONFIG)
+    const { nodes } = toGraph(config, builtIns())
+    const video = nodes.find((node) => node.id === routeId('series', 0))!
+    const subtitle = nodes.find((node) => node.id === routeId('series', 1))!
+
+    const index = routeAt(nodes.filter((node) => node.id !== subtitle.id), 'series', video.position.y - 1)
+    const moved = moveRoute(config, 'series', 1, index - 1)
+
+    expect(pipelinesOf(moved, 'series')).toEqual(['subtitle', 'video'])
+  })
+
+  // @behavior PGE-079
+  it('moves a route joined to a target there', () => {
+    const config = routeTo(read(CONFIG), 'movies', 0, 'dst')
+
+    expect(routesOf(config, 'movies')).toEqual([{ pipeline: 'video', move: 'dst' }])
+  })
+
+  // @behavior PGE-080
+  it('leaves the other routes in order when one is removed', () => {
+    const config = removeRoute(joinPipeline(read(CONFIG), 'series', 'extra'), 'series', 1)
+
+    expect(pipelinesOf(config, 'series')).toEqual(['video', 'extra'])
+  })
+
+  // @behavior PGE-081
+  it('moves no route to a removed target', () => {
+    const config = read(`${CONFIG}
+[watch.clash]
+source = "/clash"
+routes = [{ pipeline = "video", move = "dst", rejected = { move = "dst" } }, { pipeline = "subtitle", rejected = { pipeline = "subtitle", move = "dst" } }]
+`)
+    const withDefault = setIn(config, ['default', 'routes'], [{ pipeline: 'video', move: 'dst' }])
+
+    const removed = removeTarget(withDefault, 'dst')
+
+    expect(asTable(removed.target).dst).toBeUndefined()
+    expect(asTable(removed.default).routes).toEqual([{ pipeline: 'video' }])
+    expect(routesOf(removed, 'series')).toEqual([{ pipeline: 'video' }, { pipeline: 'subtitle' }])
+    expect(routesOf(removed, 'clash')).toEqual([{ pipeline: 'video' }, { pipeline: 'subtitle', rejected: { pipeline: 'subtitle' } }])
+  })
+
+  // @behavior PGE-082
+  it('renames in place with a route whose move joint is removed', () => {
+    const config = routeTo(read(CONFIG), 'series', 0, undefined)
+
+    expect(routesOf(config, 'series')[0]).toEqual({ pipeline: 'video' })
   })
 })
 

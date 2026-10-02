@@ -625,3 +625,43 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | a drawn built-in pipeline |
 | When | a stage is dropped on it |
 | Then | no pipeline is chosen to take the stage |
+
+## `PGE-078` A route moved above another in its watch claims before it
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch whose routes run `video` then `subtitle` |
+| When | the route of `subtitle` is moved above the route of `video` |
+| Then | the watch's routes run `subtitle` then `video` |
+
+## `PGE-079` A route joined to a target moves there
+
+| Step | Statement |
+| --- | --- |
+| Given | a route of `video` without a move, and the declared target `dst` |
+| When | the route is joined to `dst` |
+| Then | the route moves to `dst` |
+
+## `PGE-080` A removed route leaves the watch's other routes in order
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch whose routes run `video`, `subtitle` and `extra` |
+| When | the route of `subtitle` is removed |
+| Then | the watch's routes run `video` then `extra` |
+
+## `PGE-081` A removed target is moved to by no route
+
+| Step | Statement |
+| --- | --- |
+| Given | routes moving to `dst`, one of them sending what it refuses to `dst` too, in the default and in a watch |
+| When | the target `dst` is removed |
+| Then | no route nor rejected route moves to `dst`, and each keeps its pipeline |
+
+## `PGE-082` A route's move joint removed renames in place
+
+| Step | Statement |
+| --- | --- |
+| Given | a route of `video` moving to `dst` |
+| When | its joint to `dst` is removed |
+| Then | the route has no move |

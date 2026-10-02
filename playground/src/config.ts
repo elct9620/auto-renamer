@@ -85,11 +85,16 @@ export function removeStage(config: Table, pipeline: string, index: number): Tab
 
 /** Moves a stage by `offset` places, keeping it within the pipeline. */
 export function moveStage(config: Table, pipeline: string, index: number, offset: number): Table {
-  const stages = [...stagesOf(config, pipeline)]
-  const to = Math.min(Math.max(index + offset, 0), stages.length - 1)
-  const [stage] = stages.splice(index, 1)
-  stages.splice(to, 0, stage)
-  return withStages(config, pipeline, stages)
+  return withStages(config, pipeline, moved(stagesOf(config, pipeline), index, offset))
+}
+
+/** A list with the item at `index` moved by `offset` places, kept within the list. */
+function moved<T>(list: T[], index: number, offset: number): T[] {
+  const next = [...list]
+  const to = Math.min(Math.max(index + offset, 0), next.length - 1)
+  const [item] = next.splice(index, 1)
+  next.splice(to, 0, item)
+  return next
 }
 
 export function replaceStage(config: Table, pipeline: string, index: number, stage: Stage): Table {
@@ -111,22 +116,39 @@ export function joinPipeline(config: Table, watch: string, pipeline: string): Ta
     routes.some((route) => route.pipeline === pipeline) ? routes : [...routes, { pipeline }])
 }
 
+/** Moves a route by `offset` places among its watch's routes, keeping it within them. */
+export function moveRoute(config: Table, watch: string, index: number, offset: number): Table {
+  return withRoutes(config, watch, (routes) => moved(routes, index, offset))
+}
+
+export function removeRoute(config: Table, watch: string, index: number): Table {
+  return withRoutes(config, watch, (routes) => routes.filter((_, at) => at !== index))
+}
+
+/** Sets the target a route moves to; none renames in place. */
+export function routeTo(config: Table, watch: string, index: number, target: string | undefined): Table {
+  return withRoutes(config, watch, (routes) => routes.map((route, at) => (at === index ? setIn(route, ['move'], target) : route)))
+}
+
+/** Removes a target and every move to it, a rejected route's included; a rejected route left with nothing goes. */
+export function removeTarget(config: Table, name: string): Table {
+  return rewriteRoutes(setIn(config, ['target', name], undefined), (route) => {
+    const next = route.move === name ? setIn(route, ['move'], undefined) : route
+    const rejected = asTable(next.rejected)
+    if (rejected.move !== name) return next
+    const kept = setIn(rejected, ['move'], undefined)
+    return setIn(next, ['rejected'], Object.keys(kept).length ? kept : undefined)
+  })
+}
+
 export function partPipeline(config: Table, watch: string, pipeline: string): Table {
   return withRoutes(config, watch, (routes) => routes.filter((route) => route.pipeline !== pipeline))
 }
 
-/** Rewrites the pipeline every route names, its rejected route's included: in the default's routes and in
- * each watch's own. A route whose pipeline is renamed to nothing goes; a rejected route loses its pipeline. */
-function rewriteRouted(config: Table, change: (name: string) => string | undefined): Table {
-  const rewrite = (routes: Table[]) =>
-    routes.flatMap((route) => {
-      const pipeline = typeof route.pipeline === 'string' ? change(route.pipeline) : undefined
-      if (pipeline === undefined) return []
-      const rejected = asTable(route.rejected)
-      const kept = typeof rejected.pipeline === 'string' ? change(rejected.pipeline) : undefined
-      const next = { ...route, pipeline }
-      return [route.rejected === undefined ? next : { ...next, rejected: setIn(rejected, ['pipeline'], kept) }]
-    })
+/** Rewrites every route the configuration lists, in the default's routes and in each watch's own; a route
+ * rewritten to nothing goes. */
+function rewriteRoutes(config: Table, change: (route: Table) => Table | undefined): Table {
+  const rewrite = (routes: Table[]) => routes.flatMap((route) => change(route) ?? [])
   let next = config
   const defaults = asTable(config.default).routes
   if (defaults !== undefined) next = setIn(next, ['default', 'routes'], rewrite(asRoutes(defaults)))
@@ -135,6 +157,19 @@ function rewriteRouted(config: Table, change: (name: string) => string | undefin
     if (own !== undefined) next = setIn(next, ['watch', watch, 'routes'], rewrite(asRoutes(own)))
   }
   return next
+}
+
+/** Rewrites the pipeline every route names, its rejected route's included. A route whose pipeline is renamed to
+ * nothing goes; a rejected route loses its pipeline. */
+function rewriteRouted(config: Table, change: (name: string) => string | undefined): Table {
+  return rewriteRoutes(config, (route) => {
+    const pipeline = typeof route.pipeline === 'string' ? change(route.pipeline) : undefined
+    if (pipeline === undefined) return undefined
+    const rejected = asTable(route.rejected)
+    const kept = typeof rejected.pipeline === 'string' ? change(rejected.pipeline) : undefined
+    const next = { ...route, pipeline }
+    return route.rejected === undefined ? next : { ...next, rejected: setIn(rejected, ['pipeline'], kept) }
+  })
 }
 
 /** Renames a pipeline and every route naming it. */
