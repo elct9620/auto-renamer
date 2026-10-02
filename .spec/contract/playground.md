@@ -14,6 +14,14 @@ Which configuration a text is: the global one or a folder configuration.
 pub enum Configuration {}
 ```
 
+## `built_ins`
+
+The pipelines the core builds in, by name, each as a configuration declares it, for the page to draw them and copy one to change it.
+
+```rust
+pub fn built_ins() -> Table {}
+```
+
 ## `check`
 
 Read a configuration as the CLI reads it, answering why it is refused when it is.

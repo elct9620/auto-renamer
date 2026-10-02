@@ -125,3 +125,11 @@ The playground checks, reads and writes a configuration, and simulates a watch o
 | Given | a folder configuration replacing the pipeline of its folder |
 | When | the watch is simulated |
 | Then | the outcome of a file in that folder is marked as planned by a replaced pipeline, and one elsewhere is not |
+
+## `PLG-016` A built-in pipeline written out plans as the built-in does
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch routing `series-video`, and the same watch with the pipeline the page is offered for `series-video` written into the configuration |
+| When | each is simulated over `Alpha/Alpha - 12.mkv` |
+| Then | both move the file to the same place |

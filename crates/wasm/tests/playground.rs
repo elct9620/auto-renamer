@@ -1,5 +1,6 @@
 use auto_renamer_wasm::{
-    Configuration, Entry, Outcome, Simulation, check, read, render, simulate, stages,
+    Configuration, Entry, Outcome, Simulation, Table, built_ins, check, read, render, simulate,
+    stages,
 };
 
 const MOVE_AS_SHOW: &str = r#"[{ format = "{show}" }]"#;
@@ -251,4 +252,25 @@ fn should_mark_a_file_a_replaced_pipeline_planned() {
             .expect("the file is reported")
             .replaced
     );
+}
+
+// @behavior PLG-016
+#[test]
+fn should_plan_a_built_in_pipeline_written_out_as_the_built_in() {
+    let watch = "[target.dst]\npath = \"/dst\"\n\n[watch.w]\nsource = \"/src\"\nroutes = [{ pipeline = \"series-video\", move = \"dst\" }]\nunit = { root = [\"*\"] }\n";
+    let offered = built_ins();
+    let mut written = Table::new();
+    written.insert("pipeline".into(), toml::Value::Table(offered.clone()));
+    let copied = format!("{}\n{watch}", render(&written));
+    let entries = || vec![file("/src/Alpha/Alpha - 12.mkv")];
+
+    let built_in = simulate(watch, "w", entries()).expect("simulates");
+    let copy = simulate(&copied, "w", entries()).expect("simulates");
+
+    assert_eq!(
+        built_in.outcomes[0].to.as_deref(),
+        Some("/dst/Alpha/Season 01/Alpha s01e12.mkv")
+    );
+    assert_eq!(copy.outcomes[0].to, built_in.outcomes[0].to);
+    assert!(offered.contains_key("series-video"));
 }

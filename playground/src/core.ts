@@ -74,6 +74,11 @@ export function render(table: Table): string {
   return wasm.render(table)
 }
 
+/** The pipelines the core builds in, by name, each as a configuration declares it. */
+export function builtIns(): Table {
+  return wasm.builtIns()
+}
+
 export function stages(): Declaration[] {
   return wasm.stages()
 }

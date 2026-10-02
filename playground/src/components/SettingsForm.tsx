@@ -6,7 +6,8 @@ import { Caption, TextField, ValueRows } from '@/components/Fields'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
-import { BUILT_IN_PIPELINES, type Table, type Value, asTable, setIn, targetsOf } from '../config'
+import { type Table, type Value, asTable, setIn, targetsOf } from '../config'
+import { builtIns } from '../core'
 import { type Scope, type Setting, settingsOf } from '../settings'
 
 function names(value: Value | undefined): string[] {
@@ -142,7 +143,7 @@ export function SettingsForm({ config, scope, path, onChange }: {
   let table: Table = config
   for (const key of path) table = asTable(table[key])
   const inherited = scope === 'watch' ? routes(asTable(config.default).routes) : undefined
-  const defined = [...new Set([...Object.keys(asTable(config.pipeline)), ...BUILT_IN_PIPELINES])]
+  const defined = [...new Set([...Object.keys(asTable(config.pipeline)), ...Object.keys(builtIns())])]
   const targets = Object.keys(targetsOf(config))
   return (
     <>

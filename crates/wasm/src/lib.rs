@@ -11,8 +11,8 @@ use std::path::PathBuf;
 
 pub use auto_renamer_core::Declaration;
 use auto_renamer_core::{
-    Config, Declared, FolderConfig, Processed, Renames, Step, Value, What, process_batch_observed,
-    replaced_pipelines,
+    BUILT_IN_PIPELINES, Config, Declared, FolderConfig, Processed, Renames, Step, Value, What,
+    process_batch_observed, replaced_pipelines,
 };
 use serde::{Deserialize, Serialize};
 pub use toml::Table;
@@ -45,6 +45,16 @@ pub fn read(text: &str) -> Result<Table, String> {
 /// The configuration text of a table, without comments or the layout it was read with.
 pub fn render(table: &Table) -> String {
     table.to_string()
+}
+
+/// The pipelines the core builds in, by name, each as a configuration declares it, for the page to draw them
+/// and copy one to change it.
+pub fn built_ins() -> Table {
+    let declared = read(BUILT_IN_PIPELINES).expect("the built-in pipelines are TOML");
+    match declared.get("pipeline") {
+        Some(toml::Value::Table(pipelines)) => pipelines.clone(),
+        _ => Table::new(),
+    }
 }
 
 /// How each stage is declared, for the page to offer the stages and make their forms.

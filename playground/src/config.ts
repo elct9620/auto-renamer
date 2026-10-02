@@ -8,9 +8,6 @@ export interface Table {
   [key: string]: Value
 }
 
-/** The pipelines the core builds in, which a route may name without the configuration defining them. */
-export const BUILT_IN_PIPELINES = ['series-video', 'series-subtitle']
-
 /** A stage as written in `stages`: its name alone, or a one-key table of its name and parameters. */
 export type Stage = string | Table
 
