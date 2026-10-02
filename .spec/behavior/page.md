@@ -361,13 +361,13 @@ The playground page draws a configuration for people who do not read TOML: each 
 | When | the watch `series` is selected |
 | Then | its `dry_run` field is labelled 試運行 with `dry_run` beside it |
 
-## `PGE-045` The canvas sits between the palette and the inspector, above the trees
+## `PGE-045` The canvas sits between the palette and the inspector, above the panel
 
 | Step | Statement |
 | --- | --- |
-| Given | the global configuration shown |
-| When | the page is laid out |
-| Then | the palette, canvas and inspector run left to right above the source and target trees |
+| Given | the page just opened |
+| When | it is laid out |
+| Then | the palette, canvas and inspector run left to right above one panel holding the trees and the results |
 
 ## `PGE-046` Every stage, parameter, setting and single value is named in both languages
 
@@ -785,3 +785,19 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | a simulation that moved one file of `/downloads` to `/video` and left another that nothing claims |
 | When | the changes of each root are counted |
 | Then | `/downloads` and `/video` each count one |
+
+## `PGE-098` A tree's tab counts the files a simulation changed in it
+
+| Step | Statement |
+| --- | --- |
+| Given | the opening example |
+| When | its watch is triggered |
+| Then | the tabs of the source and of the target each show how many of their files changed |
+
+## `PGE-099` Triggering a watch shows its results
+
+| Step | Statement |
+| --- | --- |
+| Given | the source tree shown in the panel |
+| When | the watch is triggered |
+| Then | the panel shows where each file went |

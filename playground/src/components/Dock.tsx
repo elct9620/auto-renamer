@@ -1,8 +1,9 @@
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { Fragment, useState } from 'react'
+import { Fragment, type ReactNode, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { StageName } from '@/components/Fields'
+import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import type { Outcome, SimulatedStep, Simulation } from '../core'
@@ -36,21 +37,48 @@ function Timeline({ outcome }: { outcome: Outcome }) {
   )
 }
 
-export function Output({ fileName, text, status, simulation }: {
+/** One tree the panel offers: its tab and what the tab shows. */
+export interface TreeTab {
+  value: string
+  label: string
+  /** How many of its files the last simulation changed; none before one ran. */
+  changed: number | null
+  content: ReactNode
+}
+
+/** The panel under the canvas: a tab for each tree, each counting the files a simulation changed in it, and
+ * tabs for the results and the configuration text. What triggers a simulation sits beside the tabs. */
+export function Dock({ trees, controls, fileName, text, status, simulation, tab, onTab }: {
+  trees: TreeTab[]
+  controls: ReactNode
   fileName: string
   text: string
   status: { ok: boolean; lines: string[] }
   simulation: Simulation | null
+  tab: string
+  onTab: (tab: string) => void
 }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState<string | null>(null)
   return (
-    <Tabs defaultValue="results" className="flex min-h-0 min-w-0 flex-col p-3">
-      <TabsList>
-        <TabsTrigger value="results">{t('output.results')}</TabsTrigger>
-        <TabsTrigger value="config">{fileName}</TabsTrigger>
-      </TabsList>
-      <TabsContent value="results" className="min-h-0 overflow-auto">
+    <Tabs value={tab} onValueChange={onTab} className="flex min-h-0 min-w-0 flex-col gap-0 border-t">
+      <div className="flex flex-wrap items-center gap-2 border-b px-3 py-1.5">
+        <TabsList>
+          {trees.map((tree) => (
+            <TabsTrigger key={tree.value} value={tree.value} className="gap-1.5">
+              {tree.label}
+              {tree.changed !== null && tree.changed > 0 && <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">{tree.changed}</Badge>}
+            </TabsTrigger>
+          ))}
+          <TabsTrigger value="results">{t('output.results')}</TabsTrigger>
+          <TabsTrigger value="config">{fileName}</TabsTrigger>
+        </TabsList>
+        <div className="ml-auto flex items-center gap-2">{controls}</div>
+      </div>
+      {trees.map((tree) => (
+        <TabsContent key={tree.value} value={tree.value} className="min-h-0">{tree.content}</TabsContent>
+      ))}
+      <TabsContent value="results" className="min-h-0 overflow-auto px-3">
         {simulation === null ? (
           <p className="p-2 text-xs text-muted-foreground">{t('output.empty')}</p>
         ) : (
@@ -81,7 +109,7 @@ export function Output({ fileName, text, status, simulation }: {
           </table>
         )}
       </TabsContent>
-      <TabsContent value="config" className="min-h-0 overflow-auto">
+      <TabsContent value="config" className="min-h-0 overflow-auto px-3">
         <pre className={cn('p-2 text-xs whitespace-pre-wrap break-all', !status.ok && 'text-destructive')}>{text}</pre>
         {status.lines.map((line) => (
           <p key={line} className={status.ok ? 'px-2 text-xs text-amber-600' : 'px-2 text-xs text-destructive'}>{line}</p>

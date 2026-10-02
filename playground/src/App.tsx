@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next'
 
 import { Canvas } from '@/components/Canvas'
 import { Choice } from '@/components/Choice'
+import { Dock } from '@/components/Dock'
 import { Inspector } from '@/components/Inspector'
-import { Output } from '@/components/Output'
 import { Palette } from '@/components/Palette'
 import { TreePanel } from '@/components/TreePanel'
 import { Badge } from '@/components/ui/badge'
@@ -16,7 +16,7 @@ import { type Entry, type Kind, type Simulation, builtIns, check, read, render, 
 import { type Example, EXAMPLES, FIRST } from './examples'
 import type { Selected } from './graph'
 import { LANGUAGES } from './i18n'
-import { FOLDER_CONFIGURATION, foldersUnder, marksOf, rootsOf, startConfiguration, writeFile } from './tree'
+import { FOLDER_CONFIGURATION, changedUnder, foldersUnder, marksOf, rootsOf, startConfiguration, writeFile } from './tree'
 
 // The values the configuration switcher gives the global configuration and a folder still to be configured.
 const GLOBAL = '\u0000global'
@@ -48,6 +48,7 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
   const [entries, setEntries] = useState<Entry[]>(example.entries)
   const [watch, setWatch] = useState(example.watch)
   const [simulation, setSimulation] = useState<Simulation | null>(null)
+  const [tab, setTab] = useState('source')
 
   const folder = entries.find((entry) => entry.path === editing)
   const kind: Kind = folder ? 'folder' : 'global'
@@ -173,6 +174,7 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
     try {
       setSimulation(simulate(globalText, watch, entries))
       setMessage('')
+      setTab('results')
     } catch (error) {
       setSimulation(null)
       setMessage(errorOf(error))
@@ -180,7 +182,7 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
   }
 
   return (
-    <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto_minmax(0,11rem)] bg-background text-foreground">
+    <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_minmax(0,20rem)] bg-background text-foreground">
       <header className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
         <h1 className="mr-2 text-sm font-semibold">Auto Renamer Playground</h1>
         <Choice label={t('editing.label')} className="w-auto" value={editing ?? GLOBAL} options={editable} onChange={choose} />
@@ -200,7 +202,7 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
           onChange={(code) => i18n.changeLanguage(code)} />
       </header>
 
-      <main className="grid min-h-0 grid-cols-[11rem_minmax(0,1fr)_20rem] border-b">
+      <main className="grid min-h-0 grid-cols-[11rem_minmax(0,1fr)_20rem]">
         <aside className="min-h-0 overflow-auto border-r">
           <Palette global={!folder} onAdd={add} />
         </aside>
@@ -214,26 +216,27 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
         </aside>
       </main>
 
-      <section className="grid h-56 min-h-0 grid-cols-[minmax(0,1fr)_10rem_minmax(0,1fr)] border-b">
-        <TreePanel title={t('tree.source')} root={roots.source} entries={entries} marks={marks} editing={editing}
-          starting={render(folderStart(config, watch))} onEdit={editEntries} onOpen={open} />
-        <div className="flex flex-col justify-center gap-2 border-x p-3">
-          <Choice label={t('tree.watch')} value={watch} options={watches.map((name) => ({ value: name, label: name }))}
+      <Dock tab={tab} onTab={setTab} fileName={fileName} text={text} status={status} simulation={simulation}
+        trees={[
+          {
+            value: 'source', label: t('tree.source'), changed: simulation && changedUnder(simulation, roots.source, roots.source),
+            content: <TreePanel title={t('tree.source')} root={roots.source} entries={entries} marks={marks} editing={editing}
+              starting={render(folderStart(config, watch))} onEdit={editEntries} onOpen={open} />,
+          },
+          ...roots.targets.map((root) => ({
+            value: `target:${root}`, label: `${t('tree.target')} ${root}`, changed: simulation && changedUnder(simulation, roots.source, root),
+            content: <TreePanel title={`${t('tree.target')} ${root}`} root={root} entries={simulation?.entries ?? entries} marks={marks}
+              editing={editing} onEdit={editEntries} />,
+          })),
+        ]}
+        controls={<>
+          <Choice label={t('tree.watch')} className="w-36" value={watch} options={watches.map((name) => ({ value: name, label: name }))}
             onChange={setWatch} />
           <Button size="sm" onClick={run} disabled={!runnable || !watches.includes(watch)}><Play />{t('tree.trigger')}</Button>
           {simulation && (
             <Button size="sm" variant="outline" onClick={() => editEntries(() => simulation.entries)}><Check />{t('tree.keep')}</Button>
           )}
-        </div>
-        <div className="flex min-h-0 flex-col overflow-auto">
-          {roots.targets.map((root) => (
-            <TreePanel key={root} title={roots.targets.length > 1 ? `${t('tree.target')} ${root}` : t('tree.target')} root={root}
-              entries={simulation?.entries ?? entries} marks={marks} editing={editing} onEdit={editEntries} />
-          ))}
-        </div>
-      </section>
-
-      <Output fileName={fileName} text={text} status={status} simulation={simulation} />
+        </>} />
     </div>
   )
 }

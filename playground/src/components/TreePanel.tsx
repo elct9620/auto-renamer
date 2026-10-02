@@ -118,9 +118,6 @@ export function TreePanel({ title, root, entries, marks, editing, starting = '',
   }
   return (
     <div role="group" aria-label={title} className="flex min-h-0 flex-col gap-2 p-3">
-      <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {title} <span className="font-mono normal-case">{root}</span>
-      </h2>
       {onOpen && <p className="flex items-center gap-1 text-xs text-muted-foreground"><FileCog className="size-3.5" />{t('tree.hint')}</p>}
       <div className="min-h-0 flex-1 overflow-auto">
         <Branch nodes={treeOf(entries, root)} marks={marks} actions={{ editing, starting, onEdit, onStart: start, onOpen }} />

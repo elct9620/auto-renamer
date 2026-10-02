@@ -18,9 +18,9 @@ function title(page: Page, name: string) {
   return node(page, name).getByText(name, { exact: true })
 }
 
-// The configuration tab is named after whatever is being edited, so it is found by its place.
+// The configuration tab is named after whatever is being edited, so it is found by its file's kind.
 async function configText(page: Page): Promise<string> {
-  await page.getByRole('tab').nth(1).click()
+  await page.getByRole('tab', { name: /\.toml$/ }).click()
   return (await page.getByRole('tabpanel').textContent()) ?? ''
 }
 
@@ -79,6 +79,7 @@ test('choosing the example again brings back its configuration and tree', async 
   await ownSeriesVideo(page)
   await title(page, 'format').click()
   await page.getByRole('button', { name: 'Remove', exact: true }).click()
+  await page.getByRole('tab', { name: /^Source/ }).click()
   const path = page.getByRole('combobox', { name: 'Path of a new file or folder' }).first()
   await path.fill('Omega/01.mkv')
   await page.getByRole('button', { name: 'Add file' }).first().click()
@@ -129,8 +130,8 @@ test('a folder configuration chosen in the tree is edited with the trees still s
   await openAlphaConfiguration(page)
 
   await expect(page.getByText('Folder configuration of /downloads/Alpha')).toBeVisible()
-  await expect(page.getByRole('heading', { name: /^Source/ })).toBeVisible()
-  await expect(page.getByRole('heading', { name: /^Target/ })).toBeVisible()
+  await expect(page.getByRole('tab', { name: /^Source/ })).toBeVisible()
+  await expect(page.getByRole('tab', { name: /^Target/ })).toBeVisible()
 })
 
 // @behavior PGE-039
@@ -194,19 +195,19 @@ test('a key is labelled in the page\'s language beside the CLI\'s key', async ({
 })
 
 // @behavior PGE-045
-test('the canvas sits between the palette and the inspector, above the trees', async ({ page }) => {
+test('the canvas sits between the palette and the inspector, above the panel', async ({ page }) => {
   const box = async (locator: ReturnType<Page['locator']>) => (await locator.boundingBox())!
 
   const palette = await box(page.getByRole('button', { name: 'Add pipeline' }))
   const canvas = await box(page.locator('.react-flow'))
   const inspector = await box(page.getByRole('heading', { name: 'Defaults' }))
-  const source = await box(page.getByRole('heading', { name: /^Source/ }))
-  const target = await box(page.getByRole('heading', { name: /^Target/ }))
+  const source = await box(page.getByRole('tab', { name: /^Source/ }))
+  const results = await box(page.getByRole('tab', { name: 'Results' }))
 
   expect(palette.x).toBeLessThan(canvas.x)
   expect(canvas.x + canvas.width).toBeLessThanOrEqual(inspector.x)
   expect(source.y).toBeGreaterThan(canvas.y + canvas.height - 1)
-  expect(source.x).toBeLessThan(target.x)
+  expect(results.y).toBe(source.y)
 })
 
 // @behavior PGE-048
@@ -221,6 +222,7 @@ test('a folder configuration edited in the form applies in the next simulation',
   await value.blur()
 
   await page.getByRole('button', { name: 'Trigger' }).click()
+  await page.getByRole('tab', { name: /^Target/ }).click()
 
   await expect(page.getByText('Omega s01e12.mkv', { exact: true })).toBeVisible()
 })
@@ -494,4 +496,21 @@ test('a refused file moves into a target picked from those declared', async ({ p
   await page.getByRole('option', { name: 'conflict' }).click()
 
   expect(await configText(page)).toMatch(/\[watch\.series\.routes\.rejected\]\s+move = "conflict"/)
+})
+
+// @behavior PGE-098
+test('a tree\'s tab counts the files a simulation changed in it', async ({ page }) => {
+  await page.getByRole('button', { name: 'Trigger' }).click()
+
+  await expect(page.getByRole('tab', { name: 'Source 6' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Target /downloads 6' })).toBeVisible()
+})
+
+// @behavior PGE-099
+test('triggering a watch shows its results', async ({ page }) => {
+  await expect(source(page)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Trigger' }).click()
+
+  await expect(page.getByRole('cell', { name: 'Alpha/[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv' })).toBeVisible()
 })
