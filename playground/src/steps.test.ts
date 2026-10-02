@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import './setup.test-helper'
 import { simulate } from './core'
-import { afterStage, changes } from './steps'
+import { afterStage, changes, claimedBy } from './steps'
 
 const CONFIG = `[pipeline.video]
 stages = [{ number = { into = "episode" } }, { format = "Show {episode}" }]
@@ -58,5 +58,25 @@ routes = [{ pipeline = "video" }]
     const { ran } = afterStage(outcomes, 'video', 0, null, true)
 
     expect(ran.map(({ origin }) => origin)).toEqual(['a.mkv'])
+  })
+})
+
+describe('a claim', () => {
+  // @behavior PGE-087
+  it('tells a claim by a rejected route without a pipeline apart', () => {
+    const config = `[pipeline.video]
+stages = [{ filter = { ext = ["mkv"] } }, { format = "x" }, { filter = { glob = "never*" } }]
+
+[target.conflict]
+path = "/conflict"
+
+[watch.series]
+source = "/downloads"
+routes = [{ pipeline = "video", rejected = { move = "conflict" } }]
+`
+    const { outcomes } = simulate(config, 'series', [{ path: '/downloads/a.mkv', folder: false, modified: 0, text: '' }])
+    const claims = outcomes[0].steps.filter((step) => step.stage === null)
+
+    expect(claims.map(claimedBy)).toEqual(['video', null])
   })
 })

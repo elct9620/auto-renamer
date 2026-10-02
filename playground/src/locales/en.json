@@ -81,6 +81,7 @@
     "to": "To",
     "why": "Why",
     "claimed": "Claimed by {{pipeline}}",
+    "claimedRejected": "Claimed by the rejected route",
     "steps": "Steps of {{file}}"
   },
   "what": {

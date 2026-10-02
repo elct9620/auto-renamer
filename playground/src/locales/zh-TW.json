@@ -81,6 +81,7 @@
     "to": "目的地",
     "why": "原因",
     "claimed": "由 {{pipeline}} 認領",
+    "claimedRejected": "由失敗路線認領",
     "steps": "{{file}} 的處理步驟"
   },
   "what": {

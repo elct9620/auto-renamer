@@ -697,3 +697,11 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | a global configuration routing the built-in `series-video` without defining it |
 | When | `series-video` is overridden in a folder |
 | Then | the folder configuration defines `series-video` with the stages the core builds in |
+
+## `PGE-087` A file a rejected route claims without a pipeline is told so
+
+| Step | Statement |
+| --- | --- |
+| Given | a route whose pipeline refuses a file, and whose rejected route runs no pipeline |
+| When | the watch is simulated |
+| Then | the file's timeline says the rejected route claimed it, rather than a pipeline without a name |

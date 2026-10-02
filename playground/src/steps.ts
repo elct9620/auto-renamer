@@ -2,6 +2,11 @@
 
 import type { Outcome, SimulatedStep } from './core'
 
+/** The pipeline that claimed a file at a step; none when a rejected route without a pipeline claimed it. */
+export function claimedBy(step: SimulatedStep): string | null {
+  return step.pipeline === '' ? null : step.pipeline
+}
+
 /** One thing a step changed: a field, or the plan under the name `plan`; `from` is absent for a new value. */
 export interface Change {
   key: string

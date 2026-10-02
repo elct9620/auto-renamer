@@ -5,18 +5,22 @@ import { useTranslation } from 'react-i18next'
 import { StageName } from '@/components/Fields'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import type { Outcome, Simulation } from '../core'
-import { changes } from '../steps'
+import type { Outcome, SimulatedStep, Simulation } from '../core'
+import { changes, claimedBy } from '../steps'
 
 /** How the pipeline planned one file: the claim, then each stage it reached with only what that stage changed. */
 function Timeline({ outcome }: { outcome: Outcome }) {
   const { t } = useTranslation()
+  const claim = (step: SimulatedStep) => {
+    const pipeline = claimedBy(step)
+    return pipeline === null ? t('output.claimedRejected') : t('output.claimed', { pipeline })
+  }
   return (
     <ol aria-label={t('output.steps', { file: outcome.origin })} className="grid gap-1 py-1 pl-6">
       {outcome.steps.map((step, index) => (
         <li key={`${step.pipeline}:${step.stage}`} className="flex flex-wrap items-baseline gap-x-2">
           <span className="font-sans font-medium">
-            {step.name === null ? t('output.claimed', { pipeline: step.pipeline }) : <StageName name={step.name} />}
+            {step.name !== null ? <StageName name={step.name} /> : claim(step)}
           </span>
           {step.stop !== null && (
             <span className="text-destructive">{step.stop}</span>
