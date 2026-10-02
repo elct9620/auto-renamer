@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import type { Outcome, SimulatedStep, Simulation } from '../core'
 import { changes, claimedBy } from '../steps'
-import { TableHead } from './TableHead'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 /** How the pipeline planned one file: the claim, then each stage it reached with only what that stage changed. */
 function Timeline({ outcome }: { outcome: Outcome }) {
@@ -83,29 +83,34 @@ export function Dock({ trees, controls, fileName, text, status, simulation, tab,
         {simulation === null ? (
           <p className="p-2 text-xs text-muted-foreground">{t('output.empty')}</p>
         ) : (
-          <table className="w-full text-left font-mono text-xs">
-            <TableHead columns={[t('output.file'), t('output.became'), t('output.to'), t('output.why')]} />
-            <tbody>
+          <Table className="font-mono text-xs">
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('output.file')}</TableHead><TableHead>{t('output.became')}</TableHead>
+                <TableHead>{t('output.to')}</TableHead><TableHead>{t('output.why')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {simulation.outcomes.map((outcome) => (
                 <Fragment key={outcome.origin}>
-                  <tr className="border-t">
-                    <td className="p-1">
+                  <TableRow>
+                    <TableCell>
                       <button className="flex items-center gap-1 text-left" aria-expanded={open === outcome.origin}
                         disabled={outcome.steps.length === 0} onClick={() => setOpen(open === outcome.origin ? null : outcome.origin)}>
                         {open === outcome.origin ? <ChevronDown className="size-3.5 shrink-0" /> : <ChevronRight className="size-3.5 shrink-0" />}
                         {outcome.origin}
                       </button>
-                    </td>
-                    <td className="p-1">{t(`what.${outcome.what}`, outcome.what)}</td>
-                    <td className="p-1">{outcome.to}</td><td className="p-1">{outcome.reason}</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell>{t(`what.${outcome.what}`, outcome.what)}</TableCell>
+                    <TableCell>{outcome.to}</TableCell><TableCell>{outcome.reason}</TableCell>
+                  </TableRow>
                   {open === outcome.origin && (
-                    <tr ref={(row) => row?.scrollIntoView({ block: 'nearest' })}><td colSpan={4}><Timeline outcome={outcome} /></td></tr>
+                    <TableRow ref={(row) => row?.scrollIntoView({ block: 'nearest' })}><TableCell colSpan={4}><Timeline outcome={outcome} /></TableCell></TableRow>
                   )}
                 </Fragment>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         )}
       </TabsContent>
       <TabsContent value="config" className="min-h-0 overflow-auto px-3">

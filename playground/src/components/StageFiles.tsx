@@ -3,15 +3,15 @@ import { useTranslation } from 'react-i18next'
 
 import type { Simulation } from '../core'
 import { type Change, type StageView, afterStage } from '../steps'
-import { TableHead } from './TableHead'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 /** One field a stage changed: its name, the value before and the value after. */
 function ChangeCells({ change }: { change: Change }) {
   return (
     <>
-      <td className="p-1">{change.key}</td>
-      <td className="p-1 break-all text-muted-foreground">{change.from}</td>
-      <td className="p-1 break-all">{change.to}</td>
+      <TableCell>{change.key}</TableCell>
+      <TableCell className="whitespace-normal break-all text-muted-foreground">{change.from}</TableCell>
+      <TableCell className="whitespace-normal break-all">{change.to}</TableCell>
     </>
   )
 }
@@ -24,31 +24,36 @@ export function StageFiles({ simulation, stage }: { simulation: Simulation; stag
   if (ran.length === 0) return <p className="p-2 text-xs text-muted-foreground">{t('output.none')}</p>
   return (
     <>
-      <table className="w-full text-left font-mono text-xs">
-        <TableHead columns={[t('output.file'), t('output.field'), t('output.before'), t('output.after')]} />
-        <tbody>
+      <Table className="font-mono text-xs">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-1/2">{t('output.file')}</TableHead><TableHead>{t('output.field')}</TableHead>
+            <TableHead>{t('output.before')}</TableHead><TableHead>{t('output.after')}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {ran.map(({ origin, step, changes }) => {
             const rows = step.stop !== null || changes.length === 0 ? 1 : changes.length
             return (
               <Fragment key={origin}>
-                <tr className="border-t align-top">
-                  <td className="p-1 break-all" rowSpan={rows}>{origin}</td>
+                <TableRow className="align-top">
+                  <TableCell className="whitespace-normal break-all" rowSpan={rows}>{origin}</TableCell>
                   {step.stop !== null ? (
-                    <td className="p-1 text-destructive" colSpan={3}>{step.stop}</td>
+                    <TableCell className="whitespace-normal text-destructive" colSpan={3}>{step.stop}</TableCell>
                   ) : changes.length === 0 ? (
-                    <td className="p-1 text-muted-foreground" colSpan={3}>{t('output.unchanged')}</td>
+                    <TableCell className="text-muted-foreground" colSpan={3}>{t('output.unchanged')}</TableCell>
                   ) : (
                     <ChangeCells change={changes[0]} />
                   )}
-                </tr>
+                </TableRow>
                 {step.stop === null && changes.slice(1).map((change) => (
-                  <tr key={change.key} className="align-top"><ChangeCells change={change} /></tr>
+                  <TableRow key={change.key} className="align-top"><ChangeCells change={change} /></TableRow>
                 ))}
               </Fragment>
             )
           })}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
       {taken.length > 0 && <p className="p-2 text-xs text-muted-foreground">{t('output.taken', { count: taken.length })}</p>}
     </>
   )

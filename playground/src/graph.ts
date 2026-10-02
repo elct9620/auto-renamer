@@ -73,8 +73,11 @@ function heightOf(count: number): number {
   return HEADER + STEP * count + PAD
 }
 
-/** A pipeline is one row as high as a single stage, and as wide as its stages laid side by side. */
-const PIPELINE_HEIGHT = heightOf(1)
+/** Room under a stage for the count of files a simulation ran through it. */
+export const APPENDIX = 32
+
+/** A pipeline is one row as high as a single stage and its count, and as wide as its stages laid side by side. */
+const PIPELINE_HEIGHT = heightOf(1) + APPENDIX
 
 function widthOf(count: number): number {
   return Math.max(GROUP, PAD + STAGE_STEP * count - STAGE_GAP + PAD)

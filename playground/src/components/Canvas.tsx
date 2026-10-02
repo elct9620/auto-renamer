@@ -57,7 +57,7 @@ import {
   transferStage,
 } from '../config'
 import { type Simulation, builtIns, read, stages } from '../core'
-import { type Joint, type Layout, type Move, type NodeData, type Selected, absolute, dropAt, laidOut, relaid, routeAt, toGraph } from '../graph'
+import { APPENDIX, type Joint, type Layout, type Move, type NodeData, type Selected, absolute, dropAt, laidOut, relaid, routeAt, toGraph } from '../graph'
 import { afterStage } from '../steps'
 
 /** The type a stage dragged from the palette carries its name under. */
@@ -113,7 +113,7 @@ function StageNode({ data }: NodeProps<Node<NodeData>>) {
       <Handle type="source" position={Position.Right} isConnectable={false} />
       {ran !== null && <NodeAppendix position="bottom" className="text-xs text-muted-foreground">{t('canvas.ran', { count: ran })}</NodeAppendix>}
       {simulation && stage && (
-        <NodeToolbar position={Position.Bottom} offset={28}>
+        <NodeToolbar position={Position.Bottom} offset={APPENDIX + 16}>
           <section aria-label={t('canvas.after', { stage: data.label })} className="max-h-60 w-[32rem] overflow-auto rounded-md border bg-popover p-2 shadow-md">
             <StageFiles simulation={simulation} stage={stage} />
           </section>
