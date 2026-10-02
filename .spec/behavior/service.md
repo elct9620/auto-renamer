@@ -158,3 +158,59 @@ Processing a batch is what a ready batch of settled files turns into: the files 
 | Given | a watch running `video` and `subtitle`, and a folder configuration in the unit declaring `video` |
 | When | the pipelines it replaces are asked for that unit |
 | Then | only `video` is named |
+
+## `SVC-022` A refused file goes to its route's rejected route with its own name
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch whose route formats the name as `{show}` into a target holding `Show/Alpha.mkv`, with `rejected` moving into a second target, and the file `Show/x.mkv` |
+| When | the batch is processed |
+| Then | the file is moved to `Show/x.mkv` under the second target |
+
+## `SVC-023` A rejected file carries the plan it had and why it was refused
+
+| Step | Statement |
+| --- | --- |
+| Given | the same watch, whose rejected route formats the name from `reason` and from the file name in `planned` |
+| When | the batch is processed |
+| Then | the file is moved to `Show/move Alpha.mkv` under the second target |
+
+## `SVC-024` A rejected file keeps the fields found before it was refused
+
+| Step | Statement |
+| --- | --- |
+| Given | the same watch, whose route first numbers `episode`, and whose rejected route formats the name as `{episode}`, and the file `Show/x 07.mkv` |
+| When | the batch is processed |
+| Then | the file is moved to `Show/7.mkv` under the second target |
+
+## `SVC-025` A rejected route takes only the files its pipeline claims
+
+| Step | Statement |
+| --- | --- |
+| Given | the same watch, whose rejected route's pipeline takes only the reason `format` |
+| When | the batch is processed |
+| Then | the file stays in the source, refused by `move` |
+
+## `SVC-026` A file refused again on its rejected route stays
+
+| Step | Statement |
+| --- | --- |
+| Given | the same watch, whose rejected route formats the name from a field the file does not have |
+| When | the batch is processed |
+| Then | the file stays in the source, refused by `format` |
+
+## `SVC-027` A rejected route cleans up only when it says so
+
+| Step | Statement |
+| --- | --- |
+| Given | the same watch, whose route cleans up and whose rejected route does not, and the file `Show/Rel/x.mkv` of the unit `Show/Rel` |
+| When | the batch is processed |
+| Then | the file is moved under the second target and `Show/Rel` is kept |
+
+## `SVC-028` A refused file is reported with the plan it had
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch whose route formats the name as `{show}` into a target holding `Show/Alpha.mkv`, and the file `Show/x.mkv` |
+| When | the batch is processed |
+| Then | the file is reported as refused, naming `move` and the plan `Show/Alpha.mkv` |

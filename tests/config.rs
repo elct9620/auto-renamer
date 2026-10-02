@@ -359,3 +359,30 @@ fn should_refuse_a_target_without_a_path() {
 
     assert!(names(&refused(text), "path"));
 }
+
+// @behavior CFG-036
+#[test]
+fn should_read_where_a_route_sends_the_files_it_refused() {
+    let text = format!(
+        "{PIPELINES}\n[target.conflict]\npath = \"/conflict\"\n\n[watch.series]\nsource = \"/downloads\"\nroutes = [{{ pipeline = \"video\", move = \"library\", rejected = {{ move = \"conflict\" }} }}]\n"
+    );
+
+    let watch = read(&text).remove(0);
+    let rejected = watch.routes()[0]
+        .rejected
+        .as_ref()
+        .expect("the route has a rejected route");
+
+    assert_eq!(rejected.target.as_deref(), Some(Path::new("/conflict")));
+    assert_eq!(rejected.pipeline, None);
+}
+
+// @behavior CFG-037
+#[test]
+fn should_refuse_a_rejected_route_of_a_rejected_route() {
+    let text = format!(
+        "{PIPELINES}\n[watch.series]\nsource = \"/downloads\"\nroutes = [{{ pipeline = \"video\", rejected = {{ rejected = {{}} }} }}]\n"
+    );
+
+    assert!(names(&refused(&text), "rejected"));
+}

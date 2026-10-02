@@ -4,10 +4,11 @@ use std::collections::HashMap;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::config::{FOLDER_CONFIG, FolderConfig, MAX_FOLDER_CONFIG_BYTES, Route, Watch};
+use crate::config::{FOLDER_CONFIG, FolderConfig, MAX_FOLDER_CONFIG_BYTES, Watch};
 use crate::context::Target;
 use crate::effects::{Applied, Done, Effect, Kind, Roots, SkipReason, Tree, apply_effects};
-use crate::engine::{Step, Verdict, plan};
+use crate::engine::{Planned, Step, Takes, Verdict, plan};
+use crate::pipeline::Pipeline;
 use crate::record::Record;
 
 /// The target as a stage asks for it, answered by the tree under the root of the target.
@@ -143,30 +144,36 @@ fn process(
         }
     }
 
-    let pipelines = effective.pipelines();
-    let targets: Vec<TargetIn> = effective
-        .routes()
+    let legs = legs_of(&effective);
+    let targets: Vec<TargetIn> = legs
         .iter()
-        .map(|route| TargetIn {
+        .map(|leg| TargetIn {
             tree,
-            root: root_of(route, &effective),
+            root: leg.root(&effective),
         })
         .collect();
-    let planned: Vec<_> = pipelines
+    let planned: Vec<Planned> = legs
         .iter()
         .zip(&targets)
-        .map(|((name, pipeline), target)| (name.as_str(), pipeline, target as &dyn Target))
+        .map(|(leg, target)| Planned {
+            name: &leg.name,
+            pipeline: &leg.pipeline,
+            target,
+            takes: leg.takes,
+        })
         .collect();
     let judged = plan(&planned, records, observe);
     for entry in judged {
         let what = match (entry.verdict, entry.pipeline) {
             (Verdict::Planned(record), Some(index)) => {
-                let route = &effective.routes()[index];
-                apply_planned(tree, route, &record, unit, &effective, renames)
+                apply_planned(tree, &legs[index], &record, unit, &effective, renames)
             }
-            (Verdict::Rejected(stop), _) => {
-                What::Refused(format!("{}: {}", stop.stage, stop.reason))
-            }
+            (Verdict::Rejected(stop), _) => What::Refused(format!(
+                "{}: {}, planned as `{}`",
+                stop.stage,
+                stop.reason,
+                stop.planned.display()
+            )),
             _ => What::Unclaimed,
         };
         processed.push(Processed {
@@ -177,16 +184,60 @@ fn process(
     processed
 }
 
-/// Where a route moves its files: its target, or the source when it renames them in place.
-fn root_of(route: &Route, watch: &Watch) -> PathBuf {
-    route.target.clone().unwrap_or_else(|| watch.source.clone())
+/// One pipeline of a watch as its batch is planned: a route's own, or the one its rejected route takes the
+/// refused files with, together with where it moves them and what it does to them.
+struct Leg {
+    name: String,
+    pipeline: Pipeline,
+    target: Option<PathBuf>,
+    effects: Vec<Effect>,
+    takes: Takes,
 }
 
-/// Runs the effects of the route on a planned file, unless it has been renamed in place too many times
+impl Leg {
+    /// Where the leg moves its files: its target, or the source when it renames them in place.
+    fn root(&self, watch: &Watch) -> PathBuf {
+        self.target.clone().unwrap_or_else(|| watch.source.clone())
+    }
+}
+
+/// The routes of a watch in their order, and after them the rejected routes, each taking what its route
+/// refused.
+fn legs_of(watch: &Watch) -> Vec<Leg> {
+    let routes = watch.routes();
+    let mut legs: Vec<Leg> = routes
+        .iter()
+        .map(|route| Leg {
+            name: route.pipeline.clone(),
+            pipeline: watch.pipeline(&route.pipeline).clone(),
+            target: route.target.clone(),
+            effects: route.effects(),
+            takes: Takes::Fresh,
+        })
+        .collect();
+    for (index, route) in routes.iter().enumerate() {
+        if let Some(rejected) = &route.rejected {
+            legs.push(Leg {
+                name: rejected.pipeline.clone().unwrap_or_default(),
+                pipeline: rejected
+                    .pipeline
+                    .as_deref()
+                    .map(|name| watch.pipeline(name).clone())
+                    .unwrap_or_default(),
+                target: rejected.target.clone(),
+                effects: rejected.effects(),
+                takes: Takes::RefusedBy(index),
+            });
+        }
+    }
+    legs
+}
+
+/// Runs the effects of the leg on a planned file, unless it has been renamed in place too many times
 /// in a row, and keeps count of its renames in place.
 fn apply_planned(
     tree: &dyn Tree,
-    route: &Route,
+    leg: &Leg,
     record: &Record,
     unit: &Path,
     watch: &Watch,
@@ -194,9 +245,9 @@ fn apply_planned(
 ) -> What {
     let roots = Roots {
         source: watch.source.clone(),
-        target: root_of(route, watch),
+        target: leg.root(watch),
     };
-    let in_place = route.target.is_none();
+    let in_place = leg.target.is_none();
     let origin = record.origin();
     let count = renames.count(origin);
     if in_place && record.plan() != origin && count >= MAX_IN_PLACE_RENAMES {
@@ -204,7 +255,7 @@ fn apply_planned(
             "renamed in place {count} times in a row; the pipeline may name its own result again"
         ));
     }
-    let what = effects_of(tree, &route.effects(), record, unit, &roots, watch.dry_run);
+    let what = effects_of(tree, &leg.effects, record, unit, &roots, watch.dry_run);
     if in_place {
         match &what {
             What::Moved(to) | What::MovedThenFailed { to, .. } => {

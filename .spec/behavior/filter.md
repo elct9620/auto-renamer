@@ -61,3 +61,11 @@ A filter decides whether a file goes on down its pipeline. A file it lets throug
 | Given | a filter for the extension `mkv` and the name pattern `Beta*` and a record for `Alpha.mkv` |
 | When | the stage is applied |
 | Then | the record is refused, naming the stage `filter` |
+
+## `FLT-008` A reason filter takes only files refused for those reasons
+
+| Step | Statement |
+| --- | --- |
+| Given | a filter for the reason `move`, a record whose `reason` is `move`, and a record whose `reason` is `format` |
+| When | the stage is applied to each |
+| Then | the first goes on unchanged and the second is refused, naming the stage `filter` |

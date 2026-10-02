@@ -7,8 +7,8 @@ use crate::stages::{DeclareError, Declared, Filter};
 /// The most stages a pipeline may hold, because a declaration may come from downloaded content.
 const MAX_STAGES: usize = 64;
 
-/// The ordered stages a watch applies to the files it claims.
-#[derive(Debug, Clone)]
+/// The ordered stages a route applies to the files it claims; with none, it takes every file as it is.
+#[derive(Debug, Clone, Default)]
 pub struct Pipeline {
     stages: Vec<Declared>,
 }

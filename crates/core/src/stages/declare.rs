@@ -98,7 +98,12 @@ use ParameterKind::{Boolean, Integer, Text, Texts};
 static DECLARATIONS: &[Declaration] = &[
     stage(
         "filter",
-        &[may("ext", Texts), may("glob", Text), may("invert", Boolean)],
+        &[
+            may("ext", Texts),
+            may("glob", Text),
+            may("reason", Texts),
+            may("invert", Boolean),
+        ],
         r#"{ ext = ["mkv", "mp4"] }"#,
         filter,
     ),
@@ -382,12 +387,21 @@ fn filter(value: Option<&Toml>) -> Result<Declared, DeclareError> {
         Some(source) => Some(glob(&args, "glob", &source)?),
         None => None,
     };
+    let reason = args.strings("reason")?.unwrap_or_default();
     let invert = args.boolean("invert")?.unwrap_or(false);
-    if ext.is_empty() && glob.is_none() {
-        return Err(args.invalid("ext", "needs `ext` or `glob` to say which files it means"));
+    if ext.is_empty() && glob.is_none() && reason.is_empty() {
+        return Err(args.invalid(
+            "ext",
+            "needs `ext`, `glob` or `reason` to say which files it means",
+        ));
     }
     args.finish()?;
-    Ok(Declared::Filter(Filter { ext, glob, invert }))
+    Ok(Declared::Filter(Filter {
+        ext,
+        glob,
+        reason,
+        invert,
+    }))
 }
 
 fn number(value: Option<&Toml>) -> Result<Declared, DeclareError> {

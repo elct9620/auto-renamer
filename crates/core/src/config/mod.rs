@@ -96,21 +96,51 @@ pub struct Route {
     pub pipeline: String,
     pub target: Option<PathBuf>,
     pub cleanup: Option<Cleanup>,
+    pub rejected: Option<RejectedRoute>,
+}
+
+/// Where a route sends the files it refused: the pipeline that may take them, or none to take every one
+/// as it is, the target root it moves them to, or none to rename them in place, and the folders its
+/// cleanup keeps.
+#[derive(Debug, Clone)]
+pub struct RejectedRoute {
+    pub pipeline: Option<String>,
+    pub target: Option<PathBuf>,
+    pub cleanup: Option<Cleanup>,
 }
 
 impl Route {
     /// What the route does to a file it planned: the move, then the cleanup if it has one.
     pub fn effects(&self) -> Vec<Effect> {
-        let mut effects = vec![Effect::Move];
-        effects.extend(self.cleanup.clone().map(Effect::Cleanup));
-        effects
+        effects_of(&self.cleanup)
     }
 }
 
-/// A route as it is written, before its pipeline and target are looked up.
+impl RejectedRoute {
+    /// What the rejected route does to a file it planned: the move, then the cleanup if it has one.
+    pub fn effects(&self) -> Vec<Effect> {
+        effects_of(&self.cleanup)
+    }
+}
+
+fn effects_of(cleanup: &Option<Cleanup>) -> Vec<Effect> {
+    let mut effects = vec![Effect::Move];
+    effects.extend(cleanup.clone().map(Effect::Cleanup));
+    effects
+}
+
+/// A route as it is written, before its pipelines and targets are looked up.
 #[derive(Debug, Clone)]
 struct Written {
     pipeline: String,
+    target: Option<String>,
+    cleanup: Option<Cleanup>,
+    rejected: Option<WrittenRejected>,
+}
+
+#[derive(Debug, Clone)]
+struct WrittenRejected {
+    pipeline: Option<String>,
     target: Option<String>,
     cleanup: Option<Cleanup>,
 }
@@ -240,6 +270,25 @@ impl Config {
 }
 
 impl Watch {
+    /// Every pipeline the routes name, their rejected routes' included.
+    fn pipeline_names(&self) -> impl Iterator<Item = &str> {
+        self.routes.iter().flat_map(|route| {
+            std::iter::once(route.pipeline.as_str()).chain(
+                route
+                    .rejected
+                    .as_ref()
+                    .and_then(|rejected| rejected.pipeline.as_deref()),
+            )
+        })
+    }
+
+    /// The pipeline a route names, which reading the configuration found defined.
+    pub fn pipeline(&self, name: &str) -> &Pipeline {
+        self.definitions
+            .get(name)
+            .expect("a route names a pipeline that reading the configuration found defined")
+    }
+
     /// The routes of the watch, in the order they claim.
     pub fn routes(&self) -> &[Route] {
         &self.routes
@@ -264,7 +313,7 @@ impl Watch {
         for folder in folders {
             watch.vars.extend(folder.vars.clone());
             for (name, pipeline) in &folder.pipelines {
-                if watch.routes.iter().any(|route| &route.pipeline == name) {
+                if watch.pipeline_names().any(|named| named == name) {
                     watch.definitions.insert(name.clone(), pipeline.clone());
                 }
             }
@@ -336,8 +385,18 @@ fn read_routes(reader: &mut Reader<String>) -> Result<Option<Vec<Written>>, Conf
             let mut route = table_reader("routes".to_string(), entry)?;
             let pipeline = route.required_string("pipeline")?;
             let target = route.string("move")?;
-            let cleanup = match route.table("cleanup")? {
-                Some(table) => Some(read_cleanup(Reader::new("cleanup".to_string(), table))?),
+            let cleanup = read_route_cleanup(&mut route)?;
+            let rejected = match route.table("rejected")? {
+                Some(table) => {
+                    let mut rejected = Reader::new("rejected".to_string(), table);
+                    let written = WrittenRejected {
+                        pipeline: rejected.string("pipeline")?,
+                        target: rejected.string("move")?,
+                        cleanup: read_route_cleanup(&mut rejected)?,
+                    };
+                    rejected.finish()?;
+                    Some(written)
+                }
                 None => None,
             };
             route.finish()?;
@@ -345,10 +404,18 @@ fn read_routes(reader: &mut Reader<String>) -> Result<Option<Vec<Written>>, Conf
                 pipeline,
                 target,
                 cleanup,
+                rejected,
             })
         })
         .collect::<Result<Vec<_>, _>>()
         .map(Some)
+}
+
+fn read_route_cleanup(route: &mut Reader<String>) -> Result<Option<Cleanup>, ConfigError> {
+    match route.table("cleanup")? {
+        Some(table) => read_cleanup(Reader::new("cleanup".to_string(), table)).map(Some),
+        None => Ok(None),
+    }
 }
 
 fn read_cleanup(mut reader: Reader<String>) -> Result<Cleanup, ConfigError> {
@@ -452,27 +519,46 @@ fn build_watch(
         .unwrap_or_default()
         .into_iter()
         .map(|written| {
-            if !definitions.contains_key(&written.pipeline) {
-                return Err(invalid(
-                    &scope,
-                    "routes",
-                    format!("the pipeline `{}` is not defined", written.pipeline),
-                ));
-            }
-            let target = match written.target {
-                Some(target) => Some(targets.get(&target).cloned().ok_or_else(|| {
+            let defined = |pipeline: &String| {
+                if definitions.contains_key(pipeline) {
+                    Ok(())
+                } else {
+                    Err(invalid(
+                        &scope,
+                        "routes",
+                        format!("the pipeline `{pipeline}` is not defined"),
+                    ))
+                }
+            };
+            let declared = |target: Option<String>| match target {
+                Some(target) => targets.get(&target).cloned().map(Some).ok_or_else(|| {
                     invalid(
                         &scope,
                         "routes",
                         format!("the target `{target}` is not declared"),
                     )
-                })?),
+                }),
+                None => Ok(None),
+            };
+            defined(&written.pipeline)?;
+            let rejected = match written.rejected {
+                Some(rejected) => {
+                    if let Some(pipeline) = &rejected.pipeline {
+                        defined(pipeline)?;
+                    }
+                    Some(RejectedRoute {
+                        pipeline: rejected.pipeline,
+                        target: declared(rejected.target)?,
+                        cleanup: rejected.cleanup,
+                    })
+                }
                 None => None,
             };
             Ok(Route {
                 pipeline: written.pipeline,
-                target,
+                target: declared(written.target)?,
                 cleanup: written.cleanup,
+                rejected,
             })
         })
         .collect::<Result<Vec<_>, _>>()?;

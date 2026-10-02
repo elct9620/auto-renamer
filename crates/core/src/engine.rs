@@ -1,10 +1,10 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use crate::context::{Context, Earlier, Target};
 use crate::pipeline::Pipeline;
 use crate::record::Record;
-use crate::stages::{Batch, Flow, Stop};
+use crate::stages::{Batch, File, Flow, Stop};
 
 /// What a batch made of one file.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -51,6 +51,23 @@ struct Outcome {
     stopped: Result<(), Stop>,
 }
 
+/// One pipeline as a batch is planned through it: its name, its stages, the target it moves into, and
+/// which files it takes.
+pub(crate) struct Planned<'a> {
+    pub name: &'a str,
+    pub pipeline: &'a Pipeline,
+    pub target: &'a dyn Target,
+    pub takes: Takes,
+}
+
+/// The files a pipeline takes: those no pipeline before it claimed, or those the pipeline at an earlier
+/// place refused, as a rejected route takes them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Takes {
+    Fresh,
+    RefusedBy(usize),
+}
+
 /// Plans a whole batch through pipelines that all look into one target, in the order they are listed.
 ///
 /// Files are taken in the order of their paths, each path at most once in a batch. Each is claimed by the
@@ -78,98 +95,87 @@ pub fn plan_batch_observed(
     plan(&into_one(pipelines, target), records, Some(observe))
 }
 
-/// Pipelines that all look into the same target.
-fn into_one<'a>(
-    pipelines: &'a [(String, Pipeline)],
-    target: &'a dyn Target,
-) -> Vec<(&'a str, &'a Pipeline, &'a dyn Target)> {
+/// Pipelines that all look into the same target, each taking the files no pipeline before it claimed.
+fn into_one<'a>(pipelines: &'a [(String, Pipeline)], target: &'a dyn Target) -> Vec<Planned<'a>> {
     pipelines
         .iter()
-        .map(|(name, pipeline)| (name.as_str(), pipeline, target))
+        .map(|(name, pipeline)| Planned {
+            name,
+            pipeline,
+            target,
+            takes: Takes::Fresh,
+        })
         .collect()
 }
 
-/// Plans a batch through pipelines, each looking into the target of its route, telling the steps only when
-/// someone observes them, so planning without an observer keeps nothing for them.
+/// Plans a batch through pipelines, each looking into its own target, telling the steps only when someone
+/// observes them, so planning without an observer keeps nothing for them.
+///
+/// A pipeline that takes what an earlier one refused runs after every pipeline taking fresh files, on the
+/// refused records restarted from their origins; what it refuses in turn stays refused.
 pub(crate) fn plan(
-    pipelines: &[(&str, &Pipeline, &dyn Target)],
+    pipelines: &[Planned],
     records: Vec<Record>,
     mut observe: Option<&mut dyn FnMut(Step)>,
 ) -> Vec<Judged> {
-    let Some(&(_, _, first)) = pipelines.first() else {
+    let Some(first) = pipelines.first() else {
         let mut judged = unclaimed(records);
         judged.sort_by(|a, b| a.origin.cmp(&b.origin));
         return judged;
     };
-    let mut context = Context::new(first);
+    let sends_on: HashSet<usize> = pipelines
+        .iter()
+        .filter_map(|planned| match planned.takes {
+            Takes::RefusedBy(index) => Some(index),
+            Takes::Fresh => None,
+        })
+        .collect();
+    let mut context = Context::new(first.target);
     let mut waiting = records;
-    let mut outcomes = Vec::new();
+    let mut refused: HashMap<usize, Vec<Record>> = HashMap::new();
+    let mut outcomes: BTreeMap<PathBuf, Outcome> = BTreeMap::new();
 
-    for (index, &(name, pipeline, target)) in pipelines.iter().enumerate() {
-        context.enter(target);
-        let (filters, rest) = pipeline.split_at_claim();
-        let (claimed, unclaimed): (Vec<Record>, Vec<Record>) = waiting
+    for (index, planned) in pipelines.iter().enumerate() {
+        context.enter(planned.target);
+        let offered = match planned.takes {
+            Takes::Fresh => std::mem::take(&mut waiting),
+            Takes::RefusedBy(earlier) => refused.remove(&earlier).unwrap_or_default(),
+        };
+        let (filters, _) = planned.pipeline.split_at_claim();
+        let (claimed, passed): (Vec<Record>, Vec<Record>) = offered
             .into_iter()
             .partition(|record| filters.iter().all(|filter| filter.accepts(record)));
-        waiting = unclaimed;
+        if planned.takes == Takes::Fresh {
+            waiting = passed;
+        }
 
-        // A file is told up to the step that stopped it, and no more after.
-        let mut stopped = HashSet::new();
-        let mut tell = |batch: &Batch,
-                        stage: Option<(usize, &'static str)>,
-                        observe: &mut Option<&mut dyn FnMut(Step)>| {
-            let Some(observe) = observe else { return };
-            for (origin, flow) in batch.files() {
-                if stopped.contains(origin) {
-                    continue;
-                }
-                observe(Step {
-                    origin,
-                    pipeline: name,
-                    stage,
-                    flow,
-                });
-                if flow.is_err() {
-                    stopped.insert(origin.to_path_buf());
-                }
-            }
-        };
-        let claimed = Batch::new(claimed);
-        tell(&claimed, None, &mut observe);
-        let staged = rest
-            .iter()
-            .enumerate()
-            .fold(claimed, |batch, (index, stage)| {
-                let batch = stage.run(batch, &mut context);
-                tell(
-                    &batch,
-                    Some((filters.len() + index, stage.name())),
-                    &mut observe,
-                );
-                batch
-            });
-        let placed = staged.each(|record| take_place(record, &mut context));
-        tell(
-            &placed,
-            Some((filters.len() + rest.len(), "move")),
-            &mut observe,
-        );
-        let files = placed.into_files();
-
+        let keeping = sends_on.contains(&index);
+        let files = plan_through(planned, claimed, keeping, &mut context, &mut observe);
         for file in files {
-            let (planned, stopped) = match file.flow {
+            let (record, stopped) = match file.flow {
                 Ok(record) => (Some(record), Ok(())),
-                Err(stop) => (None, Err(stop)),
+                Err(stop) => {
+                    if let Some(kept) = file.stopped {
+                        refused
+                            .entry(index)
+                            .or_default()
+                            .push(kept.restarted(&stop.planned, &stop.stage));
+                    }
+                    (None, Err(stop))
+                }
             };
-            outcomes.push(Outcome {
-                origin: file.origin.clone(),
-                pipeline: index,
-                stopped,
-            });
+            outcomes.insert(
+                file.origin.clone(),
+                Outcome {
+                    origin: file.origin.clone(),
+                    pipeline: index,
+                    stopped,
+                },
+            );
             context.remember(Earlier {
-                pipeline: name.to_string(),
+                pipeline: planned.name.to_string(),
                 origin: file.origin,
-                planned,
+                planned: record,
             });
         }
     }
@@ -181,7 +187,7 @@ pub(crate) fn plan(
         .filter_map(|earlier| Some((earlier.origin, earlier.planned?)))
         .collect();
     let mut judged: Vec<Judged> = outcomes
-        .into_iter()
+        .into_values()
         .map(|outcome| {
             let flow = outcome.stopped.map(|()| {
                 planned
@@ -201,6 +207,52 @@ pub(crate) fn plan(
     judged
 }
 
+/// Runs the stages of one pipeline over the files it claimed, then claims each plan in its target, telling
+/// each step to whoever observes. A file is told up to the step that stopped it, and no more after.
+fn plan_through(
+    planned: &Planned,
+    claimed: Vec<Record>,
+    keeping: bool,
+    context: &mut Context,
+    observe: &mut Option<&mut dyn FnMut(Step)>,
+) -> Vec<File> {
+    let (filters, rest) = planned.pipeline.split_at_claim();
+    let mut stopped = HashSet::new();
+    let mut tell = |batch: &Batch, stage: Option<(usize, &'static str)>| {
+        let Some(observe) = observe else { return };
+        for (origin, flow) in batch.files() {
+            if stopped.contains(origin) {
+                continue;
+            }
+            observe(Step {
+                origin,
+                pipeline: planned.name,
+                stage,
+                flow,
+            });
+            if flow.is_err() {
+                stopped.insert(origin.to_path_buf());
+            }
+        }
+    };
+    let mut claimed = Batch::new(claimed);
+    if keeping {
+        claimed = claimed.keeping_stopped();
+    }
+    tell(&claimed, None);
+    let staged = rest
+        .iter()
+        .enumerate()
+        .fold(claimed, |batch, (index, stage)| {
+            let batch = stage.run(batch, context);
+            tell(&batch, Some((filters.len() + index, stage.name())));
+            batch
+        });
+    let placed = staged.each(|record| take_place(record, context));
+    tell(&placed, Some((filters.len() + rest.len(), "move")));
+    placed.into_files()
+}
+
 /// Claims the plan of a file in its target, refusing it when the target holds a file there or a file
 /// before it in the batch was planned there. A file left where it is takes no place but its own.
 fn take_place(record: Record, context: &mut Context) -> Flow {
@@ -208,10 +260,7 @@ fn take_place(record: Record, context: &mut Context) -> Flow {
     if free || record.plan() == record.origin() {
         Ok(record)
     } else {
-        Err(Stop::rejected(
-            "move",
-            format!("`{}` is already taken", record.plan().display()),
-        ))
+        Err(Stop::rejected("move", "the plan is already taken"))
     }
 }
 

@@ -37,8 +37,10 @@ impl Filter {
             .glob
             .as_ref()
             .is_none_or(|glob| glob.is_match(&file_name));
+        let reason_matches =
+            self.reason.is_empty() || self.reason.contains(&text(record, "reason"));
 
-        (ext_matches && glob_matches) != self.invert
+        (ext_matches && glob_matches && reason_matches) != self.invert
     }
 }
 

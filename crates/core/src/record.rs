@@ -89,6 +89,30 @@ impl Record {
         self
     }
 
+    /// The record as a rejected route takes it: the fields the path gives start over from the origin, so
+    /// the file keeps its own name and place, while every other field stays, with the plan it had as
+    /// `planned` and the stage that refused it as `reason`.
+    pub(crate) fn restarted(self, planned: &Path, reason: &str) -> Record {
+        let mtime = match self.fields.get("mtime") {
+            Some(Value::Date(mtime)) => *mtime,
+            _ => DateTime::<Utc>::UNIX_EPOCH,
+        };
+        let mut restarted = Record::new(&self.origin, mtime)
+            .expect("a record was made from this origin, so its path is valid UTF-8");
+        for (name, value) in self.fields {
+            restarted.fields.entry(name).or_insert(value);
+        }
+        restarted.answers = self.answers;
+        restarted.fields.insert(
+            "planned".to_string(),
+            Value::Text(planned.display().to_string()),
+        );
+        restarted
+            .fields
+            .insert("reason".to_string(), Value::Text(reason.to_string()));
+        restarted
+    }
+
     /// Whether `vars` gave this field.
     pub(crate) fn is_answer(&self, name: &str) -> bool {
         self.answers.contains(name)

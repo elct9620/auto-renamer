@@ -1,6 +1,6 @@
 mod common;
 
-use common::{apply, assert_rejected_by, record};
+use common::{apply, assert_rejected_by, record, text, with};
 
 // @behavior FLT-001
 #[test]
@@ -68,4 +68,15 @@ fn should_need_both_the_extension_and_the_pattern_to_match() {
     );
 
     assert_rejected_by(outcome, "filter");
+}
+
+// @behavior FLT-008
+#[test]
+fn should_take_only_the_files_refused_for_the_reasons_named() {
+    let declaration = r#"{ filter = { reason = ["move"] } }"#;
+    let by_move = with(record("Alpha.mkv"), "reason", text("move"));
+    let by_format = with(record("Alpha.mkv"), "reason", text("format"));
+
+    assert_eq!(apply(declaration, by_move.clone()), Ok(by_move));
+    assert_rejected_by(apply(declaration, by_format), "filter");
 }

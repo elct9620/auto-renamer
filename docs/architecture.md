@@ -115,6 +115,16 @@ let rewritten = change(text_field(stage, &record, field)?);
 
 效果不是階段，而是路線上的資料：`Route::effects` 給出先 `move` 再 `cleanup`。整批規劃完才由 `effects` 經 `Tree` 逐檔執行，規劃因此不碰任何檔案；乾跑時 `move` 只回報會搬到哪裡，`cleanup` 不執行。管線裡寫不出效果，前純後動是結構上的保證。
 
+### 失敗路線
+
+```
+  routes    claim ─► stages ─► move claim ─► refused, kept as before the stop
+  rejected  restarted(planned, reason) ─► claim ─► stages ─► move claim
+            refused again ─► stays
+```
+
+`engine` 先跑完所有取新檔案的路線，再依 `Takes::RefusedBy` 把各路線拒絕的記錄交給它的失敗路線，只走一層。`Batch` 只在路線有失敗路線時保留拒絕前的記錄，其餘只多帶一份計畫路徑。
+
 ### 檢視時機
 
 | 情況 | 要重新決定的事 |

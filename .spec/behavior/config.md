@@ -262,3 +262,19 @@ The configuration says which folders are watched, which routes take their files,
 | Given | a target `library` with no `path` |
 | When | the configuration is read |
 | Then | the configuration is refused, naming `path` |
+
+## `CFG-036` A route reads where its rejected files go
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch with a route of `video` into `library` whose `rejected` moves into `conflict`, with no pipeline |
+| When | the configuration is read |
+| Then | the route's rejected route moves into `/conflict` and has no pipeline |
+
+## `CFG-037` A rejected route has no rejected route of its own
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch with a route whose `rejected` holds a `rejected` of its own |
+| When | the configuration is read |
+| Then | the configuration is refused, naming `rejected` |

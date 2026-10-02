@@ -335,7 +335,7 @@ pub enum PipelineError {}
 
 ## `Stop`
 
-Why a stage refused a record, and which stage it was. A filter that turns a record away refuses it too, so every stop is a refusal. A stage answers with the record to go on with, or with a stop.
+Why a stage refused a record, which stage it was, and the plan the record had then. A filter that turns a record away refuses it too, so every stop is a refusal. A stage answers with the record to go on with, or with a stop.
 
 | Attribute | Value |
 | --- | --- |
@@ -641,6 +641,18 @@ One entry of a watch's routes: the pipeline that claims and names files, the tar
 
 ```rust
 pub struct Route {}
+```
+
+## `RejectedRoute`
+
+Where a route sends the files it refused: the pipeline that may take them, or none to take every one as it is, the target root it moves them to, or none to rename them in place, and the folders its cleanup keeps.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct RejectedRoute {}
 ```
 
 ## `Watch::routes`

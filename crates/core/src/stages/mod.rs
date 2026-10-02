@@ -13,6 +13,7 @@ mod take;
 mod text;
 
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 
 use globset::GlobMatcher;
 
@@ -21,17 +22,19 @@ use crate::record::{Record, Value, is_usable_file_name};
 use crate::template::Template;
 
 pub use batch::Batch;
+pub(crate) use batch::File;
 pub use declare::{Declaration, DeclareError, Parameter, ParameterKind};
 
 /// What a stage answers for one record: the record to go on with, or what stops it.
 pub type Flow = Result<Record, Stop>;
 
-/// Why a stage refused a record, and which stage it was. A filter that turns a record away refuses it
-/// too, so every stop is a refusal.
+/// Why a stage refused a record, which stage it was, and the plan the record had then. A filter that
+/// turns a record away refuses it too, so every stop is a refusal.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Stop {
     pub stage: String,
     pub reason: String,
+    pub planned: PathBuf,
 }
 
 impl Stop {
@@ -39,6 +42,7 @@ impl Stop {
         Stop {
             stage: stage.to_string(),
             reason: reason.into(),
+            planned: PathBuf::new(),
         }
     }
 }
@@ -198,6 +202,8 @@ pub struct Filter {
     /// Lower-cased extensions, written without the dot.
     pub ext: Vec<String>,
     pub glob: Option<GlobMatcher>,
+    /// The reasons a refused file may have been refused for, to take on a rejected route.
+    pub reason: Vec<String>,
     pub invert: bool,
 }
 

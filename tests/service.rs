@@ -504,3 +504,154 @@ fn should_name_the_pipelines_a_folder_configuration_replaces() {
 
     assert_eq!(replaced, ["video"]);
 }
+
+/// A watch whose route runs `stages` into `target`, which already holds `Show/Alpha.mkv`, and sends what it
+/// refuses to a rejected route moving into `conflict`, with `rejected` written into that route and `tables`
+/// after the watch.
+fn refusing(stages: &str, route: &str, rejected: &str, tables: &str) -> Setup {
+    let sandbox = Sandbox::new();
+    sandbox.make_dir("source");
+    sandbox.make_dir("conflict");
+    sandbox.write("target/Show/Alpha.mkv", "old");
+    let text = format!(
+        "[pipeline.p]\nstages = {stages}\n\n[target.t]\npath = \"{}\"\n\n[target.c]\npath = \"{}\"\n\n\
+         [watch.w]\nsource = \"{}\"\nroutes = [{{ pipeline = \"p\", move = \"t\"{route}, rejected = {{ move = \"c\"{rejected} }} }}]\n\
+         unit = \"directory\"\nvars = {{ show = \"Alpha\" }}\n\n{tables}",
+        sandbox.path("target").display(),
+        sandbox.path("conflict").display(),
+        sandbox.path("source").display(),
+    );
+    let config = Config::parse(&text).expect("the configuration should be accepted");
+    Setup {
+        sandbox,
+        config,
+        renames: Default::default(),
+    }
+}
+
+// @behavior SVC-022
+#[test]
+fn should_send_a_refused_file_to_the_rejected_route_with_its_own_name() {
+    let run = refusing(MOVE_AS_SHOW, "", "", "");
+    run.sandbox.write("source/Show/x.mkv", "new");
+
+    let processed = run.process("Show", &["Show/x.mkv"]);
+
+    assert_eq!(
+        run.what(&processed, "Show/x.mkv"),
+        What::Moved(run.sandbox.path("conflict/Show/x.mkv"))
+    );
+}
+
+// @behavior SVC-023
+#[test]
+fn should_let_a_rejected_file_carry_its_plan_and_why_it_was_refused() {
+    let run = refusing(
+        MOVE_AS_SHOW,
+        "",
+        ", pipeline = \"r\"",
+        "[pipeline.r]\nstages = [{ regex = { from = \"planned\", pattern = '(?<shown>[^/]+)\\.mkv$' } }, { format = \"{reason} {shown}\" }]\n",
+    );
+    run.sandbox.write("source/Show/x.mkv", "new");
+
+    let processed = run.process("Show", &["Show/x.mkv"]);
+
+    assert_eq!(
+        run.what(&processed, "Show/x.mkv"),
+        What::Moved(run.sandbox.path("conflict/Show/move Alpha.mkv"))
+    );
+}
+
+// @behavior SVC-024
+#[test]
+fn should_let_a_rejected_file_keep_the_fields_found_before_it_was_refused() {
+    let run = refusing(
+        r#"[{ number = { into = "episode" } }, { format = "{show}" }]"#,
+        "",
+        ", pipeline = \"r\"",
+        "[pipeline.r]\nstages = [{ format = \"{episode}\" }]\n",
+    );
+    run.sandbox.write("source/Show/x 07.mkv", "new");
+
+    let processed = run.process("Show", &["Show/x 07.mkv"]);
+
+    assert_eq!(
+        run.what(&processed, "Show/x 07.mkv"),
+        What::Moved(run.sandbox.path("conflict/Show/7.mkv"))
+    );
+}
+
+// @behavior SVC-025
+#[test]
+fn should_let_a_rejected_route_take_only_what_its_pipeline_claims() {
+    let run = refusing(
+        MOVE_AS_SHOW,
+        "",
+        ", pipeline = \"r\"",
+        "[pipeline.r]\nstages = [{ filter = { reason = [\"format\"] } }]\n",
+    );
+    run.sandbox.write("source/Show/x.mkv", "new");
+
+    let processed = run.process("Show", &["Show/x.mkv"]);
+
+    assert!(matches!(
+        run.what(&processed, "Show/x.mkv"),
+        What::Refused(reason) if reason.starts_with("move:")
+    ));
+    assert!(run.sandbox.exists("source/Show/x.mkv"));
+}
+
+// @behavior SVC-026
+#[test]
+fn should_leave_a_file_refused_again_on_its_rejected_route() {
+    let run = refusing(
+        MOVE_AS_SHOW,
+        "",
+        ", pipeline = \"r\"",
+        "[pipeline.r]\nstages = [{ format = \"{missing}\" }]\n",
+    );
+    run.sandbox.write("source/Show/x.mkv", "new");
+
+    let processed = run.process("Show", &["Show/x.mkv"]);
+
+    assert!(matches!(
+        run.what(&processed, "Show/x.mkv"),
+        What::Refused(reason) if reason.starts_with("format:")
+    ));
+    assert!(run.sandbox.exists("source/Show/x.mkv"));
+}
+
+// @behavior SVC-027
+#[test]
+fn should_clean_up_on_a_rejected_route_only_when_it_says_so() {
+    let run = refusing(
+        r#"[{ format = "{show}" }, { lift = 1 }]"#,
+        ", cleanup = {}",
+        "",
+        "",
+    );
+    run.sandbox.write("source/Show/Rel/x.mkv", "new");
+
+    let processed = run.process("Show/Rel", &["Show/Rel/x.mkv"]);
+
+    assert_eq!(
+        run.what(&processed, "Show/Rel/x.mkv"),
+        What::Moved(run.sandbox.path("conflict/Show/Rel/x.mkv"))
+    );
+    assert!(run.sandbox.exists("source/Show/Rel"));
+}
+
+// @behavior SVC-028
+#[test]
+fn should_report_a_refused_file_with_the_plan_it_had() {
+    let run = alpha("");
+    run.sandbox.write("source/Show/x.mkv", "new");
+    run.sandbox.write("target/Show/Alpha.mkv", "old");
+
+    let processed = run.process("Show", &["Show/x.mkv"]);
+
+    assert!(matches!(
+        run.what(&processed, "Show/x.mkv"),
+        What::Refused(reason) if reason.starts_with("move:") && reason.contains("`Show/Alpha.mkv`")
+    ));
+}
