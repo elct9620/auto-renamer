@@ -4,6 +4,9 @@ function node(page: Page, name: string) {
   return page.locator('.react-flow__node').filter({ has: page.getByText(name, { exact: true }) })
 }
 
+// The route the opening example's watch claims with first.
+const FIRST_ROUTE = '1 · series-video'
+
 // A watch or a pipeline holds other nodes, so it is chosen by its title rather than its middle.
 function title(page: Page, name: string) {
   return node(page, name).getByText(name, { exact: true })
@@ -393,10 +396,37 @@ test('a target added in the defaults form is declared', async ({ page }) => {
 // @behavior PGE-072
 test('a route moves into a target picked from those declared', async ({ page }) => {
   await declareTarget(page, 'conflict')
-  await title(page, 'series').click()
+  await title(page, FIRST_ROUTE).click()
 
   await page.getByRole('combobox', { name: 'Move to', exact: true }).click()
   await page.getByRole('option', { name: 'conflict' }).click()
 
   expect(await configText(page)).toContain('move = "conflict"')
+})
+
+// @behavior PGE-083
+test('a refused file is sent through a pipeline picked from those defined', async ({ page }) => {
+  await title(page, FIRST_ROUTE).click()
+
+  await page.getByRole('combobox', { name: 'Refused files run' }).click()
+  await page.getByRole('option', { name: 'series-subtitle' }).click()
+
+  expect(await configText(page)).toContain('pipeline = "series-subtitle"')
+})
+
+// @behavior PGE-084
+test('a route that cleans up keeps the folders it lists', async ({ page }) => {
+  // The opening route already cleans up, so it is first set not to.
+  await title(page, FIRST_ROUTE).click()
+  const cleanup = page.getByRole('switch', { name: /^Clean up/ })
+  await cleanup.click()
+  expect(await configText(page)).not.toContain('cleanup')
+  await title(page, FIRST_ROUTE).click()
+
+  await page.getByRole('switch', { name: /^Clean up/ }).click()
+  const keep = page.getByRole('textbox', { name: /^Keep/ })
+  await keep.fill('Extras')
+  await keep.blur()
+
+  expect(await configText(page)).toMatch(/\[watch\.series\.routes\.cleanup\]\s+keep = \["Extras"\]/)
 })

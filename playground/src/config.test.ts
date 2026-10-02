@@ -16,10 +16,12 @@ import {
   readStage,
   removePipeline,
   moveRoute,
+  ownPipeline,
   removeRoute,
   removeStage,
   removeTarget,
   renamePipeline,
+  routable,
   routeTo,
   routesOf,
   setIn,
@@ -416,11 +418,30 @@ describe('starting a folder configuration', () => {
 })
 
 describe('overriding a pipeline in a folder', () => {
+  // @behavior PGE-086
+  it('copies a built-in pipeline overridden in a folder from the core', () => {
+    const global = read('[watch.series]\nsource = "/src"\nroutes = [{ pipeline = "series-video" }]\n')
+
+    const result = overridden({}, routable(global, builtIns()), 'series-video')
+
+    expect(stagesOf(result, 'series-video')).toEqual(stagesOf({ pipeline: builtIns() }, 'series-video'))
+  })
+
+  // @behavior PGE-085
+  it('makes a copied built-in pipeline the configuration\'s own', () => {
+    const config = read('[watch.series]\nsource = "/src"\nroutes = [{ pipeline = "series-video" }]\n')
+
+    const copied = ownPipeline(config, builtIns(), 'series-video')
+
+    expect(stagesOf(copied, 'series-video')).toEqual(stagesOf({ pipeline: builtIns() }, 'series-video'))
+    expect(stagesOf(copied, 'series-video').length).toBeGreaterThan(0)
+  })
+
   // @behavior PGE-063
   it('copies the global pipeline in, keeping what the folder holds', () => {
     const folder = read('vars = { show = "Alpha" }\n\n[pipeline.subtitle]\nstages = ["strip"]\n\n[pipeline.video]\nstages = []\n')
 
-    const result = overridden(folder, read(CONFIG), 'video')
+    const result = overridden(folder, routable(read(CONFIG), builtIns()), 'video')
 
     expect(result.vars).toEqual({ show: 'Alpha' })
     expect(names(result, 'subtitle')).toEqual(['strip'])

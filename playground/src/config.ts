@@ -51,9 +51,19 @@ export function folderStart(config: Table, watch: string): Table {
   return Object.keys(vars).length ? { vars } : {}
 }
 
-/** A folder configuration with the global pipeline `name` copied in, replacing its own of that name only. */
-export function overridden(folder: Table, global: Table, name: string): Table {
-  return setIn(folder, ['pipeline', name], asTable(global.pipeline)[name])
+/** The pipelines a configuration can route, by name: its own, over the built-in ones they replace. */
+export function routable(config: Table, builtIns: Table): Table {
+  return { ...builtIns, ...asTable(config.pipeline) }
+}
+
+/** A folder configuration with the pipeline `name` of `pipelines` copied in, replacing its own of that name only. */
+export function overridden(folder: Table, pipelines: Table, name: string): Table {
+  return setIn(folder, ['pipeline', name], pipelines[name])
+}
+
+/** The configuration with the built-in pipeline `name` copied in as its own, to be changed. */
+export function ownPipeline(config: Table, builtIns: Table, name: string): Table {
+  return setIn(config, ['pipeline', name], builtIns[name])
 }
 
 function withStages(config: Table, pipeline: string, stages: Stage[]): Table {

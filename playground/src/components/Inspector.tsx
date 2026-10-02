@@ -1,10 +1,10 @@
-import { ArrowDown, ArrowUp, type LucideIcon, Settings2, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Copy, type LucideIcon, Settings2, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Choice } from '@/components/Choice'
 import { StageName } from '@/components/Fields'
-import { SettingsForm, TargetsForm } from '@/components/SettingsForm'
+import { RouteForm, SettingsForm, TargetsForm } from '@/components/SettingsForm'
 import { KIND_ICONS, stageIcon } from '@/components/kinds'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,17 +12,25 @@ import {
   type Table,
   addStage,
   asTable,
+  moveRoute,
   moveStage,
   newStage,
+  ownPipeline,
   removePipeline,
+  removeRoute,
   removeStage,
+  removeTarget,
   renamePipeline,
   replaceStage,
+  routable,
+  routesOf,
   setIn,
   stageName,
   stagesOf,
+  targetsOf,
+  withRoutes,
 } from '../config'
-import { type Kind, type Simulation, read, stages } from '../core'
+import { type Kind, type Simulation, builtIns, read, stages } from '../core'
 import type { Selected } from '../graph'
 import { afterStage } from '../steps'
 import { StageForm } from './StageForm'
@@ -118,10 +126,67 @@ export function Inspector({ config, kind, selected, folders = [], simulation = n
     )
   }
 
-  if (selected.kind === 'route' || selected.kind === 'target') return null
+  if (selected.kind === 'route') {
+    const { watch, index } = selected
+    const routes = routesOf(config, watch)
+    const route = routes[index]
+    if (route === undefined) return null
+    const at = (to: number) => onSelect({ ...selected, index: to })
+    return (
+      <Section icon={KIND_ICONS.route} title={t('inspector.route', { position: index + 1, watch })}>
+        {asTable(asTable(config.watch)[watch]).routes === undefined && (
+          <p className="text-xs text-muted-foreground">{t('inspector.followsDefault')}</p>
+        )}
+        <RouteForm key={`${watch}-${index}`} route={route} pipelines={Object.keys(routable(config, builtIns()))}
+          targets={Object.keys(targetsOf(config))}
+          onChange={(next) => onChange(withRoutes(config, watch, (all) => all.map((one, place) => (place === index ? next : one))))} />
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" disabled={index === 0} onClick={() => {
+            onChange(moveRoute(config, watch, index, -1)); at(index - 1)
+          }}><ArrowUp />{t('inspector.earlier')}</Button>
+          <Button variant="outline" size="sm" disabled={index === routes.length - 1} onClick={() => {
+            onChange(moveRoute(config, watch, index, 1)); at(index + 1)
+          }}><ArrowDown />{t('inspector.later')}</Button>
+          <Button variant="destructive" size="sm" onClick={() => { onChange(removeRoute(config, watch, index)); onSelect(null) }}>
+            <Trash2 />{t('inspector.removeRoute')}
+          </Button>
+        </div>
+      </Section>
+    )
+  }
+
+  if (selected.kind === 'target') {
+    return (
+      <Section icon={KIND_ICONS.target} title={t('inspector.target', { name: selected.name })}>
+        <SettingsForm config={config} scope="target" path={['target', selected.name]} onChange={onChange} />
+        <Button variant="destructive" size="sm" onClick={() => { onChange(removeTarget(config, selected.name)); onSelect(null) }}>
+          <Trash2 />{t('inspector.removeTarget')}
+        </Button>
+      </Section>
+    )
+  }
+
+  // A built-in pipeline and its stages are changed only once copied in as the configuration's own.
+  const builtIn = selected.kind === 'pipeline' ? selected.name : selected.pipeline
+  if (!(builtIn in asTable(config.pipeline))) {
+    if (!(builtIn in builtIns())) return null
+    return (
+      <Section icon={KIND_ICONS.pipeline} title={t('inspector.pipeline', { name: builtIn })}>
+        <p className="text-xs text-muted-foreground">{t('inspector.builtIn')}</p>
+        <Button variant="outline" size="sm" onClick={() => onChange(ownPipeline(config, builtIns(), builtIn))}>
+          <Copy />{t('inspector.copyBuiltIn')}
+        </Button>
+        {onOverride && (
+          <Field label={t('inspector.override')}>
+            <Choice value="" placeholder={t('inspector.chooseFolder')} options={folders.map((folder) => ({ value: folder, label: folder }))}
+              onChange={(folder) => onOverride(builtIn, folder)} />
+          </Field>
+        )}
+      </Section>
+    )
+  }
 
   if (selected.kind === 'pipeline') {
-    if (!(selected.name in asTable(config.pipeline))) return null
     return (
       <Section icon={KIND_ICONS.pipeline} title={t('inspector.pipeline', { name: selected.name })}>
         <Field label={t('inspector.name')} error={nameError}>

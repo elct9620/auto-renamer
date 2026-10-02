@@ -582,8 +582,8 @@ The playground page draws a configuration for people who do not read TOML: each 
 
 | Step | Statement |
 | --- | --- |
-| Given | the target `conflict` declared and the watch `series` selected |
-| When | `conflict` is picked as where its route moves |
+| Given | the target `conflict` declared and the first route of the watch `series` selected |
+| When | `conflict` is picked as where it moves |
 | Then | the route moves into `conflict` |
 
 ## `PGE-073` A route is joined to the target it moves to
@@ -665,3 +665,35 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | a route of `video` moving to `dst` |
 | When | its joint to `dst` is removed |
 | Then | the route has no move |
+
+## `PGE-083` A refused file is sent through a pipeline picked from those defined
+
+| Step | Statement |
+| --- | --- |
+| Given | the first route of the watch `series` selected |
+| When | `series-subtitle` is picked as the pipeline its rejected route runs |
+| Then | the route's rejected route runs `series-subtitle` |
+
+## `PGE-084` A route that cleans up keeps the folders it lists
+
+| Step | Statement |
+| --- | --- |
+| Given | a selected route that does not clean up |
+| When | it is set to clean up, keeping `Season *` |
+| Then | the route cleans up and keeps `Season *` |
+
+## `PGE-085` A built-in pipeline copied becomes the configuration's own
+
+| Step | Statement |
+| --- | --- |
+| Given | a configuration routing the built-in `series-video` |
+| When | `series-video` is copied |
+| Then | the configuration defines `series-video` with the stages the core builds in |
+
+## `PGE-086` A built-in pipeline overridden in a folder is copied from the core
+
+| Step | Statement |
+| --- | --- |
+| Given | a global configuration routing the built-in `series-video` without defining it |
+| When | `series-video` is overridden in a folder |
+| Then | the folder configuration defines `series-video` with the stages the core builds in |

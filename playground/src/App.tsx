@@ -11,8 +11,8 @@ import { TreePanel } from '@/components/TreePanel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { errorOf } from '@/lib/utils'
-import { type Table, asTable, download, folderStart, overridden, setIn } from './config'
-import { type Entry, type Kind, type Simulation, check, read, render, simulate } from './core'
+import { type Table, asTable, download, folderStart, overridden, routable, setIn } from './config'
+import { type Entry, type Kind, type Simulation, builtIns, check, read, render, simulate } from './core'
 import { type Example, EXAMPLES, FIRST } from './examples'
 import type { Selected } from './graph'
 import { LANGUAGES } from './i18n'
@@ -145,7 +145,7 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
     ...configurations.map((entry) => ({ value: entry.path, label: t('editing.folder', { folder: folderOf(entry.path) }) })),
     ...bare.map((folder) => ({ value: `${ADD}${folder}`, label: t('editing.add', { folder }) })),
   ]
-  // A global pipeline overridden in a folder lands in that folder's configuration, which opens to be changed.
+  // A global or built-in pipeline overridden in a folder lands in that folder's configuration, which opens to be changed.
   const override = (pipeline: string, folder: string) => {
     const path = `${folder}/${FOLDER_CONFIGURATION}`
     const existing = entries.find((entry) => entry.path === path)
@@ -156,7 +156,7 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
       setMessage(errorOf(error))
       return
     }
-    editEntries((all) => writeFile(all, path, render(overridden(table, config, pipeline))))
+    editEntries((all) => writeFile(all, path, render(overridden(table, routable(config, builtIns()), pipeline))))
     open(path)
   }
   const choose = (value: string) => {

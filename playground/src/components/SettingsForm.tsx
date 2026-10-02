@@ -6,7 +6,7 @@ import { Caption, TextField, ValueRows } from '@/components/Fields'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
-import { type Table, type Value, asTable, setIn, targetsOf } from '../config'
+import { type Table, type Value, asTable, routable, setIn, targetsOf } from '../config'
 import { builtIns } from '../core'
 import { type Scope, type Setting, settingsOf } from '../settings'
 
@@ -33,23 +33,62 @@ function MoveChoice({ label, value, targets, none, onChange }: {
   )
 }
 
-/** The routes in their order, each a pipeline picked from those defined and built in, the target it moves to,
- * whether it cleans up, and where its refused files go; a watch without its own routes follows `inherited`. */
-function RoutesField({ value, inherited, defined, targets, onApply }: {
+/** One route's pipeline, the target it moves to, whether it cleans up and what it keeps, and the pipeline and
+ * target of its rejected route; a rejected route left with neither goes. */
+export function RouteForm({ route, pipelines, targets, onChange }: {
+  route: Table
+  pipelines: string[]
+  targets: string[]
+  onChange: (route: Table) => void
+}) {
+  const { t } = useTranslation()
+  const cleanup = route.cleanup === undefined ? undefined : asTable(route.cleanup)
+  const rejected = asTable(route.rejected)
+  const reject = (key: string, value: string | undefined) => {
+    const next = setIn(rejected, [key], value)
+    onChange(setIn(route, ['rejected'], Object.keys(next).length ? next : undefined))
+  }
+  return (
+    <div className="grid gap-1.5">
+      <Choice label={t('route.pipeline')} value={typeof route.pipeline === 'string' ? route.pipeline : ''}
+        options={pipelines.map((name) => ({ value: name, label: name }))} onChange={(name) => onChange(setIn(route, ['pipeline'], name))} />
+      <MoveChoice label={t('route.move')} value={route.move} targets={targets} none={t('route.inPlace')}
+        onChange={(target) => onChange(setIn(route, ['move'], target))} />
+      <label className="flex items-center gap-2">
+        <Switch checked={cleanup !== undefined} onCheckedChange={(checked) => onChange(setIn(route, ['cleanup'], checked ? {} : undefined))} />
+        <Caption name={t('route.cleanup')} code="cleanup" />
+      </label>
+      {cleanup !== undefined && (
+        <TextField caption={<Caption name={t('route.keep')} code="keep" />} kind="texts" value={cleanup.keep} placeholder="Season *"
+          onApply={(keep) => onChange(setIn(route, ['cleanup'], setIn(cleanup, ['keep'], keep)))} />
+      )}
+      <Choice label={t('route.rejectedPipeline')} value={typeof rejected.pipeline === 'string' ? rejected.pipeline : ''} clearable
+        placeholder={t('route.noPipeline')} options={pipelines.map((name) => ({ value: name, label: name }))}
+        onChange={(name) => reject('pipeline', name === '' ? undefined : name)} />
+      <MoveChoice label={t('route.rejected')} value={rejected.move} targets={targets} none={t('route.noRejected')}
+        onChange={(target) => reject('move', target)} />
+    </div>
+  )
+}
+
+/** The routes in their order, each a pipeline picked from those defined and built in; a watch without its own
+ * routes follows `inherited`. The default's routes are edited here in full, since no node stands for them; a
+ * watch's are edited by selecting them on the canvas. */
+function RoutesField({ value, inherited, defined, targets, detailed, onApply }: {
   value: Value | undefined
   inherited?: Table[]
   defined: string[]
   targets: string[]
+  detailed: boolean
   onApply: (value: Value | undefined) => void
 }) {
   const { t } = useTranslation()
   const following = value === undefined && inherited !== undefined
   const listed = following ? inherited : routes(value)
-  const change = (index: number, key: string, next: Value | undefined) =>
-    onApply(listed.map((route, at) => (at === index ? setIn(route, [key], next) : route)))
   return (
     <div className="grid gap-2">
       {following && <span className="text-xs text-muted-foreground">{t('inspector.followsDefault')}</span>}
+      {!detailed && listed.length > 0 && <span className="text-xs text-muted-foreground">{t('inspector.routeDetails')}</span>}
       {listed.map((route, index) => {
         const pipeline = typeof route.pipeline === 'string' ? route.pipeline : ''
         return (
@@ -58,14 +97,8 @@ function RoutesField({ value, inherited, defined, targets, onApply }: {
               <Badge variant={following ? 'outline' : 'secondary'} className="font-mono">{pipeline}</Badge>
               <button aria-label={t('inspector.unlist', { name: pipeline })} onClick={() => onApply(listed.filter((_, at) => at !== index))}><X className="size-3" /></button>
             </div>
-            <MoveChoice label={t('route.move')} value={route.move} targets={targets} none={t('route.inPlace')}
-              onChange={(target) => change(index, 'move', target)} />
-            <label className="flex items-center gap-2">
-              <Switch checked={route.cleanup !== undefined} onCheckedChange={(checked) => change(index, 'cleanup', checked ? asTable(route.cleanup) : undefined)} />
-              <Caption name={t('route.cleanup')} code="cleanup" />
-            </label>
-            <MoveChoice label={t('route.rejected')} value={asTable(route.rejected).move} targets={targets} none={t('route.noRejected')}
-              onChange={(target) => change(index, 'rejected', target === undefined ? undefined : setIn(asTable(route.rejected), ['move'], target))} />
+            {detailed && <RouteForm route={route} pipelines={defined} targets={targets}
+              onChange={(next) => onApply(listed.map((one, at) => (at === index ? next : one)))} />}
           </div>
         )
       })}
@@ -97,8 +130,9 @@ function UnitField({ value, onApply }: { value: Value | undefined; onApply: (val
   )
 }
 
-function Field({ setting, value, inherited, defined, targets, onApply }: {
+function Field({ setting, value, inherited, defined, targets, scope, onApply }: {
   setting: Setting
+  scope: Scope
   value: Value | undefined
   inherited?: Table[]
   defined: string[]
@@ -125,7 +159,7 @@ function Field({ setting, value, inherited, defined, targets, onApply }: {
     case 'integer':
       return <TextField caption={caption} kind={setting.kind} value={value} placeholder={String(setting.example)} onApply={onApply} />
     case 'routes':
-      return <div className="grid gap-1.5">{caption}<RoutesField value={value} inherited={inherited} defined={defined} targets={targets} onApply={onApply} /></div>
+      return <div className="grid gap-1.5">{caption}<RoutesField value={value} inherited={inherited} defined={defined} targets={targets} detailed={scope === 'default'} onApply={onApply} /></div>
     case 'vars':
       return <div className="grid gap-1.5">{caption}<ValueRows values={asTable(value)} onChange={(values) => onApply(Object.keys(values).length ? values : undefined)} /></div>
     case 'unit':
@@ -143,13 +177,13 @@ export function SettingsForm({ config, scope, path, onChange }: {
   let table: Table = config
   for (const key of path) table = asTable(table[key])
   const inherited = scope === 'watch' ? routes(asTable(config.default).routes) : undefined
-  const defined = [...new Set([...Object.keys(asTable(config.pipeline)), ...Object.keys(builtIns())])]
+  const defined = Object.keys(routable(config, builtIns()))
   const targets = Object.keys(targetsOf(config))
   return (
     <>
       {settingsOf(scope).map((setting) => (
         <Field key={`${path.join('.')}-${setting.key}`} setting={setting} value={table[setting.key]} inherited={inherited} defined={defined}
-          targets={targets} onApply={(value) => onChange(setIn(config, [...path, setting.key], value))} />
+          targets={targets} scope={scope} onApply={(value) => onChange(setIn(config, [...path, setting.key], value))} />
       ))}
     </>
   )

@@ -20,7 +20,7 @@
   "inspector": {
     "defaults": "Defaults",
     "folder": "Folder configuration",
-    "hint": "Select a watch, a pipeline or a stage to edit it.",
+    "hint": "Select a watch, a route, a pipeline, a stage or a target to edit it.",
     "watch": "Watch {{name}}",
     "removeWatch": "Remove watch",
     "pipeline": "Pipeline {{name}}",
@@ -47,7 +47,14 @@
     "after": "Files after this stage",
     "none": "No file reached this stage.",
     "taken_one": "{{count}} file ran this pipeline as a folder configuration replaced it.",
-    "taken_other": "{{count}} files ran this pipeline as folder configurations replaced it."
+    "taken_other": "{{count}} files ran this pipeline as folder configurations replaced it.",
+    "route": "Route {{position}} of {{watch}}",
+    "removeRoute": "Remove route",
+    "target": "Target {{name}}",
+    "removeTarget": "Remove target",
+    "builtIn": "The core builds this pipeline in. Copy it to change it.",
+    "copyBuiltIn": "Copy as own pipeline",
+    "routeDetails": "Select a route on the canvas to set where it moves."
   },
   "tree": {
     "source": "Source",
@@ -343,6 +350,10 @@
     "cleanup": "Clean up",
     "rejected": "Refused files move to",
     "noRejected": "stay in the source",
-    "newTarget": "New target"
+    "newTarget": "New target",
+    "pipeline": "Pipeline",
+    "keep": "Keep",
+    "rejectedPipeline": "Refused files run",
+    "noPipeline": "no pipeline"
   }
 }

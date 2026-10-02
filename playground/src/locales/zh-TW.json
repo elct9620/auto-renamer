@@ -20,7 +20,7 @@
   "inspector": {
     "defaults": "預設值",
     "folder": "目錄設定",
-    "hint": "選取監控、管線或階段來編輯。",
+    "hint": "選取監控、路線、管線、階段或目標來編輯。",
     "watch": "監控 {{name}}",
     "removeWatch": "移除監控",
     "pipeline": "管線 {{name}}",
@@ -47,7 +47,14 @@
     "after": "跑完這個階段的檔案",
     "none": "沒有檔案跑到這個階段。",
     "taken_one": "另有 {{count}} 個檔案由目錄設定的同名管線處理。",
-    "taken_other": "另有 {{count}} 個檔案由目錄設定的同名管線處理。"
+    "taken_other": "另有 {{count}} 個檔案由目錄設定的同名管線處理。",
+    "route": "{{watch}} 的第 {{position}} 條路線",
+    "removeRoute": "移除路線",
+    "target": "目標 {{name}}",
+    "removeTarget": "移除目標",
+    "builtIn": "這是核心內建的管線，複製成自訂管線後才能修改。",
+    "copyBuiltIn": "複製成自訂管線",
+    "routeDetails": "在畫布上選取路線，設定它搬到哪裡。"
   },
   "tree": {
     "source": "來源",
@@ -343,6 +350,10 @@
     "cleanup": "清理",
     "rejected": "被拒絕的檔案搬到",
     "noRejected": "留在 source",
-    "newTarget": "新增目標"
+    "newTarget": "新增目標",
+    "pipeline": "管線",
+    "keep": "保留",
+    "rejectedPipeline": "被拒絕的檔案改走",
+    "noPipeline": "不經管線"
   }
 }
