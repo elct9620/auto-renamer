@@ -386,3 +386,13 @@ fn should_refuse_a_rejected_route_of_a_rejected_route() {
 
     assert!(names(&refused(&text), "rejected"));
 }
+
+// @behavior CFG-038
+#[test]
+fn should_read_the_fields_that_make_a_group() {
+    let text = format!(
+        "{PIPELINES}\n[default]\ngroup = [\"show\", \"episode\"]\n\n[watch.series]\nsource = \"/downloads\"\n"
+    );
+
+    assert_eq!(read(&text)[0].group, ["show", "episode"]);
+}

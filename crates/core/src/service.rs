@@ -162,7 +162,7 @@ fn process(
             takes: leg.takes,
         })
         .collect();
-    let judged = plan(&planned, records, observe);
+    let judged = plan(&planned, records, &effective.group, observe);
     for entry in judged {
         let what = match (entry.verdict, entry.pipeline) {
             (Verdict::Planned(record), Some(index)) => {

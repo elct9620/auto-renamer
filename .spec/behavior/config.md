@@ -278,3 +278,11 @@ The configuration says which folders are watched, which routes take their files,
 | Given | a watch with a route whose `rejected` holds a `rejected` of its own |
 | When | the configuration is read |
 | Then | the configuration is refused, naming `rejected` |
+
+## `CFG-038` A watch reads the fields that make a group
+
+| Step | Statement |
+| --- | --- |
+| Given | a configuration whose default has `group = ["show", "episode"]` and a watch that says none |
+| When | the configuration is read |
+| Then | the watch groups files by `show` and `episode` |

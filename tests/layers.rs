@@ -167,3 +167,9 @@ fn should_refuse_a_folder_batch_limit_above_the_ceiling() {
 fn should_not_let_a_folder_declare_a_target() {
     assert!(names(&refused("[target.t]\npath = \"/etc\""), "target"));
 }
+
+// @behavior LAY-018
+#[test]
+fn should_not_let_a_folder_set_the_group() {
+    assert!(names(&refused("group = [\"show\"]"), "group"));
+}

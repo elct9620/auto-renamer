@@ -214,3 +214,27 @@ Processing a batch is what a ready batch of settled files turns into: the files 
 | Given | a watch whose route formats the name as `{show}` into a target holding `Show/Alpha.mkv`, and the file `Show/x.mkv` |
 | When | the batch is processed |
 | Then | the file is reported as refused, naming `move` and the plan `Show/Alpha.mkv` |
+
+## `SVC-029` A refused file takes the rest of its group with it
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch grouping by `show` and `episode`, a route for `mkv` formatting the name as `{show} {episode}` into a target holding `Show/Alpha 12.mkv`, a route for `ass` doing the same, and the files `Show/x 12.mkv` and `Show/x 12.ass` |
+| When | the batch is processed |
+| Then | `Show/x 12.mkv` is refused by `move` and `Show/x 12.ass` by `group`, and both stay in the source |
+
+## `SVC-030` A file refused with its group follows to its route's rejected route
+
+| Step | Statement |
+| --- | --- |
+| Given | the same watch, whose `ass` route sends what it refuses to a second target |
+| When | the batch is processed |
+| Then | `Show/x 12.ass` is moved to `Show/x 12.ass` under the second target |
+
+## `SVC-031` Files of other groups go on
+
+| Step | Statement |
+| --- | --- |
+| Given | the same watch, and also the file `Show/x 13.ass` |
+| When | the batch is processed |
+| Then | `Show/x 13.ass` is moved to `Show/Alpha 13.ass` under the target |

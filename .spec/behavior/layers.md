@@ -124,3 +124,11 @@ A folder can carry its own `auto-renamer.toml` for the exceptions of what lies i
 | Given | a folder configuration with a `target` table |
 | When | it is read |
 | Then | it is refused, naming `target` |
+
+## `LAY-018` A folder configuration cannot set the group
+
+| Step | Statement |
+| --- | --- |
+| Given | a folder configuration with `group` |
+| When | it is read |
+| Then | it is refused, naming `group` |

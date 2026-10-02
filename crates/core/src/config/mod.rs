@@ -85,6 +85,8 @@ pub struct Watch {
     pub max_wait: Duration,
     pub max_files: usize,
     pub dry_run: bool,
+    /// The fields that make files of one batch a group, refused together; none means no groups.
+    pub group: Vec<String>,
     routes: Vec<Route>,
     definitions: BTreeMap<String, Pipeline>,
 }
@@ -160,6 +162,7 @@ struct Settings {
     max_wait: Option<Duration>,
     max_files: Option<usize>,
     routes: Option<Vec<Written>>,
+    group: Option<Vec<String>>,
     vars: BTreeMap<String, Value>,
     unit: Option<Unit>,
     dry_run: Option<bool>,
@@ -356,6 +359,7 @@ fn read_settings(mut reader: Reader<String>) -> Result<Settings, ConfigError> {
     let max_wait = reader.duration("max_wait")?;
     let max_files = read_max_files(&mut reader)?;
     let routes = read_routes(&mut reader)?;
+    let group = reader.strings("group")?;
     let dry_run = reader.boolean("dry_run")?;
     let vars = read_vars(&mut reader)?;
     let unit = read_unit(&mut reader)?;
@@ -365,6 +369,7 @@ fn read_settings(mut reader: Reader<String>) -> Result<Settings, ConfigError> {
         max_wait,
         max_files,
         routes,
+        group,
         vars,
         unit,
         dry_run,
@@ -580,6 +585,10 @@ fn build_watch(
             .or(default.max_files)
             .unwrap_or(DEFAULT_MAX_FILES),
         dry_run: settings.dry_run.or(default.dry_run).unwrap_or(false),
+        group: settings
+            .group
+            .or_else(|| default.group.clone())
+            .unwrap_or_default(),
         routes,
         definitions: definitions.clone(),
     })

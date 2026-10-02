@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use crate::context::{Context, Earlier, Target};
 use crate::pipeline::Pipeline;
-use crate::record::Record;
+use crate::record::{Record, Value};
 use crate::stages::{Batch, File, Flow, Stop};
 
 /// What a batch made of one file.
@@ -81,7 +81,7 @@ pub fn plan_batch(
     records: Vec<Record>,
     target: &dyn Target,
 ) -> Vec<Judged> {
-    plan(&into_one(pipelines, target), records, None)
+    plan(&into_one(pipelines, target), records, &[], None)
 }
 
 /// Plans a batch as [`plan_batch`] does, telling `observe` each step of every file as it happens: the claim,
@@ -92,7 +92,7 @@ pub fn plan_batch_observed(
     target: &dyn Target,
     observe: &mut dyn FnMut(Step),
 ) -> Vec<Judged> {
-    plan(&into_one(pipelines, target), records, Some(observe))
+    plan(&into_one(pipelines, target), records, &[], Some(observe))
 }
 
 /// Pipelines that all look into the same target, each taking the files no pipeline before it claimed.
@@ -111,11 +111,14 @@ fn into_one<'a>(pipelines: &'a [(String, Pipeline)], target: &'a dyn Target) -> 
 /// Plans a batch through pipelines, each looking into its own target, telling the steps only when someone
 /// observes them, so planning without an observer keeps nothing for them.
 ///
-/// A pipeline that takes what an earlier one refused runs after every pipeline taking fresh files, on the
-/// refused records restarted from their origins; what it refuses in turn stays refused.
+/// Once every pipeline taking fresh files has planned, a file planned in the group of a refused file,
+/// whose `group` fields all agree with it, is refused too. A pipeline that takes what an earlier one refused
+/// runs after that, on the refused records restarted from their origins; what it refuses in turn stays
+/// refused.
 pub(crate) fn plan(
     pipelines: &[Planned],
     records: Vec<Record>,
+    group: &[String],
     mut observe: Option<&mut dyn FnMut(Step)>,
 ) -> Vec<Judged> {
     let Some(first) = pipelines.first() else {
@@ -133,9 +136,22 @@ pub(crate) fn plan(
     let mut context = Context::new(first.target);
     let mut waiting = records;
     let mut refused: HashMap<usize, Vec<Record>> = HashMap::new();
+    let mut refused_groups: HashSet<Vec<String>> = HashSet::new();
     let mut outcomes: BTreeMap<PathBuf, Outcome> = BTreeMap::new();
+    let mut grouped = group.is_empty();
 
     for (index, planned) in pipelines.iter().enumerate() {
+        if !grouped && planned.takes != Takes::Fresh {
+            refuse_groups(
+                &mut context,
+                &mut outcomes,
+                &mut refused,
+                &refused_groups,
+                group,
+                &sends_on,
+            );
+            grouped = true;
+        }
         context.enter(planned.target);
         let offered = match planned.takes {
             Takes::Fresh => std::mem::take(&mut waiting),
@@ -149,17 +165,22 @@ pub(crate) fn plan(
             waiting = passed;
         }
 
-        let keeping = sends_on.contains(&index);
+        let keeping = sends_on.contains(&index) || !group.is_empty();
         let files = plan_through(planned, claimed, keeping, &mut context, &mut observe);
         for file in files {
             let (record, stopped) = match file.flow {
                 Ok(record) => (Some(record), Ok(())),
                 Err(stop) => {
                     if let Some(kept) = file.stopped {
-                        refused
-                            .entry(index)
-                            .or_default()
-                            .push(kept.restarted(&stop.planned, &stop.stage));
+                        if let Some(key) = group_key(&kept, group) {
+                            refused_groups.insert(key);
+                        }
+                        if sends_on.contains(&index) {
+                            refused
+                                .entry(index)
+                                .or_default()
+                                .push(kept.restarted(&stop.planned, &stop.stage));
+                        }
                     }
                     (None, Err(stop))
                 }
@@ -178,6 +199,17 @@ pub(crate) fn plan(
                 planned: record,
             });
         }
+    }
+
+    if !grouped {
+        refuse_groups(
+            &mut context,
+            &mut outcomes,
+            &mut refused,
+            &refused_groups,
+            group,
+            &sends_on,
+        );
     }
 
     // The records planned went on to the context for the pipelines after theirs; they come back by origin.
@@ -205,6 +237,59 @@ pub(crate) fn plan(
     judged.extend(unclaimed(waiting));
     judged.sort_by(|a, b| a.origin.cmp(&b.origin));
     judged
+}
+
+/// Refuses every planned file in the group of a refused one, handing it on to its pipeline's rejected route
+/// when there is one.
+fn refuse_groups(
+    context: &mut Context,
+    outcomes: &mut BTreeMap<PathBuf, Outcome>,
+    refused: &mut HashMap<usize, Vec<Record>>,
+    refused_groups: &HashSet<Vec<String>>,
+    group: &[String],
+    sends_on: &HashSet<usize>,
+) {
+    for earlier in context.earlier_mut() {
+        let in_refused_group = earlier
+            .planned
+            .as_ref()
+            .and_then(|record| group_key(record, group))
+            .is_some_and(|key| refused_groups.contains(&key));
+        if !in_refused_group {
+            continue;
+        }
+        let Some(record) = earlier.planned.take() else {
+            continue;
+        };
+        let Some(outcome) = outcomes.get_mut(&earlier.origin) else {
+            continue;
+        };
+        let mut stop = Stop::rejected("group", "a file of its group was refused");
+        stop.planned = record.plan().to_path_buf();
+        if sends_on.contains(&outcome.pipeline) {
+            refused
+                .entry(outcome.pipeline)
+                .or_default()
+                .push(record.restarted(&stop.planned, &stop.stage));
+        }
+        outcome.stopped = Err(stop);
+    }
+}
+
+/// What makes a record one of a group: the values of the `group` fields, or nothing when one is missing
+/// or no fields make a group.
+fn group_key(record: &Record, group: &[String]) -> Option<Vec<String>> {
+    if group.is_empty() {
+        return None;
+    }
+    group
+        .iter()
+        .map(|field| match record.field(field)? {
+            Value::Text(text) => Some(text.clone()),
+            Value::Number(number) => Some(number.to_string()),
+            Value::Date(date) => Some(date.to_rfc3339()),
+        })
+        .collect()
 }
 
 /// Runs the stages of one pipeline over the files it claimed, then claims each plan in its target, telling

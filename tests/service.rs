@@ -655,3 +655,82 @@ fn should_report_a_refused_file_with_the_plan_it_had() {
         What::Refused(reason) if reason.starts_with("move:") && reason.contains("`Show/Alpha.mkv`")
     ));
 }
+
+/// A watch grouping by `show` and `episode`, with a route for `mkv` and a route for `ass` that both name
+/// the file `{show} {episode}` into `target`, which already holds `Show/Alpha 12.mkv`; `ass_route` is
+/// written into the `ass` route.
+fn grouping(ass_route: &str) -> Setup {
+    let sandbox = Sandbox::new();
+    sandbox.make_dir("source");
+    sandbox.make_dir("conflict");
+    sandbox.write("target/Show/Alpha 12.mkv", "old");
+    let stages = r#"[{ number = { into = "episode" } }, { format = "{show} {episode}" }]"#;
+    let text = format!(
+        "[pipeline.video]\nstages = [{{ filter = {{ ext = [\"mkv\"] }} }}, {}]\n\n\
+         [pipeline.subtitle]\nstages = [{{ filter = {{ ext = [\"ass\"] }} }}, {}]\n\n\
+         [target.t]\npath = \"{}\"\n\n[target.c]\npath = \"{}\"\n\n\
+         [watch.w]\nsource = \"{}\"\nroutes = [{{ pipeline = \"video\", move = \"t\" }}, {{ pipeline = \"subtitle\", move = \"t\"{ass_route} }}]\n\
+         unit = \"directory\"\ngroup = [\"show\", \"episode\"]\nvars = {{ show = \"Alpha\" }}\n",
+        &stages[1..stages.len() - 1],
+        &stages[1..stages.len() - 1],
+        sandbox.path("target").display(),
+        sandbox.path("conflict").display(),
+        sandbox.path("source").display(),
+    );
+    let config = Config::parse(&text).expect("the configuration should be accepted");
+    Setup {
+        sandbox,
+        config,
+        renames: Default::default(),
+    }
+}
+
+// @behavior SVC-029
+#[test]
+fn should_refuse_the_rest_of_a_group_with_the_file_refused() {
+    let run = grouping("");
+    run.sandbox.write("source/Show/x 12.mkv", "video");
+    run.sandbox.write("source/Show/x 12.ass", "subtitle");
+
+    let processed = run.process("Show", &["Show/x 12.mkv", "Show/x 12.ass"]);
+
+    assert!(matches!(
+        run.what(&processed, "Show/x 12.mkv"),
+        What::Refused(reason) if reason.starts_with("move:")
+    ));
+    assert!(matches!(
+        run.what(&processed, "Show/x 12.ass"),
+        What::Refused(reason) if reason.starts_with("group:")
+    ));
+    assert!(run.sandbox.exists("source/Show/x 12.ass"));
+}
+
+// @behavior SVC-030
+#[test]
+fn should_send_a_file_refused_with_its_group_to_its_rejected_route() {
+    let run = grouping(", rejected = { move = \"c\" }");
+    run.sandbox.write("source/Show/x 12.mkv", "video");
+    run.sandbox.write("source/Show/x 12.ass", "subtitle");
+
+    let processed = run.process("Show", &["Show/x 12.mkv", "Show/x 12.ass"]);
+
+    assert_eq!(
+        run.what(&processed, "Show/x 12.ass"),
+        What::Moved(run.sandbox.path("conflict/Show/x 12.ass"))
+    );
+}
+
+// @behavior SVC-031
+#[test]
+fn should_let_the_files_of_other_groups_go_on() {
+    let run = grouping("");
+    run.sandbox.write("source/Show/x 12.mkv", "video");
+    run.sandbox.write("source/Show/x 13.ass", "subtitle");
+
+    let processed = run.process("Show", &["Show/x 12.mkv", "Show/x 13.ass"]);
+
+    assert_eq!(
+        run.what(&processed, "Show/x 13.ass"),
+        What::Moved(run.sandbox.path("target/Show/Alpha 13.ass"))
+    );
+}

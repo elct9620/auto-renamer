@@ -83,6 +83,11 @@ impl<'a> Context<'a> {
         &self.earlier
     }
 
+    /// What the pipelines before the running one made of their files, to take a planned record back.
+    pub(crate) fn earlier_mut(&mut self) -> &mut [Earlier] {
+        &mut self.earlier
+    }
+
     /// Keeps what a pipeline made of one of its files, for the pipelines after it.
     pub(crate) fn remember(&mut self, file: Earlier) {
         self.earlier.push(file);
