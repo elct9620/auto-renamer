@@ -93,6 +93,12 @@ export function removeStage(config: Table, pipeline: string, index: number): Tab
   )
 }
 
+/** Moves the stage at `index` of `from` into `to`, placed at `at`. */
+export function transferStage(config: Table, from: string, index: number, to: string, at: number): Table {
+  const stage = stagesOf(config, from)[index]
+  return insertStage(removeStage(config, from, index), to, at, stage)
+}
+
 /** Moves a stage by `offset` places, keeping it within the pipeline. */
 export function moveStage(config: Table, pipeline: string, index: number, offset: number): Table {
   return withStages(config, pipeline, moved(stagesOf(config, pipeline), index, offset))

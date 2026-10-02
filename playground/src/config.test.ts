@@ -28,6 +28,7 @@ import {
   replaceStage,
   stageName,
   stagesOf,
+  transferStage,
   withParameter,
 } from './config'
 import { builtIns, check, read, render, stages } from './core'
@@ -336,7 +337,7 @@ describe('routes and targets', () => {
     const video = nodes.find((node) => node.id === routeId('series', 0))!
     const subtitle = nodes.find((node) => node.id === routeId('series', 1))!
 
-    const index = routeAt(nodes.filter((node) => node.id !== subtitle.id), 'series', video.position.y - 1)
+    const index = routeAt(nodes.filter((node) => node.id !== subtitle.id), 'series', { x: video.position.x, y: video.position.y - 1 })!
     const moved = moveRoute(config, 'series', 1, index - 1)
 
     expect(pipelinesOf(moved, 'series')).toEqual(['subtitle', 'video'])
@@ -458,5 +459,21 @@ describe('overriding a pipeline in a folder', () => {
     expect(result.vars).toEqual({ show: 'Alpha' })
     expect(names(result, 'subtitle')).toEqual(['strip'])
     expect(names(result)).toEqual(names(read(CONFIG)))
+  })
+})
+
+describe('moving a stage across pipelines', () => {
+  // @behavior PGE-102
+  it('takes a stage out of its pipeline and into the other', () => {
+    const config = transferStage(read(CONFIG), 'video', 1, 'subtitle', 0)
+
+    expect(names(config)).toEqual(['filter', 'strip'])
+    expect(names(config, 'subtitle')).toEqual(['format', 'strip'])
+  })
+
+  it('places nothing for a route dropped away from its watch', () => {
+    const { nodes } = toGraph(read(CONFIG), builtIns())
+
+    expect(routeAt(nodes, 'series', { x: 600, y: 50 })).toBeNull()
   })
 })

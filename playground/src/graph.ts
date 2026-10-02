@@ -108,12 +108,14 @@ export function dropAt(nodes: Node<NodeData>[], point: XYPosition): { pipeline: 
   return { pipeline, index }
 }
 
-/** Where a route moved to a height inside its watch goes: after each other route of the watch whose middle is
- * above it. `nodes` are as drawn, without the route being moved. */
-export function routeAt(nodes: Node<NodeData>[], watch: string, y: number): number {
+/** Where a route dropped at a place inside its watch goes: after each other route of the watch whose middle is
+ * above it; none when it was dropped away from the watch's column. `nodes` are as drawn, without the route being
+ * moved. */
+export function routeAt(nodes: Node<NodeData>[], watch: string, at: XYPosition): number | null {
+  if (Math.abs(at.x - PAD) > CHILD / 2) return null
   return nodes.filter((node) => {
     const one = node.data.selected
-    return one.kind === 'route' && one.watch === watch && node.position.y + STEP / 2 <= y
+    return one.kind === 'route' && one.watch === watch && node.position.y + STEP / 2 <= at.y
   }).length
 }
 
@@ -186,7 +188,6 @@ export function toGraph(config: Table, builtIns: Table = {}): { nodes: Node<Node
         id,
         type: 'route',
         parentId: watchId(name),
-        extent: 'parent',
         position: below(index),
         style: { width: CHILD },
         data: { label: `${index + 1} · ${pipeline}`, followed, selected: { kind: 'route', watch: name, index } },
@@ -242,7 +243,6 @@ export function toGraph(config: Table, builtIns: Table = {}): { nodes: Node<Node
         id,
         type: 'stage',
         parentId: pipelineId(pipeline),
-        extent: 'parent',
         position: beside(index),
         style: { width: CHILD },
         draggable: !locked,

@@ -100,7 +100,11 @@
   },
   "canvas": {
     "resetLayout": "重設版面",
-    "part": "從 {{watch}} 移除 {{pipeline}}"
+    "part": "從 {{watch}} 移除 {{pipeline}}",
+    "transfer": "把 {{stage}} 移到 {{pipeline}}？",
+    "transferHint": "它會離開 {{from}}，改在另一條管線放下的位置執行。",
+    "move": "移動",
+    "cancel": "取消"
   },
   "examples": {
     "label": "範例",

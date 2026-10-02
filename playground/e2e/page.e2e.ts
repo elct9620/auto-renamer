@@ -539,3 +539,47 @@ test('the whole drawing is in view on opening', async ({ page }) => {
       && box.top >= canvas.y - 1 && box.bottom <= canvas.y + canvas.height + 1)
   }).toBe(true)
 })
+
+async function dragOnto(page: Page, from: ReturnType<Page['locator']>, to: { x: number; y: number }) {
+  const box = (await from.boundingBox())!
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(to.x, to.y, { steps: 12 })
+  await page.mouse.up()
+}
+
+// @behavior PGE-103
+test('a stage dropped on another pipeline moves there once confirmed', async ({ page }) => {
+  await ownSeriesVideo(page)
+  await page.getByRole('button', { name: 'Add pipeline' }).click()
+  const format = node(page, 'format')
+  const target = (await node(page, 'new_pipeline').boundingBox())!
+  const inside = { x: target.x + target.width / 2, y: target.y + target.height * 0.7 }
+  const before = await configText(page)
+
+  await dragOnto(page, format, inside)
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  expect(await configText(page)).toBe(before)
+  await dragOnto(page, format, inside)
+  await page.getByRole('button', { name: 'Move', exact: true }).click()
+
+  expect(await configText(page)).toMatch(/\[\[pipeline\.new_pipeline\.stages\]\]\s+format = /)
+})
+
+// @behavior PGE-104
+test('a stage dropped where it means nothing goes back', async ({ page }) => {
+  await ownSeriesVideo(page)
+  const format = node(page, 'format')
+  const pipeline = node(page, 'series-video')
+  // A drag near the edge pans the view, so the stage is placed against its pipeline rather than the page.
+  const inPipeline = async () => (await format.boundingBox())!.y - (await pipeline.boundingBox())!.y
+  const before = await configText(page)
+  const offset = await inPipeline()
+  const at = (await format.boundingBox())!
+  const canvas = (await page.locator('.react-flow').boundingBox())!
+
+  await dragOnto(page, format, { x: at.x + at.width / 2, y: canvas.y + canvas.height - 20 })
+
+  await expect.poll(inPipeline).toBeCloseTo(offset, 0)
+  expect(await configText(page)).toBe(before)
+})

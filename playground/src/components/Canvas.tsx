@@ -24,6 +24,16 @@ import { BaseNode, BaseNodeContent, BaseNodeHeader, BaseNodeHeaderTitle } from '
 import { ButtonEdge } from '@/components/button-edge'
 import { GroupNode } from '@/components/labeled-group-node'
 import { StageName } from '@/components/Fields'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { KIND_ICONS, stageIcon } from '@/components/kinds'
 import { cn } from '@/lib/utils'
@@ -41,6 +51,7 @@ import {
   removeTarget,
   routeTo,
   setIn,
+  transferStage,
 } from '../config'
 import { builtIns, read, stages } from '../core'
 import { type Joint, type Layout, type Move, type NodeData, type Selected, absolute, dropAt, laidOut, relaid, routeAt, toGraph } from '../graph'
@@ -194,6 +205,13 @@ function Flow({ config, onChange, onSelect }: {
     setEdges(graph.edges)
   }, [shown, graph, setNodes, setEdges])
 
+  // A stage dropped on another pipeline waits here until the move is confirmed.
+  const [transfer, setTransfer] = useState<{ stage: { pipeline: string; index: number }; to: { pipeline: string; index: number }; name: string } | null>(null)
+  const goBack = (id: string) => {
+    const drawnAt = shown.find((one) => one.id === id)?.position
+    if (drawnAt) setNodes((current) => current.map((one) => (one.id === id ? { ...one, position: drawnAt } : one)))
+  }
+
   const drop = (event: DragEvent) => {
     const kind = event.dataTransfer.getData(STAGE_DRAG)
     if (!kind) return
@@ -203,6 +221,7 @@ function Flow({ config, onChange, onSelect }: {
   }
 
   return (
+    <>
     <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} colorMode="system" fitView
       // A long pipeline is wider than the canvas; the whole drawing is fitted, scaled down past the default limit.
       minZoom={0.2} fitViewOptions={{ maxZoom: 1 }}
@@ -212,8 +231,8 @@ function Flow({ config, onChange, onSelect }: {
         const moved = (node.data as NodeData).selected
         const place = dropAt(shown.filter((other) => other.id !== node.id), absolute(shown, node as Node<NodeData>))
         if (moved.kind === 'route') {
-          const index = routeAt(shown.filter((other) => other.id !== node.id), moved.watch, node.position.y)
-          if (index !== moved.index) {
+          const index = routeAt(shown.filter((other) => other.id !== node.id), moved.watch, node.position)
+          if (index !== null && index !== moved.index) {
             onChange(moveRoute(config, moved.watch, moved.index, index - moved.index))
             onSelect({ ...moved, index })
             return
@@ -222,6 +241,14 @@ function Flow({ config, onChange, onSelect }: {
         if (moved.kind === 'stage' && place?.pipeline === moved.pipeline && place.index !== moved.index) {
           onChange(moveStage(config, moved.pipeline, moved.index, place.index - moved.index))
           onSelect({ ...moved, index: place.index })
+          return
+        }
+        // A route or a stage stays where its list places it; dropped anywhere else, it goes back.
+        if (node.parentId) {
+          if (moved.kind === 'stage' && place && place.pipeline !== moved.pipeline) {
+            setTransfer({ stage: moved, to: place, name: (node.data as NodeData).label })
+          }
+          goBack(node.id)
           return
         }
         setLayout({ ...layout, [node.id]: node.position })
@@ -261,6 +288,23 @@ function Flow({ config, onChange, onSelect }: {
         </ControlButton>
       </Controls>
     </ReactFlow>
+    <AlertDialog open={transfer !== null} onOpenChange={(open) => { if (!open) setTransfer(null) }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t('canvas.transfer', { stage: transfer?.name, pipeline: transfer?.to.pipeline })}</AlertDialogTitle>
+          <AlertDialogDescription>{t('canvas.transferHint', { from: transfer?.stage.pipeline })}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t('canvas.cancel')}</AlertDialogCancel>
+          <AlertDialogAction onClick={() => {
+            if (!transfer) return
+            onChange(transferStage(config, transfer.stage.pipeline, transfer.stage.index, transfer.to.pipeline, transfer.to.index))
+            onSelect({ kind: 'stage', pipeline: transfer.to.pipeline, index: transfer.to.index })
+          }}>{t('canvas.move')}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }
 

@@ -817,3 +817,27 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the full example, whose pipelines are wider than the canvas |
 | When | it is opened |
 | Then | every node is drawn inside the canvas |
+
+## `PGE-102` A stage moved to another pipeline leaves its own and joins the other
+
+| Step | Statement |
+| --- | --- |
+| Given | the pipeline `video` with the stages filter, format and strip, and the pipeline `subtitle` with strip |
+| When | the format of `video` is moved to the start of `subtitle` |
+| Then | `video` holds filter and strip, and `subtitle` holds format and strip |
+
+## `PGE-103` A stage dropped on another pipeline moves there once confirmed
+
+| Step | Statement |
+| --- | --- |
+| Given | two pipelines the configuration defines |
+| When | a stage of one is dropped on the other and the move is confirmed |
+| Then | the stage is written in the other pipeline, and asking alone changed nothing |
+
+## `PGE-104` A stage or route dropped where it means nothing goes back
+
+| Step | Statement |
+| --- | --- |
+| Given | a stage of a pipeline the configuration defines |
+| When | it is dropped away from every pipeline |
+| Then | it is drawn where it was and the configuration is as it was |

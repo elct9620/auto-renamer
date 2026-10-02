@@ -100,7 +100,11 @@
   },
   "canvas": {
     "resetLayout": "Reset layout",
-    "part": "Remove {{pipeline}} from {{watch}}"
+    "part": "Remove {{pipeline}} from {{watch}}",
+    "transfer": "Move {{stage}} to {{pipeline}}?",
+    "transferHint": "It leaves {{from}} and runs in the other pipeline from where it was dropped.",
+    "move": "Move",
+    "cancel": "Cancel"
   },
   "examples": {
     "label": "Examples",
