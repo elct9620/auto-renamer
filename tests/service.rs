@@ -660,17 +660,30 @@ fn should_report_a_refused_file_with_the_plan_it_had() {
 /// the file `{show} {episode}` into `target`, which already holds `Show/Alpha 12.mkv`; `ass_route` is
 /// written into the `ass` route.
 fn grouping(ass_route: &str) -> Setup {
+    grouped(ass_route, r#"group = ["show", "episode"]"#, false)
+}
+
+/// The video and subtitle routes of `grouping`, grouped by `group`, with the subtitles claimed first when
+/// `ass_first`.
+fn grouped(ass_route: &str, group: &str, ass_first: bool) -> Setup {
     let sandbox = Sandbox::new();
     sandbox.make_dir("source");
     sandbox.make_dir("conflict");
     sandbox.write("target/Show/Alpha 12.mkv", "old");
     let stages = r#"[{ number = { into = "episode" } }, { format = "{show} {episode}" }]"#;
+    let video = r#"{ pipeline = "video", move = "t" }"#;
+    let subtitle = format!(r#"{{ pipeline = "subtitle", move = "t"{ass_route} }}"#);
+    let routes = if ass_first {
+        format!("{subtitle}, {video}")
+    } else {
+        format!("{video}, {subtitle}")
+    };
     let text = format!(
         "[pipeline.video]\nstages = [{{ filter = {{ ext = [\"mkv\"] }} }}, {}]\n\n\
          [pipeline.subtitle]\nstages = [{{ filter = {{ ext = [\"ass\"] }} }}, {}]\n\n\
          [target.t]\npath = \"{}\"\n\n[target.c]\npath = \"{}\"\n\n\
-         [watch.w]\nsource = \"{}\"\nroutes = [{{ pipeline = \"video\", move = \"t\" }}, {{ pipeline = \"subtitle\", move = \"t\"{ass_route} }}]\n\
-         unit = \"directory\"\ngroup = [\"show\", \"episode\"]\nvars = {{ show = \"Alpha\" }}\n",
+         [watch.w]\nsource = \"{}\"\nroutes = [{routes}]\n\
+         unit = \"directory\"\n{group}\nvars = {{ show = \"Alpha\" }}\n",
         &stages[1..stages.len() - 1],
         &stages[1..stages.len() - 1],
         sandbox.path("target").display(),
@@ -732,5 +745,130 @@ fn should_let_the_files_of_other_groups_go_on() {
     assert_eq!(
         run.what(&processed, "Show/x 13.ass"),
         What::Moved(run.sandbox.path("target/Show/Alpha 13.ass"))
+    );
+}
+
+// @behavior SVC-032
+#[test]
+fn should_put_a_file_missing_a_field_of_the_group_in_no_group() {
+    let run = grouped("", r#"group = ["show", "season"]"#, false);
+    run.sandbox.write("source/Show/x 12.mkv", "video");
+    run.sandbox.write("source/Show/x 12.ass", "subtitle");
+
+    let processed = run.process("Show", &["Show/x 12.mkv", "Show/x 12.ass"]);
+
+    assert!(matches!(
+        run.what(&processed, "Show/x 12.mkv"),
+        What::Refused(_)
+    ));
+    assert_eq!(
+        run.what(&processed, "Show/x 12.ass"),
+        What::Moved(run.sandbox.path("target/Show/Alpha 12.ass"))
+    );
+}
+
+// @behavior SVC-033
+#[test]
+fn should_take_no_other_file_along_without_a_group() {
+    let run = grouped("", "", false);
+    run.sandbox.write("source/Show/x 12.mkv", "video");
+    run.sandbox.write("source/Show/x 12.ass", "subtitle");
+
+    let processed = run.process("Show", &["Show/x 12.mkv", "Show/x 12.ass"]);
+
+    assert!(matches!(
+        run.what(&processed, "Show/x 12.mkv"),
+        What::Refused(_)
+    ));
+    assert_eq!(
+        run.what(&processed, "Show/x 12.ass"),
+        What::Moved(run.sandbox.path("target/Show/Alpha 12.ass"))
+    );
+}
+
+// @behavior SVC-034
+#[test]
+fn should_process_members_of_a_group_in_different_batches_apart() {
+    let run = grouping("");
+    run.sandbox.write("source/Show/x 12.mkv", "video");
+    let first = run.process("Show", &["Show/x 12.mkv"]);
+    run.sandbox.write("source/Show/x 12.ass", "subtitle");
+
+    let later = run.process("Show", &["Show/x 12.ass"]);
+
+    assert!(matches!(
+        run.what(&first, "Show/x 12.mkv"),
+        What::Refused(_)
+    ));
+    assert_eq!(
+        run.what(&later, "Show/x 12.ass"),
+        What::Moved(run.sandbox.path("target/Show/Alpha 12.ass"))
+    );
+}
+
+// @behavior SVC-035
+#[test]
+fn should_judge_a_group_after_every_route_has_planned() {
+    let run = grouped("", r#"group = ["show", "episode"]"#, true);
+    run.sandbox.write("source/Show/x 12.mkv", "video");
+    run.sandbox.write("source/Show/x 12.ass", "subtitle");
+
+    let processed = run.process("Show", &["Show/x 12.mkv", "Show/x 12.ass"]);
+
+    assert!(matches!(
+        run.what(&processed, "Show/x 12.ass"),
+        What::Refused(reason) if reason.starts_with("group:")
+    ));
+    assert!(run.sandbox.exists("source/Show/x 12.ass"));
+}
+
+// @behavior SVC-036
+#[test]
+fn should_apply_a_changed_folder_configuration_to_the_next_batch() {
+    let run = alpha("");
+    run.sandbox
+        .write("source/Show/auto-renamer.toml", "[vars]\nshow = \"Beta\"\n");
+    run.sandbox.write("source/Show/x.mkv", "video");
+    run.process("Show", &["Show/x.mkv"]);
+    run.sandbox.write(
+        "source/Show/auto-renamer.toml",
+        "[vars]\nshow = \"Gamma\"\n",
+    );
+    run.sandbox.write("source/Show/y.mkv", "video");
+
+    run.process("Show", &["Show/y.mkv"]);
+
+    assert!(run.sandbox.exists("target/Show/Beta.mkv"));
+    assert!(run.sandbox.exists("target/Show/Gamma.mkv"));
+}
+
+// @behavior SVC-037
+#[test]
+fn should_plan_each_route_against_its_own_target() {
+    let sandbox = Sandbox::new();
+    sandbox.make_dir("source");
+    sandbox.make_dir("videos");
+    sandbox.write("subtitles/a.mkv", "old");
+    let text = format!(
+        "[pipeline.video]\nstages = [{{ filter = {{ ext = [\"mkv\"] }} }}, {{ format = \"a\" }}]\n\n\
+         [pipeline.subtitle]\nstages = [{{ filter = {{ ext = [\"ass\"] }} }}, {{ format = \"a\" }}]\n\n\
+         [target.v]\npath = \"{}\"\n\n[target.s]\npath = \"{}\"\n\n\
+         [watch.w]\nsource = \"{}\"\nroutes = [{{ pipeline = \"subtitle\", move = \"s\" }}, {{ pipeline = \"video\", move = \"v\" }}]\nunit = \"source\"\n",
+        sandbox.path("videos").display(),
+        sandbox.path("subtitles").display(),
+        sandbox.path("source").display(),
+    );
+    let run = Setup {
+        config: Config::parse(&text).expect("the configuration should be accepted"),
+        sandbox,
+        renames: Default::default(),
+    };
+    run.sandbox.write("source/x.mkv", "video");
+
+    let processed = run.process("", &["x.mkv"]);
+
+    assert_eq!(
+        run.what(&processed, "x.mkv"),
+        What::Moved(run.sandbox.path("videos/a.mkv"))
     );
 }

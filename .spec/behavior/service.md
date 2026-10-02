@@ -238,3 +238,51 @@ Processing a batch is what a ready batch of settled files turns into: the files 
 | Given | the same watch, and also the file `Show/x 13.ass` |
 | When | the batch is processed |
 | Then | `Show/x 13.ass` is moved to `Show/Alpha 13.ass` under the target |
+
+## `SVC-032` A file missing a field of the group is in no group
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch grouping by `show` and `season`, files that carry no `season`, a video whose name is taken and its subtitle |
+| When | the batch is processed |
+| Then | the video is refused and the subtitle is moved |
+
+## `SVC-033` Without a group, a refused file takes no other along
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch without `group`, a video whose name is taken and the subtitle of the same episode |
+| When | the batch is processed |
+| Then | the video is refused and the subtitle is moved |
+
+## `SVC-034` Members of a group in different batches are processed apart
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch grouping by `show` and `episode`, and a video whose name is taken, processed and refused in one batch |
+| When | the subtitle of the same episode is processed in a later batch |
+| Then | the subtitle is moved |
+
+## `SVC-035` A group is judged after every route has planned
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch grouping by `show` and `episode` whose subtitle route claims before its video route, a video whose name is taken and its subtitle |
+| When | the batch is processed |
+| Then | the subtitle is refused with its group |
+
+## `SVC-036` A changed folder configuration applies to the next batch
+
+| Step | Statement |
+| --- | --- |
+| Given | a folder configuration giving `show` as Beta, and a batch processed with it |
+| When | the folder configuration is changed to give Gamma and the next batch of that folder is processed |
+| Then | the next file is named Gamma |
+
+## `SVC-037` Each route plans against its own target
+
+| Step | Statement |
+| --- | --- |
+| Given | a video route moving to an empty target, and a subtitle route moving to a target that holds `a.mkv` |
+| When | `x.mkv` is planned by the video route as `a.mkv` |
+| Then | it is moved, not refused |

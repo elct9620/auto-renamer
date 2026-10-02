@@ -37,3 +37,19 @@ The `vars` of a configuration are answers: what detection could not find, or fou
 | Given | a file whose `vars` give `show = "alpha"` |
 | When | a case stage turns `show` upper |
 | Then | `show` is `ALPHA` |
+
+## `ANS-005` A field an answer gave is left to a rank
+
+| Step | Statement |
+| --- | --- |
+| Given | a file whose `vars` give `index` 5 and `episode` 1, and a rank into `index` by `episode` |
+| When | the batch is planned |
+| Then | `index` is still 5 |
+
+## `ANS-006` A field an answer gave is left to a take
+
+| Step | Statement |
+| --- | --- |
+| Given | a video `Show 27.mkv` with `episode` 27, and a subtitle `Show 27.cht.ass` whose `vars` give `episode` 3, taking `episode` |
+| When | the batch is planned |
+| Then | the subtitle's `episode` is still 3 |

@@ -302,3 +302,19 @@ The configuration says which folders are watched, which routes take their files,
 | Given | a configuration defining `series-video` as a filter for `mkv` only, and a watch with a route of it |
 | When | the configuration is read |
 | Then | the route plans with the pipeline the configuration defines |
+
+## `CFG-041` A target inside a source once real paths are known is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch with the source `/downloads` and a target at `/link`, where `/link` really is `/downloads/library` |
+| When | the paths are checked with their real locations |
+| Then | the check is refused, naming `path` |
+
+## `CFG-042` A watch takes the batch settings the default gives
+
+| Step | Statement |
+| --- | --- |
+| Given | a default with `quiet`, `max_wait`, `max_files`, `dry_run` and `unit`, and a watch setting none of them |
+| When | the configuration is read |
+| Then | the watch has each value the default gives |

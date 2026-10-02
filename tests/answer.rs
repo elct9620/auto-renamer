@@ -3,7 +3,7 @@ mod common;
 use std::collections::BTreeMap;
 
 use auto_renamer::Value;
-use common::{number, planned_batch, planned_record, record, text};
+use common::{number, planned_batch, planned_record, record, text, with};
 
 /// The value a field holds once one stage ran on a file whose `vars` gave `answers`.
 fn after(stages: &str, path: &str, answers: &[(&str, Value)]) -> Option<Value> {
@@ -64,4 +64,42 @@ fn should_rework_an_answer() {
     );
 
     assert_eq!(show, Some(text("ALPHA")));
+}
+
+// @behavior ANS-005
+#[test]
+fn should_leave_a_field_an_answer_gave_to_a_rank() {
+    let index = after(
+        r#"[{ rank = { into = "index", by = ["episode"] } }]"#,
+        "a.ass",
+        &[("index", number(5)), ("episode", number(1))],
+    );
+
+    assert_eq!(index, Some(number(5)));
+}
+
+// @behavior ANS-006
+#[test]
+fn should_leave_a_field_an_answer_gave_to_a_take() {
+    let vars = BTreeMap::from([("episode".to_string(), number(3))]);
+    let records = vec![
+        with(record("Show 27.mkv"), "episode", number(27)),
+        record("Show 27.cht.ass").with_vars(vars),
+    ];
+
+    let judged = planned_batch(
+        &[
+            ("video", r#"[{ filter = { ext = ["mkv"] } }]"#),
+            (
+                "subtitle",
+                r#"[{ filter = { ext = ["ass"] } }, { take = { fields = ["episode"] } }]"#,
+            ),
+        ],
+        records,
+    );
+
+    assert_eq!(
+        planned_record(&judged, "Show 27.cht.ass").field("episode"),
+        Some(&number(3))
+    );
 }

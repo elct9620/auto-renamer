@@ -326,3 +326,45 @@ fn last_lines(log: &str) -> String {
     let lines: Vec<&str> = log.lines().rev().take(20).collect();
     lines.into_iter().rev().collect::<Vec<_>>().join("\n")
 }
+
+// @behavior RUN-031
+#[test]
+fn should_log_why_a_configuration_that_is_not_valid_is_kept() {
+    let sandbox = Sandbox::new();
+    let program = Program::start(&sandbox, r#"[]"#, "");
+
+    sandbox.write("config.toml", "this is not toml");
+
+    assert!(
+        eventually(|| program
+            .log()
+            .contains("the configuration is kept as it was: ")),
+        "{}",
+        program.log()
+    );
+}
+
+// @behavior RUN-032
+#[test]
+fn should_check_the_real_paths_again_when_reading_the_configuration_again() {
+    let sandbox = Sandbox::new();
+    let mut program = Program::start(&sandbox, r#"[]"#, "");
+    std::os::unix::fs::symlink(sandbox.path(""), sandbox.path("link")).unwrap();
+
+    sandbox.write(
+        "config.toml",
+        &format!(
+            "[pipeline.p]\nstages = []\n\n[watch.w]\nsource = \"{}\"\nroutes = [{{ pipeline = \"p\" }}]\n",
+            sandbox.path("link").display()
+        ),
+    );
+
+    let kept = || {
+        program
+            .log()
+            .lines()
+            .any(|line| line.contains("kept as it was") && line.contains("`source`"))
+    };
+    assert!(eventually(kept), "{}", program.log());
+    assert!(program.is_running());
+}

@@ -240,3 +240,19 @@ The runner is the watcher itself: it watches the sources, hands ready batches to
 | When | a file is written into the source after the batch |
 | Then | the file appears in the target under the name the changed configuration gives it |
 
+
+## `RUN-031` A configuration that is not valid is logged when kept
+
+| Step | Statement |
+| --- | --- |
+| Given | a running watcher |
+| When | its configuration file is rewritten as text that is not a configuration |
+| Then | the error output says the configuration is kept as it was, and why |
+
+## `RUN-032` Paths are checked again by their real locations when the configuration is read again
+
+| Step | Statement |
+| --- | --- |
+| Given | a running watcher |
+| When | its configuration is rewritten with a source that is a link to the folder holding the configuration file |
+| Then | the error output says the configuration is kept as it was, naming `source`, and the watcher runs on |

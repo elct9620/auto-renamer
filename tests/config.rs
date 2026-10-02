@@ -426,3 +426,38 @@ fn should_let_a_defined_pipeline_replace_a_built_in_one() {
 
     assert_eq!(watch.pipeline("series-video").stages().len(), 1);
 }
+
+// @behavior CFG-041
+#[test]
+fn should_refuse_a_target_inside_a_source_once_real_paths_are_known() {
+    let config = Config::parse(
+        "[pipeline.video]\nstages = []\n\n[target.library]\npath = \"/link\"\n\n[watch.series]\nsource = \"/downloads\"\nroutes = [{ pipeline = \"video\", move = \"library\" }]\n",
+    )
+    .expect("the configuration should be accepted as written");
+
+    let checked = config.check_paths(
+        Path::new("/etc/auto-renamer/config.toml"),
+        linked("/downloads/library"),
+    );
+
+    assert!(names(
+        &checked.expect_err("the paths should be refused"),
+        "path"
+    ));
+}
+
+// @behavior CFG-042
+#[test]
+fn should_give_a_watch_the_batch_settings_of_the_default() {
+    let text = format!(
+        "{PIPELINES}\n[default]\nquiet = \"90s\"\nmax_wait = \"10m\"\nmax_files = 50\ndry_run = true\nunit = \"source\"\n\n[watch.series]\nsource = \"/downloads\"\nroutes = [{{ pipeline = \"video\" }}]\n"
+    );
+
+    let watch = read(&text).remove(0);
+
+    assert_eq!(watch.quiet, Duration::from_secs(90));
+    assert_eq!(watch.max_wait, Duration::from_secs(600));
+    assert_eq!(watch.max_files, 50);
+    assert!(watch.dry_run);
+    assert!(matches!(watch.unit, Unit::Source));
+}
