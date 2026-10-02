@@ -96,3 +96,27 @@ The examples of the design, each run through the pipeline it gives. They show th
 | Given | the `series-video` and `series-subtitle` pipelines, `show` Alpha, and the files `Alpha/[Team] Alpha - 01 [1080p]/Alpha 01.mkv` and `Alpha/[Team] Alpha - 01 [1080p]/Alpha 01.cht.ass` |
 | When | they are planned in one batch |
 | Then | the plans are `Alpha/Season 01/Alpha s01e01.mkv` and `Alpha/Season 01/Alpha s01e01.zh.ass` |
+
+## `EX-021` The built-in pipelines are the ones the design gives
+
+| Step | Statement |
+| --- | --- |
+| Given | the built-in pipelines and the `series-video` and `series-subtitle` of the design |
+| When | they are compared |
+| Then | they are the same |
+
+## `EX-022` The built-in series pipelines take the show from its folder
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch with a route of `series-video` and no variables, and the file `Alpha/[Team] Alpha - 01 [1080p].mkv` |
+| When | the batch is planned |
+| Then | the plan is `Alpha/Season 01/Alpha s01e01.mkv` |
+
+## `EX-023` A show the variables give wins over the show folder
+
+| Step | Statement |
+| --- | --- |
+| Given | the same watch with the variable `show` set to `Gemma`, and the file `Alpha/Season 01/[Beta Team] Gemma 01 [1080p].mkv` |
+| When | the batch is planned |
+| Then | the plan is `Alpha/Season 01/Gemma s01e01.mkv` |

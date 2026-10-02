@@ -304,3 +304,74 @@ fn should_plan_a_folder_per_episode_into_its_season_folder() {
         "Alpha/Season 01/Alpha s01e01.zh.ass"
     );
 }
+
+/// The `pipeline` table of the first block of the design declaring a pipeline of this name.
+fn design_block_declaring(name: &str) -> toml::Table {
+    let design = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/docs/design.md"))
+        .expect("the design should be readable");
+    design
+        .split("```toml")
+        .skip(1)
+        .filter_map(|block| block.split("```").next()?.parse::<toml::Table>().ok())
+        .find_map(|document| {
+            let declared = document.get("pipeline")?.as_table()?;
+            declared.contains_key(name).then(|| declared.clone())
+        })
+        .unwrap_or_else(|| panic!("the design declares no `{name}`"))
+}
+
+// @behavior EX-021
+#[test]
+fn should_build_in_the_pipelines_the_design_gives() {
+    let built_in: toml::Table = auto_renamer::BUILT_IN_PIPELINES
+        .parse::<toml::Table>()
+        .expect("the built-in pipelines are TOML")["pipeline"]
+        .as_table()
+        .expect("they declare pipelines")
+        .clone();
+
+    assert_eq!(built_in, design_block_declaring("series-video"));
+}
+
+/// The plan of one file through the built-in `series-video`, as a watch with these variables reads it.
+fn built_in_plan(vars: &str, path: &str) -> PathBuf {
+    let config = auto_renamer::Config::parse(&format!(
+        "[watch.w]\nsource = \"/downloads\"\nroutes = [{{ pipeline = \"series-video\" }}]\n{vars}\n"
+    ))
+    .expect("the configuration should be accepted");
+    let watch = &config.watches()[0];
+    let listed = vec![(
+        "series-video".to_string(),
+        watch.pipeline("series-video").clone(),
+    )];
+    let record = record_on(path, 2026, 9, 27).with_vars(watch.vars.clone());
+
+    match &plan_batch(&listed, vec![record], &Files::none())[..] {
+        [
+            Judged {
+                verdict: Verdict::Planned(planned),
+                ..
+            },
+        ] => planned.plan().to_path_buf(),
+        other => panic!("expected the file to be planned, got {other:?}"),
+    }
+}
+
+// @behavior EX-022
+#[test]
+fn should_take_the_show_from_its_folder_in_the_built_in_pipelines() {
+    let plan = built_in_plan("", "Alpha/[Team] Alpha - 01 [1080p].mkv");
+
+    assert_eq!(plan, PathBuf::from("Alpha/Season 01/Alpha s01e01.mkv"));
+}
+
+// @behavior EX-023
+#[test]
+fn should_let_the_show_the_variables_give_win_over_the_folder() {
+    let plan = built_in_plan(
+        "vars = { show = \"Gemma\" }",
+        "Alpha/Season 01/[Beta Team] Gemma 01 [1080p].mkv",
+    );
+
+    assert_eq!(plan, PathBuf::from("Alpha/Season 01/Gemma s01e01.mkv"));
+}

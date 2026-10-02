@@ -59,7 +59,7 @@ Some tests depend on things outside their own file.
 
 | Test | Depends on |
 |---|---|
-| `tests/examples.rs` | the `toml` pipelines in `docs/design.md` |
+| `tests/examples.rs` | the `toml` pipelines in `docs/design.md`, which `crates/core/src/config/series.toml` must match |
 | kernel overflow in `tests/queue.rs` | a handed-in overflow notice |
 | moves between mounts in `tests/move.rs` | the `mv` on PATH |
 | MV-028 in `tests/move.rs` | the 1 MiB tmpfs at `/small` of the test container |

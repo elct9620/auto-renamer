@@ -1396,3 +1396,15 @@ impl Renames {
     pub fn new() -> Renames {}
 }
 ```
+
+## `BUILT_IN_PIPELINES`
+
+The pipelines every configuration has without defining them, written as a configuration declares pipelines; a pipeline of the same name replaces one.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub const BUILT_IN_PIPELINES: &str = "";
+```

@@ -22,6 +22,10 @@ pub const FOLDER_CONFIG: &str = "auto-renamer.toml";
 /// The most a folder configuration may hold, because it comes from downloaded content.
 pub(crate) const MAX_FOLDER_CONFIG_BYTES: usize = 64 * 1024;
 
+/// The pipelines every configuration has without defining them, written as a configuration declares
+/// pipelines; a pipeline of the same name replaces one.
+pub const BUILT_IN_PIPELINES: &str = include_str!("series.toml");
+
 /// The most files a batch may hold, whatever the configuration says, so that a unit cannot grow without bound.
 pub const MAX_BATCH_FILES: usize = 100_000;
 const DEFAULT_MAX_FILES: usize = 1000;
@@ -180,7 +184,8 @@ impl Config {
             Some(table) => read_settings(Reader::new("default".to_string(), table))?,
             None => Settings::default(),
         };
-        let definitions = read_pipelines(root.table("pipeline")?.unwrap_or_default())?;
+        let mut definitions = built_in_pipelines();
+        definitions.extend(read_pipelines(root.table("pipeline")?.unwrap_or_default())?);
         let targets = read_targets(root.table("target")?.unwrap_or_default())?;
         let declared = root.table("watch")?.unwrap_or_default();
         root.finish()?;
@@ -477,6 +482,17 @@ fn read_unit(reader: &mut Reader<String>) -> Result<Option<Unit>, ConfigError> {
             "must be \"directory\", \"source\" or { root = [...] }",
         )),
     }
+}
+
+fn built_in_pipelines() -> BTreeMap<String, Pipeline> {
+    let document: Table = BUILT_IN_PIPELINES
+        .parse()
+        .expect("the built-in pipelines are TOML");
+    let declared = match document.get("pipeline") {
+        Some(Toml::Table(declared)) => declared.clone(),
+        _ => Table::new(),
+    };
+    read_pipelines(declared).expect("the built-in pipelines are accepted")
 }
 
 fn read_pipelines(declared: Table) -> Result<BTreeMap<String, Pipeline>, ConfigError> {

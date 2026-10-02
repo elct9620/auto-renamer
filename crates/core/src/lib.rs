@@ -12,7 +12,9 @@ pub mod service;
 pub mod stages;
 pub mod template;
 
-pub use config::{Config, ConfigError, FolderConfig, RejectedRoute, Route, Unit, Watch};
+pub use config::{
+    BUILT_IN_PIPELINES, Config, ConfigError, FolderConfig, RejectedRoute, Route, Unit, Watch,
+};
 pub use context::{Context, Target};
 pub use effects::{
     Applied, Cleanup, Done, Effect, EffectError, EffectsRun, Kind, Roots, SkipReason, Tree,

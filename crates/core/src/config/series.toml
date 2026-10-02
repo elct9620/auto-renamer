@@ -1,0 +1,25 @@
+[pipeline.series-video]
+stages = [
+  { filter = { ext = ["mkv", "mp4"] } },
+  { regex = { from = "path", pattern = '^(?<show>[^/]+)' } },
+  { number = { from = "path", into = "season", prefix = "Season" } },
+  { number = { into = "episode", exclude = ["season"] } },
+  { default = { season = 1 } },
+  { lift = { keep = 1 } },
+  { folder = "Season {season:02}" },
+  { next = { into = "episode", like = "{show} s{season:02}e{episode:02}" } },
+  { format = "{show} s{season:02}e{episode:02}" },
+]
+
+[pipeline.series-subtitle]
+stages = [
+  { filter = { ext = ["ass", "srt"] } },
+  { regex = { from = "path", pattern = '^(?<show>[^/]+)' } },
+  { number = { from = "path", into = "season", prefix = "Season" } },
+  { number = { into = "episode", exclude = ["season"] } },
+  { default = { season = 1 } },
+  { rank = { into = "index", by = ["season", "episode"], prefer = ["cht"] } },
+  { lift = { keep = 1 } },
+  { folder = "Season {season:02}" },
+  { format = "{show} s{season:02}e{episode:02}.zh[.{index:02}]" },
+]

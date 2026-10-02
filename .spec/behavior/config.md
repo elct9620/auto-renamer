@@ -286,3 +286,19 @@ The configuration says which folders are watched, which routes take their files,
 | Given | a configuration whose default has `group = ["show", "episode"]` and a watch that says none |
 | When | the configuration is read |
 | Then | the watch groups files by `show` and `episode` |
+
+## `CFG-039` A route can name a built-in pipeline without defining it
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch with a route of `series-video` and no pipeline of that name |
+| When | the configuration is read |
+| Then | the route plans with the built-in `series-video` |
+
+## `CFG-040` A pipeline defined with a built-in name replaces it
+
+| Step | Statement |
+| --- | --- |
+| Given | a configuration defining `series-video` as a filter for `mkv` only, and a watch with a route of it |
+| When | the configuration is read |
+| Then | the route plans with the pipeline the configuration defines |

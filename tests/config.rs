@@ -396,3 +396,33 @@ fn should_read_the_fields_that_make_a_group() {
 
     assert_eq!(read(&text)[0].group, ["show", "episode"]);
 }
+
+// @behavior CFG-039
+#[test]
+fn should_let_a_route_name_a_built_in_pipeline() {
+    let text =
+        "[watch.series]\nsource = \"/downloads\"\nroutes = [{ pipeline = \"series-video\" }]\n";
+
+    let watch = read(text).remove(0);
+
+    assert_eq!(pipeline_names(&watch), ["series-video"]);
+    assert_eq!(
+        watch
+            .pipeline("series-video")
+            .stages()
+            .first()
+            .map(|stage| stage.name()),
+        Some("filter")
+    );
+    assert!(watch.pipeline("series-video").stages().len() > 1);
+}
+
+// @behavior CFG-040
+#[test]
+fn should_let_a_defined_pipeline_replace_a_built_in_one() {
+    let text = "[pipeline.series-video]\nstages = [{ filter = { ext = [\"mkv\"] } }]\n\n[watch.series]\nsource = \"/downloads\"\nroutes = [{ pipeline = \"series-video\" }]\n";
+
+    let watch = read(text).remove(0);
+
+    assert_eq!(watch.pipeline("series-video").stages().len(), 1);
+}
