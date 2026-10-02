@@ -122,8 +122,8 @@ export function Dock({ trees, controls, fileName, text, status, simulation, stag
   const [open, setOpen] = useState<string | null>(null)
   return (
     <Tabs value={tab === 'stage' && !(simulation && stage) ? 'results' : tab} onValueChange={onTab} className="flex min-h-0 min-w-0 flex-col gap-0 border-t">
-      <div className="flex flex-wrap items-center gap-2 border-b px-3 py-1.5">
-        <TabsList>
+      <div className="flex flex-wrap items-center gap-2 border-b bg-muted/50 px-3 py-1.5">
+        <TabsList variant="line">
           {trees.map((tree) => (
             <TabsTrigger key={tree.value} value={tree.value} className="gap-1.5">
               {tree.label}
