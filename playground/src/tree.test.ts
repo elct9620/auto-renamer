@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import './setup.test-helper'
 import type { Entry } from './core'
 import { read, simulate } from './core'
-import { foldersUnder, marksOf, removeEntry, renameEntry, rootsOf, startConfiguration, treeOf } from './tree'
+import { changedUnder, foldersUnder, marksOf, removeEntry, renameEntry, rootsOf, startConfiguration, treeOf } from './tree'
 
 function file(path: string): Entry {
   return { path, folder: false, modified: 0, text: '' }
@@ -71,9 +71,27 @@ describe('marking a simulation', () => {
   it('marks a file the simulation moved where it arrived', () => {
     const config = `[pipeline.p]\nstages = [{ format = "Alpha" }]\n\n[target.video]\npath = "/video"\n\n[watch.w]\nsource = "/downloads"\nroutes = [{ pipeline = "p", move = "video" }]\nunit = "directory"\n`
 
-    const marks = marksOf(simulate(config, 'w', [file('/downloads/Alpha/x.mkv')]))
+    const marks = marksOf(simulate(config, 'w', [file('/downloads/Alpha/x.mkv')]), '/downloads')
 
     expect(marks['/video/Alpha/Alpha.mkv']).toBe('moved')
+  })
+
+  // @behavior PGE-096
+  it('marks a file the simulation took where it was', () => {
+    const config = `[pipeline.p]\nstages = [{ format = "Alpha" }]\n\n[target.video]\npath = "/video"\n\n[watch.w]\nsource = "/downloads"\nroutes = [{ pipeline = "p", move = "video" }]\nunit = "directory"\n`
+
+    const marks = marksOf(simulate(config, 'w', [file('/downloads/Alpha/x.mkv')]), '/downloads')
+
+    expect(marks['/downloads/Alpha/x.mkv']).toBe('moved')
+  })
+
+  // @behavior PGE-097
+  it('counts the files a simulation changed under each root', () => {
+    const config = `[pipeline.p]\nstages = [{ filter = { ext = ["mkv"] } }, { format = "Alpha" }]\n\n[target.video]\npath = "/video"\n\n[watch.w]\nsource = "/downloads"\nroutes = [{ pipeline = "p", move = "video" }]\nunit = "directory"\n`
+
+    const simulation = simulate(config, 'w', [file('/downloads/Alpha/x.mkv'), file('/downloads/Alpha/notes.txt')])
+
+    expect([changedUnder(simulation, '/downloads', '/downloads'), changedUnder(simulation, '/downloads', '/video')]).toEqual([1, 1])
   })
 })
 

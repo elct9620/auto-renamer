@@ -132,7 +132,7 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
     setEntries(change(entries))
     setSimulation(null)
   }
-  const marks = marksOf(simulation)
+  const marks = marksOf(simulation, roots.source)
 
   // The header offers the global configuration, every folder configuration of the source, and a new one for
   // each folder still without one.

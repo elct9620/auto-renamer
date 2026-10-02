@@ -107,12 +107,19 @@ export function renameEntry(entries: Entry[], path: string, name: string): Entry
       : entry)
 }
 
-/** What a simulation said of each path: a file where it started, and where it arrived. */
-export function marksOf(simulation: Simulation | null): Record<string, string> {
+/** What a simulation did to each file, by its path in the tree: where it was, and where it went. */
+export function marksOf(simulation: Simulation | null, source: string): Record<string, string> {
   const marks: Record<string, string> = {}
   for (const outcome of simulation?.outcomes ?? []) {
-    marks[outcome.origin] = outcome.what
+    marks[`${source}/${outcome.origin}`] = outcome.what
     if (outcome.to !== null) marks[outcome.to] = outcome.what
   }
   return marks
+}
+
+/** How many files a simulation changed under `root`, where they were or where they went; a file nothing claimed
+ * did not change, and a file renamed in place counts once. */
+export function changedUnder(simulation: Simulation | null, source: string, root: string): number {
+  return (simulation?.outcomes ?? []).filter((outcome) => outcome.what !== 'unclaimed'
+    && (within(`${source}/${outcome.origin}`, root) || (outcome.to !== null && within(outcome.to, root)))).length
 }

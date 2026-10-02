@@ -769,3 +769,19 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the target `conflict` declared and the first route of the watch `series` selected |
 | When | `conflict` is picked as where its refused files move |
 | Then | the route's rejected route moves into `conflict` |
+
+## `PGE-096` A file a simulation took is marked where it was
+
+| Step | Statement |
+| --- | --- |
+| Given | a simulation that moved `/downloads/Alpha/x.mkv` to `/video/Alpha/Alpha.mkv` |
+| When | the trees are drawn from it |
+| Then | `/downloads/Alpha/x.mkv` is marked as moved |
+
+## `PGE-097` Each root counts the files a simulation changed in it
+
+| Step | Statement |
+| --- | --- |
+| Given | a simulation that moved one file of `/downloads` to `/video` and left another that nothing claims |
+| When | the changes of each root are counted |
+| Then | `/downloads` and `/video` each count one |
