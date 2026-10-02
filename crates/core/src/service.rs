@@ -4,22 +4,25 @@ use std::collections::HashMap;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::config::{FOLDER_CONFIG, FolderConfig, MAX_FOLDER_CONFIG_BYTES, Watch};
+use crate::config::{FOLDER_CONFIG, FolderConfig, MAX_FOLDER_CONFIG_BYTES, Route, Watch};
 use crate::context::Target;
-use crate::effects::{Applied, Done, Kind, Roots, SkipReason, Tree, apply_effects};
+use crate::effects::{Applied, Done, Effect, Kind, Roots, SkipReason, Tree, apply_effects};
 use crate::engine::{Step, Verdict, plan};
 use crate::record::Record;
-use crate::stages::Effect;
 
 /// The target as a stage asks for it, answered by the tree under the root of the target.
 struct TargetIn<'a> {
     tree: &'a dyn Tree,
-    root: &'a Path,
+    root: PathBuf,
 }
 
 impl Target for TargetIn<'_> {
     fn files_in(&self, folder: &Path) -> Vec<String> {
         self.tree.files(&self.root.join(folder))
+    }
+
+    fn root(&self) -> &Path {
+        &self.root
     }
 }
 
@@ -129,14 +132,6 @@ fn process(
         return processed;
     }
 
-    let target_root = effective
-        .target
-        .clone()
-        .unwrap_or_else(|| effective.source.clone());
-    let roots = Roots {
-        source: effective.source.clone(),
-        target: target_root.clone(),
-    };
     let mut records = Vec::new();
     for origin in files {
         match read_record(tree, &effective, origin) {
@@ -149,24 +144,30 @@ fn process(
     }
 
     let pipelines = effective.pipelines();
-    let target = TargetIn {
-        tree,
-        root: &target_root,
-    };
-    let judged = plan(&pipelines, records, &target, observe);
+    let targets: Vec<TargetIn> = effective
+        .routes()
+        .iter()
+        .map(|route| TargetIn {
+            tree,
+            root: root_of(route, &effective),
+        })
+        .collect();
+    let planned: Vec<_> = pipelines
+        .iter()
+        .zip(&targets)
+        .map(|((name, pipeline), target)| (name.as_str(), pipeline, target as &dyn Target))
+        .collect();
+    let judged = plan(&planned, records, observe);
     for entry in judged {
-        let what = match entry.verdict {
-            Verdict::Planned(record) => apply_planned(
-                tree,
-                &entry.effects,
-                &record,
-                unit,
-                &roots,
-                &effective,
-                renames,
-            ),
-            Verdict::Unclaimed => What::Unclaimed,
-            Verdict::Rejected(stop) => What::Refused(format!("{}: {}", stop.stage, stop.reason)),
+        let what = match (entry.verdict, entry.pipeline) {
+            (Verdict::Planned(record), Some(index)) => {
+                let route = &effective.routes()[index];
+                apply_planned(tree, route, &record, unit, &effective, renames)
+            }
+            (Verdict::Rejected(stop), _) => {
+                What::Refused(format!("{}: {}", stop.stage, stop.reason))
+            }
+            _ => What::Unclaimed,
         };
         processed.push(Processed {
             origin: entry.origin,
@@ -176,18 +177,26 @@ fn process(
     processed
 }
 
-/// Runs the effects of a planned file, unless it has been renamed in place too many times in a row,
-/// and keeps count of its renames in place.
+/// Where a route moves its files: its target, or the source when it renames them in place.
+fn root_of(route: &Route, watch: &Watch) -> PathBuf {
+    route.target.clone().unwrap_or_else(|| watch.source.clone())
+}
+
+/// Runs the effects of the route on a planned file, unless it has been renamed in place too many times
+/// in a row, and keeps count of its renames in place.
 fn apply_planned(
     tree: &dyn Tree,
-    effects: &[Effect],
+    route: &Route,
     record: &Record,
     unit: &Path,
-    roots: &Roots,
     watch: &Watch,
     renames: &mut Renames,
 ) -> What {
-    let in_place = watch.target.is_none();
+    let roots = Roots {
+        source: watch.source.clone(),
+        target: root_of(route, watch),
+    };
+    let in_place = route.target.is_none();
     let origin = record.origin();
     let count = renames.count(origin);
     if in_place && record.plan() != origin && count >= MAX_IN_PLACE_RENAMES {
@@ -195,7 +204,7 @@ fn apply_planned(
             "renamed in place {count} times in a row; the pipeline may name its own result again"
         ));
     }
-    let what = effects_of(tree, effects, record, unit, roots, watch.dry_run);
+    let what = effects_of(tree, &route.effects(), record, unit, &roots, watch.dry_run);
     if in_place {
         match &what {
             What::Moved(to) | What::MovedThenFailed { to, .. } => {
@@ -235,10 +244,6 @@ fn effects_of(
     roots: &Roots,
     dry_run: bool,
 ) -> What {
-    // A pipeline with no effect stage only ever previews.
-    if effects.is_empty() {
-        return What::Previewed(roots.target.join(record.plan()));
-    }
     let run = apply_effects(tree, effects, record, unit, roots, dry_run);
     let moved = run.done.into_iter().find_map(|done| match done {
         Done::Moved(applied) => Some(applied),

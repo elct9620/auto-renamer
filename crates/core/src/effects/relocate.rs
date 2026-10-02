@@ -1,9 +1,8 @@
 use std::io;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Component, Path};
 
 use super::{Applied, EffectError, Kind, Roots, SkipReason, Tree, io_error};
-use crate::record::{Record, split_extension};
-use crate::stages::{Move, OnConflict};
+use crate::record::Record;
 
 /// Moves the file of a planned record to its plan under the target, or says where it would go.
 ///
@@ -11,7 +10,6 @@ use crate::stages::{Move, OnConflict};
 /// refused before anything is touched.
 pub fn move_file(
     tree: &dyn Tree,
-    stage: &Move,
     record: &Record,
     roots: &Roots,
     dry_run: bool,
@@ -19,7 +17,7 @@ pub fn move_file(
     ensure_inside(record.origin())?;
     ensure_inside(record.plan())?;
     let from = roots.source.join(record.origin());
-    let mut to = roots.target.join(record.plan());
+    let to = roots.target.join(record.plan());
 
     if let Some(reason) = skip_reason(tree, &roots.source, record.origin())? {
         return Ok(Applied::Skipped(reason));
@@ -28,7 +26,7 @@ pub fn move_file(
         return Ok(Applied::Unchanged(from));
     }
     if tree.kind(&to).is_ok() {
-        to = settle_conflict(tree, stage, &to)?;
+        return Err(EffectError::Conflict(to));
     }
     if dry_run {
         return Ok(Applied::Preview { from, to });
@@ -74,28 +72,4 @@ fn skip_reason(
         }
     }
     Ok(None)
-}
-
-/// What to do when the target is taken: refuse, or try once more with the suffix before the extension.
-fn settle_conflict(tree: &dyn Tree, stage: &Move, taken: &Path) -> Result<PathBuf, EffectError> {
-    match stage.on_conflict {
-        OnConflict::Reject => Err(EffectError::Conflict(taken.to_path_buf())),
-        OnConflict::Suffix => {
-            let Some(file_name) = taken.file_name().and_then(|name| name.to_str()) else {
-                return Err(EffectError::Conflict(taken.to_path_buf()));
-            };
-            let (name, ext) = split_extension(file_name);
-            let suffixed = if ext.is_empty() {
-                format!("{name}{}", stage.suffix)
-            } else {
-                format!("{name}{}.{ext}", stage.suffix)
-            };
-            let candidate = taken.with_file_name(suffixed);
-            if tree.kind(&candidate).is_ok() {
-                Err(EffectError::Conflict(candidate))
-            } else {
-                Ok(candidate)
-            }
-        }
-    }
 }

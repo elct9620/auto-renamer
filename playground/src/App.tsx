@@ -24,7 +24,8 @@ const ADD = '\u0000add:'
 
 function checked(kind: Kind, text: string): { ok: boolean; lines: string[] } {
   try {
-    return { ok: true, lines: check(kind, text) }
+    check(kind, text)
+    return { ok: true, lines: [] }
   } catch (error) {
     return { ok: false, lines: [errorOf(error)] }
   }
@@ -191,7 +192,7 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
           options={EXAMPLES.map((one) => ({ value: one.id, label: t(`examples.${one.id}`) }))}
           onChange={(id) => onChoose(EXAMPLES.find((one) => one.id === id)!)} />
         <Badge variant={status.ok ? 'secondary' : 'destructive'}>
-          {status.ok ? (status.lines.length ? t('status.warnings', { count: status.lines.length }) : t('status.valid')) : t('status.refused')}
+          {status.ok ? t('status.valid') : t('status.refused')}
         </Badge>
         {message && <span className="text-xs text-muted-foreground">{message}</span>}
         <Choice label={t('language')} className="ml-auto w-auto" value={i18n.language}

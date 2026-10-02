@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use auto_renamer::{
-    ConfigError, Context, Declared, Flow, Judged, Pipeline, Record, Target, Value, Verdict,
+    Config, ConfigError, Context, Declared, Flow, Judged, Pipeline, Record, Target, Value, Verdict,
     plan_batch,
 };
 use chrono::{TimeZone, Utc};
@@ -75,6 +75,10 @@ impl Target for Files {
             .and_then(|folder| self.0.get(folder))
             .cloned()
             .unwrap_or_default()
+    }
+
+    fn root(&self) -> &Path {
+        Path::new("")
     }
 }
 
@@ -217,20 +221,16 @@ impl Drop for Sandbox {
     }
 }
 
-/// A move stage as it is written in a pipeline, such as `"move"`.
-pub fn move_stage(declaration: &str) -> auto_renamer::stages::Move {
-    match stage(declaration) {
-        Declared::Move(stage) => stage,
-        other => panic!("expected a move stage, got {other:?}"),
-    }
-}
-
-/// A cleanup stage as it is written in a pipeline, such as `{ cleanup = { keep = ["Season *"] } }`.
-pub fn cleanup_stage(declaration: &str) -> auto_renamer::stages::Cleanup {
-    match stage(declaration) {
-        Declared::Cleanup(stage) => stage,
-        other => panic!("expected a cleanup stage, got {other:?}"),
-    }
+/// The cleanup of a route as it is written, keeping the folders `keep` names, such as `"Season *"`.
+pub fn cleanup_keeping(keep: &str) -> auto_renamer::Cleanup {
+    let config = Config::parse(&format!(
+        "[pipeline.p]\nstages = []\n\n[watch.w]\nsource = \"/source\"\nroutes = [{{ pipeline = \"p\", cleanup = {{ keep = [{keep}] }} }}]\n"
+    ))
+    .expect("the route should be read");
+    config.watches()[0].routes()[0]
+        .cleanup
+        .clone()
+        .expect("the route cleans up")
 }
 
 /// The user and group every Linux keeps for what should own nothing.
@@ -247,9 +247,16 @@ fn runs_as_root(sandbox: &Sandbox) -> bool {
     std::fs::metadata(sandbox.path("")).is_ok_and(|folder| folder.uid() == 0)
 }
 
-fn target_of(sandbox: &Sandbox) -> String {
+/// The target table and the move of the route into it.
+fn target_of(sandbox: &Sandbox) -> (String, &'static str) {
     sandbox.make_dir("target");
-    format!("target = \"{}\"\n", sandbox.path("target").display())
+    (
+        format!(
+            "[target.t]\npath = \"{}\"\n\n",
+            sandbox.path("target").display()
+        ),
+        ", move = \"t\"",
+    )
 }
 
 /// The program running over a sandbox with `source` and `target` folders, killed if a test ends before it did.
@@ -266,19 +273,12 @@ impl Program {
 
     /// Starts the program and comes back at once, for a test that looks at what it does from the start.
     pub fn start_without_waiting(sandbox: &Sandbox, stages: &str, extra: &str) -> Program {
-        Program::launch(
-            sandbox,
-            stages,
-            &target_of(sandbox),
-            "3s",
-            extra,
-            User::Same,
-        )
+        Program::launch(sandbox, stages, target_of(sandbox), "3s", extra, User::Same)
     }
 
     /// Starts the program without a target, so that files are renamed where they are, with a long maximum wait.
     pub fn start_in_place(sandbox: &Sandbox, stages: &str) -> Program {
-        Program::launch(sandbox, stages, "", "60s", "", User::Same).watching()
+        Program::launch(sandbox, stages, (String::new(), ""), "60s", "", User::Same).watching()
     }
 
     /// Starts the program as a user that a folder can be closed to, which the user of the tests is not
@@ -287,7 +287,7 @@ impl Program {
         Program::launch(
             sandbox,
             stages,
-            &target_of(sandbox),
+            target_of(sandbox),
             "3s",
             extra,
             User::Unprivileged,
@@ -298,7 +298,7 @@ impl Program {
     fn launch(
         sandbox: &Sandbox,
         stages: &str,
-        target: &str,
+        (target, moving): (String, &str),
         max_wait: &str,
         extra: &str,
         user: User,
@@ -307,7 +307,7 @@ impl Program {
         sandbox.write(
             "config.toml",
             &format!(
-                "[pipeline.p]\nstages = {stages}\n\n[watch.w]\nsource = \"{}\"\n{target}pipelines = [\"p\"]\nunit = \"source\"\nquiet = \"1s\"\nmax_wait = \"{max_wait}\"\n{extra}\n",
+                "[pipeline.p]\nstages = {stages}\n\n{target}[watch.w]\nsource = \"{}\"\nroutes = [{{ pipeline = \"p\"{moving} }}]\nunit = \"source\"\nquiet = \"1s\"\nmax_wait = \"{max_wait}\"\n{extra}\n",
                 sandbox.path("source").display(),
             ),
         );

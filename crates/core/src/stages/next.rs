@@ -30,18 +30,17 @@ fn apply(next: &Next, mut record: Record, context: &mut Context) -> Flow {
         .parent()
         .unwrap_or(Path::new(""))
         .to_path_buf();
-    let key = (folder, matcher.as_str().to_string());
     // A number handed out in this batch is already past whatever the target holds.
     let last = context
-        .last_handed_out(&key)
-        .or_else(|| highest_in_target(context, &key.0, &matcher));
+        .last_handed_out(&folder, matcher.as_str())
+        .or_else(|| highest_in_target(context, &folder, &matcher));
     let Some(number) = last.unwrap_or(0).checked_add(1) else {
         return Err(Stop::rejected(
             "next",
             "there is no number left after the highest one",
         ));
     };
-    context.hand_out(key, number);
+    context.hand_out(&folder, matcher.as_str(), number);
 
     fill_field("next", &mut record, &next.into, Value::Number(number))?;
     Ok(record)

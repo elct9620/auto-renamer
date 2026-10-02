@@ -1,4 +1,3 @@
-use auto_renamer::stages::OnConflict;
 use auto_renamer::{Declaration, DeclareError, Declared, ParameterKind, Pipeline, PipelineError};
 use toml::{Table, Value};
 
@@ -42,7 +41,7 @@ fn assert_invalid(error: DeclareError, stage: &str, parameter: Option<&str>) {
 // @behavior DEC-001
 #[test]
 fn should_declare_a_stage_by_its_bare_name() {
-    assert_eq!(names(&declared(r#"["move"]"#)), ["move"]);
+    assert_eq!(names(&declared(r#"["strip"]"#)), ["strip"]);
 }
 
 // @behavior DEC-002
@@ -189,27 +188,6 @@ fn should_refuse_ranking_without_the_fields_that_make_a_group() {
     assert_invalid(error, "rank", Some("by"));
 }
 
-// @behavior DEC-021
-#[test]
-fn should_refuse_a_conflict_policy_other_than_reject_or_suffix() {
-    let error = refused_declaration(r#"[{ move = { on_conflict = "overwrite" } }]"#);
-
-    assert_invalid(error, "move", Some("on_conflict"));
-}
-
-// @behavior DEC-022
-#[test]
-fn should_refuse_a_plan_stage_after_an_effect() {
-    let refused = refused(r#"["move", { format = "{name}" }]"#);
-
-    assert_eq!(
-        refused,
-        PipelineError::PureAfterEffect {
-            stage: "format".to_string()
-        }
-    );
-}
-
 // @behavior DEC-023
 #[test]
 fn should_refuse_a_path_stage_after_next() {
@@ -224,48 +202,21 @@ fn should_refuse_a_path_stage_after_next() {
     );
 }
 
-// @behavior DEC-024
-#[test]
-fn should_report_a_pipeline_without_an_effect_stage() {
-    let pipeline = declared(r#"[{ format = "{name}" }]"#);
-
-    assert!(!pipeline.has_effect());
-}
-
 // @behavior DEC-025
 #[test]
 fn should_keep_the_order_the_stages_were_written_in() {
-    let pipeline = declared(r#"[{ filter = { ext = ["mkv"] } }, { format = "{name}" }, "move"]"#);
+    let pipeline = declared(r#"[{ filter = { ext = ["mkv"] } }, { format = "{name}" }, "strip"]"#);
 
-    assert_eq!(names(&pipeline), ["filter", "format", "move"]);
+    assert_eq!(names(&pipeline), ["filter", "format", "strip"]);
 }
 
 // @behavior DEC-026
 #[test]
 fn should_refuse_stages_that_are_not_a_list() {
     assert_eq!(
-        Pipeline::from_toml(r#"stages = "move""#).unwrap_err(),
+        Pipeline::from_toml(r#"stages = "strip""#).unwrap_err(),
         PipelineError::NotAList
     );
-}
-
-// @behavior DEC-027
-#[test]
-fn should_refuse_a_conflict_suffix_that_reaches_outside_the_file_name() {
-    let error = refused_declaration(r#"[{ move = { on_conflict = "suffix", suffix = "/../x" } }]"#);
-
-    assert_invalid(error, "move", Some("suffix"));
-}
-
-// @behavior DEC-028
-#[test]
-fn should_default_the_conflict_policy_to_reject() {
-    let pipeline = declared(r#"["move"]"#);
-
-    let Declared::Move(policy) = &pipeline.stages()[0] else {
-        panic!("expected a move");
-    };
-    assert_eq!(policy.on_conflict, OnConflict::Reject);
 }
 
 // @behavior DEC-030
@@ -416,4 +367,12 @@ fn should_accept_each_choice_of_a_parameter() {
             }
         }
     }
+}
+
+// @behavior DEC-039
+#[test]
+fn should_refuse_move_as_a_stage() {
+    let error = refused_declaration(r#"["move"]"#);
+
+    assert_eq!(error, DeclareError::UnknownStage("move".to_string()));
 }

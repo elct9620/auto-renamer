@@ -5,8 +5,8 @@ use regex::RegexBuilder;
 use toml::Value as Toml;
 
 use super::{
-    Case, CaseKind, Cleanup, Declared, DefaultFields, Fields, Filter, Folder, Format, Lift, Move,
-    Next, Number, OnConflict, Pattern, Prefix, Rank, Replace, SetFields, Strip, Take,
+    Case, CaseKind, Declared, DefaultFields, Fields, Filter, Folder, Format, Lift, Next, Number,
+    Pattern, Prefix, Rank, Replace, SetFields, Strip, Take,
 };
 use crate::reader::{Reader, Scope};
 use crate::template::Template;
@@ -15,7 +15,6 @@ use crate::template::Template;
 const REGEX_SIZE_LIMIT: usize = 1 << 20;
 
 const DEFAULT_FIELD: &str = "name";
-const DEFAULT_SUFFIX: &str = "_v2";
 
 /// How one stage is declared, for a form to be made from, and the reading of its declaration.
 #[derive(Debug)]
@@ -196,25 +195,6 @@ static DECLARATIONS: &[Declaration] = &[
         r#"{ fields = ["episode"] }"#,
         take,
     ),
-    Declaration {
-        bare: true,
-        ..stage(
-            "move",
-            &[
-                Parameter {
-                    choices: &["reject", "suffix"],
-                    ..may("on_conflict", Text)
-                },
-                may("suffix", Text),
-            ],
-            "",
-            move_stage,
-        )
-    },
-    Declaration {
-        bare: true,
-        ..stage("cleanup", &[may("keep", Texts)], "", cleanup)
-    },
 ];
 
 fn declaration(name: &str) -> Option<&'static Declaration> {
@@ -570,37 +550,4 @@ fn take(value: Option<&Toml>) -> Result<Declared, DeclareError> {
     let from = args.string("from")?;
     args.finish()?;
     Ok(Declared::Take(Take { fields, from }))
-}
-
-fn move_stage(value: Option<&Toml>) -> Result<Declared, DeclareError> {
-    let mut args = optional("move", value)?;
-    let on_conflict = match args.string("on_conflict")?.as_deref() {
-        None | Some("reject") => OnConflict::Reject,
-        Some("suffix") => OnConflict::Suffix,
-        Some(_) => return Err(args.invalid("on_conflict", "must be reject or suffix")),
-    };
-    let suffix = args
-        .string("suffix")?
-        .unwrap_or_else(|| DEFAULT_SUFFIX.to_string());
-    if suffix.is_empty() || suffix.contains('/') || suffix.contains('\0') {
-        return Err(args.invalid(
-            "suffix",
-            "is added to a file name, so it cannot be empty or hold a slash",
-        ));
-    }
-    args.finish()?;
-    Ok(Declared::Move(Move {
-        on_conflict,
-        suffix,
-    }))
-}
-
-fn cleanup(value: Option<&Toml>) -> Result<Declared, DeclareError> {
-    let mut args = optional("cleanup", value)?;
-    let mut keep = Vec::new();
-    for source in args.strings("keep")?.unwrap_or_default() {
-        keep.push(glob(&args, "keep", &source)?);
-    }
-    args.finish()?;
-    Ok(Declared::Cleanup(Cleanup { keep }))
 }

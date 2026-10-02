@@ -2,11 +2,16 @@ use auto_renamer_wasm::{
     Configuration, Entry, Outcome, Simulation, check, read, render, simulate, stages,
 };
 
-const MOVE_AS_SHOW: &str = r#"[{ format = "{show}" }, "move"]"#;
+const MOVE_AS_SHOW: &str = r#"[{ format = "{show}" }]"#;
 
 fn config(stages: &str, extra: &str) -> String {
+    config_route(stages, "", extra)
+}
+
+/// A configuration whose one route moves into `/dst`, with `route` written into the route.
+fn config_route(stages: &str, route: &str, extra: &str) -> String {
     format!(
-        "[pipeline.p]\nstages = {stages}\n\n[watch.w]\nsource = \"/src\"\ntarget = \"/dst\"\npipelines = [\"p\"]\nunit = \"directory\"\nvars = {{ show = \"Alpha\" }}\n{extra}\n"
+        "[pipeline.p]\nstages = {stages}\n\n[target.dst]\npath = \"/dst\"\n\n[watch.w]\nsource = \"/src\"\nroutes = [{{ pipeline = \"p\", move = \"dst\"{route} }}]\nunit = \"directory\"\nvars = {{ show = \"Alpha\" }}\n{extra}\n"
     )
 }
 
@@ -96,23 +101,24 @@ fn should_process_each_unit_as_its_own_batch() {
 
 // @behavior PLG-005
 #[test]
-fn should_settle_a_taken_name_by_the_rule_of_the_move() {
+fn should_refuse_a_file_whose_name_is_taken() {
     let simulation = run(
-        &config(
-            r#"[{ format = "{show}" }, { move = { on_conflict = "suffix" } }]"#,
-            "",
-        ),
+        &config(MOVE_AS_SHOW, ""),
         vec![file("/src/Show/x.mkv"), file("/dst/Show/Alpha.mkv")],
     );
 
-    assert!(holds(&simulation, "/dst/Show/Alpha_v2.mkv"));
+    assert_eq!(
+        outcome(&simulation, "Show/x.mkv").map(|o| o.what),
+        Some("refused")
+    );
+    assert!(holds(&simulation, "/src/Show/x.mkv"));
 }
 
 // @behavior PLG-006
 #[test]
 fn should_clean_up_a_folder_the_move_left_empty() {
     let simulation = run(
-        &config(r#"["move", "cleanup"]"#, ""),
+        &config_route("[]", ", cleanup = {}", ""),
         vec![file("/src/Show/Season/x.mkv")],
     );
 
@@ -147,7 +153,7 @@ fn should_refuse_a_configuration_that_is_not_valid_with_why() {
 fn should_check_a_folder_configuration_as_one() {
     let checked = check(Configuration::Folder, "[vars]\nshow = \"Beta\"\n");
 
-    assert_eq!(checked, Ok(Vec::new()));
+    assert_eq!(checked, Ok(()));
 }
 
 // @behavior PLG-010
@@ -177,10 +183,7 @@ fn should_take_the_time_field_from_the_modification_time_of_a_virtual_file() {
     let mut entry = file("/src/Show/x.mkv");
     entry.modified = 1_704_153_600_000; // 2024-01-02T00:00:00Z
 
-    let simulation = run(
-        &config(r#"[{ format = "{mtime:%Y}" }, "move"]"#, ""),
-        vec![entry],
-    );
+    let simulation = run(&config(r#"[{ format = "{mtime:%Y}" }]"#, ""), vec![entry]);
 
     assert!(holds(&simulation, "/dst/Show/2024.mkv"));
 }
@@ -231,7 +234,7 @@ fn should_mark_a_file_a_replaced_pipeline_planned() {
         file("/src/Show/x.mkv"),
         file_with(
             "/src/Show/auto-renamer.toml",
-            "[pipeline.p]\nstages = [{ format = \"Beta\" }, \"move\"]\n",
+            "[pipeline.p]\nstages = [{ format = \"Beta\" }]\n",
         ),
         file("/src/Other/y.mkv"),
     ];

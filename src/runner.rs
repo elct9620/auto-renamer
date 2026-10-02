@@ -91,9 +91,6 @@ impl Session {
         config
             .check_paths(config_path, real_path)
             .map_err(|error| RunError::Config(error.to_string()))?;
-        for warning in config.warnings() {
-            eprintln!("[warn] {warning}");
-        }
         let queue = Queue::new(QUEUE_CAPACITY);
         let mut watcher = RecommendedWatcher::new(
             queue.handler(),

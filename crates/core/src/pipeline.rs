@@ -20,7 +20,6 @@ pub enum PipelineError {
     NotAList,
     TooManyStages,
     Declare { index: usize, error: DeclareError },
-    PureAfterEffect { stage: String },
     PathAfterNext { stage: String },
 }
 
@@ -33,12 +32,6 @@ impl fmt::Display for PipelineError {
                 write!(f, "a pipeline may hold at most {MAX_STAGES} stages")
             }
             PipelineError::Declare { index, error } => write!(f, "stage {}: {error}", index + 1),
-            PipelineError::PureAfterEffect { stage } => {
-                write!(
-                    f,
-                    "`{stage}` only rewrites the plan, so it cannot follow a stage that moves files"
-                )
-            }
             PipelineError::PathAfterNext { stage } => {
                 write!(
                     f,
@@ -97,24 +90,11 @@ impl Pipeline {
         let rest = &self.stages[filters.len()..];
         (filters, rest)
     }
-
-    /// Whether the pipeline ends in a stage that touches the filesystem.
-    pub fn has_effect(&self) -> bool {
-        self.stages.iter().any(Declared::is_effect)
-    }
 }
 
 fn check_order(stages: &[Declared]) -> Result<(), PipelineError> {
-    let mut seen_effect = false;
     let mut seen_next = false;
     for stage in stages {
-        if stage.is_effect() {
-            seen_effect = true;
-        } else if seen_effect {
-            return Err(PipelineError::PureAfterEffect {
-                stage: stage.name().to_string(),
-            });
-        }
         if stage.is_path() && seen_next {
             return Err(PipelineError::PathAfterNext {
                 stage: stage.name().to_string(),

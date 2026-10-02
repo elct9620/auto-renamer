@@ -30,8 +30,6 @@ stages = [
   { number = { into = "episode" } },
   { default = { season = 1 } },
   { format = "{show} s{season:02}e{episode:02}" },
-  "move",
-  "cleanup",
 ]
 '
 
@@ -58,9 +56,14 @@ prepare() {
   docker volume create "$PREFIX-config" > /dev/null
 }
 
-# Writes the configuration: the watch reads its settings from standard input.
+# Writes the configuration: the target root given as the argument, the watch's settings from standard input.
 configure() {
-  { echo "$PIPELINE"; echo "[watch.measured]"; cat; } |
+  {
+    echo "$PIPELINE"
+    printf '[target.measured]\npath = "%s"\n\n[watch.measured]\n' "$1"
+    echo 'routes = [{ pipeline = "video", move = "measured", cleanup = {} }]'
+    cat
+  } |
     docker run --rm -i -v "$PREFIX-config:/config" alpine sh -c 'cat > /config/config.toml'
 }
 
@@ -154,10 +157,8 @@ idle() {
   prepare
   docker volume create "$PREFIX-source" > /dev/null
   docker volume create "$PREFIX-target" > /dev/null
-  configure << CONFIG
+  configure "/target" << CONFIG
 source = "/source"
-target = "/target"
-pipelines = ["video"]
 CONFIG
   start -v "$PREFIX-source:/source" -v "$PREFIX-target:/target"
   sleep 5
@@ -172,10 +173,8 @@ start_with() {
   prepare
   docker volume create "$PREFIX-data" > /dev/null
   folders "$PREFIX-data" source "$1"
-  configure << CONFIG
+  configure "/data/target" << CONFIG
 source = "/data/source"
-target = "/data/target"
-pipelines = ["video"]
 vars = { show = "Alpha" }
 quiet = "1h"
 max_wait = "1h"
@@ -194,10 +193,8 @@ batch() {
   docker volume create "$PREFIX-data" > /dev/null
   folders "$PREFIX-data" source "$1"
   sleep 3
-  configure << CONFIG
+  configure "/data/target" << CONFIG
 source = "/data/source"
-target = "/data/target"
-pipelines = ["video"]
 vars = { show = "Alpha" }
 quiet = "2s"
 max_wait = "2s"
@@ -215,10 +212,8 @@ single() {
   docker volume create "$PREFIX-data" > /dev/null
   folders "$PREFIX-data" source "$1"
   sleep 3
-  configure << CONFIG
+  configure "/data/target" << CONFIG
 source = "/data/source"
-target = "/data/target"
-pipelines = ["video"]
 unit = "source"
 vars = { show = "Alpha" }
 quiet = "2s"
@@ -235,10 +230,8 @@ rounds() {
   prepare
   docker volume create "$PREFIX-data" > /dev/null
   docker run --rm -v "$PREFIX-data:/data" alpine mkdir -p /data/source
-  configure << CONFIG
+  configure "/data/target" << CONFIG
 source = "/data/source"
-target = "/data/target"
-pipelines = ["video"]
 vars = { show = "Alpha" }
 quiet = "2s"
 max_wait = "2s"

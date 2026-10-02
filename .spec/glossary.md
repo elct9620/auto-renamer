@@ -48,7 +48,7 @@ What a stage is declared with: a single value, or named values in its table. The
 
 ### Pipeline
 
-The ordered stages a watch applies to the files it claims.
+The ordered stages a route applies to the files it claims.
 
 #### Rejected
 
@@ -64,7 +64,7 @@ One file as it moves through a pipeline: a plan path together with named fields.
 
 ### Plan
 
-The path, relative to the source, that a record will be moved to. Stages before the effect stages only rewrite the plan and never touch the filesystem.
+The path, relative to the source, that a record will be moved to under its route's target. Stages only rewrite the plan and never touch the filesystem.
 
 #### Rejected
 
@@ -80,7 +80,7 @@ Said of a file whose writing has finished, so it may enter a batch.
 
 ### Watch
 
-One watched folder with where its files go, how they are grouped into units, and the pipelines that name them.
+One watched folder with how its files are grouped into units and the routes that name and move them.
 
 #### Rejected
 
@@ -140,7 +140,7 @@ What one file holds at one point of its planning: once a pipeline claims it, and
 
 ### Effect
 
-What an effect stage asks to be done to a planned file: a move or a cleanup. Planning only notes it, and it is carried out once the whole batch is planned.
+What a route does to a planned file: a move to its target, or in place, and a cleanup. It is carried out once the whole batch is planned.
 
 #### Rejected
 

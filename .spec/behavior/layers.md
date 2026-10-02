@@ -54,14 +54,13 @@ A folder can carry its own `auto-renamer.toml` for the exceptions of what lies i
 | When | the folder configuration is read |
 | Then | it is refused, naming `source` |
 
-## `LAY-007` A folder configuration cannot set the target
+## `LAY-007` A folder configuration cannot set the routes
 
 | Step | Statement |
 | --- | --- |
-| Given | a folder configuration with `target` |
-| When | the folder configuration is read |
-| Then | it is refused, naming `target` |
-
+| Given | a folder configuration with `routes` |
+| When | it is read |
+| Then | it is refused, naming `routes` |
 ## `LAY-008` A folder configuration cannot set the unit
 
 | Step | Statement |
@@ -117,3 +116,11 @@ A folder can carry its own `auto-renamer.toml` for the exceptions of what lies i
 | Given | a folder configuration with the file limit 100001 |
 | When | the folder configuration is read |
 | Then | it is refused, naming `max_files` |
+
+## `LAY-017` A folder configuration cannot declare a target
+
+| Step | Statement |
+| --- | --- |
+| Given | a folder configuration with a `target` table |
+| When | it is read |
+| Then | it is refused, naming `target` |

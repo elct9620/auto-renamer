@@ -121,19 +121,6 @@ fn should_run_a_stage_over_the_whole_batch_in_the_order_of_the_names() {
     );
 }
 
-// @behavior BAT-008
-#[test]
-fn should_stop_a_pipeline_before_its_first_effect_stage() {
-    let list = [("all", r#"[{ format = "renamed" }, "move"]"#)];
-
-    let judged = planned_batch(&list, vec![record("a.mkv")]);
-
-    assert_eq!(
-        planned_record(&judged, "a.mkv").plan(),
-        std::path::Path::new("renamed.mkv")
-    );
-}
-
 // @behavior BAT-009
 #[test]
 fn should_keep_the_numbers_handed_out_across_pipelines_of_one_batch() {

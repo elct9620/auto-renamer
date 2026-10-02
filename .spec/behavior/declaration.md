@@ -10,10 +10,9 @@ A pipeline is declared as a list of stages, each a bare name or a table with one
 
 | Step | Statement |
 | --- | --- |
-| Given | the stage list `["move"]` |
+| Given | the stage list `["strip"]` |
 | When | the pipeline is read |
-| Then | the pipeline holds one `move` stage |
-
+| Then | the pipeline holds one `strip` stage |
 ## `DEC-002` A one-key table declares a stage with parameters
 
 | Step | Statement |
@@ -158,22 +157,6 @@ A pipeline is declared as a list of stages, each a bare name or a table with one
 | When | the pipeline is read |
 | Then | the pipeline is refused, naming the parameter `by` |
 
-## `DEC-021` A conflict policy is reject or suffix
-
-| Step | Statement |
-| --- | --- |
-| Given | the stage list `[{ move = { on_conflict = "overwrite" } }]` |
-| When | the pipeline is read |
-| Then | the pipeline is refused, naming the parameter `on_conflict` |
-
-## `DEC-022` A stage that only rewrites the plan cannot follow an effect
-
-| Step | Statement |
-| --- | --- |
-| Given | the stage list `["move", { format = "{name}" }]` |
-| When | the pipeline is read |
-| Then | the pipeline is refused, naming the stage `format` |
-
 ## `DEC-023` A path stage cannot follow next
 
 | Step | Statement |
@@ -182,45 +165,20 @@ A pipeline is declared as a list of stages, each a bare name or a table with one
 | When | the pipeline is read |
 | Then | the pipeline is refused, naming the stage `lift` |
 
-## `DEC-024` A pipeline without an effect stage is read but reported
-
-| Step | Statement |
-| --- | --- |
-| Given | the stage list `[{ format = "{name}" }]` |
-| When | the pipeline is read |
-| Then | the pipeline says it has no effect stage |
-
 ## `DEC-025` Stages keep the order they were written in
 
 | Step | Statement |
 | --- | --- |
-| Given | the stage list `[{ filter = { ext = ["mkv"] } }, { format = "{name}" }, "move"]` |
+| Given | the stage list `[{ filter = { ext = ["mkv"] } }, { format = "{name}" }, "strip"]` |
 | When | the pipeline is read |
-| Then | the pipeline holds `filter`, `format` and `move` in that order |
-
+| Then | the pipeline holds `filter`, `format` and `strip` in that order |
 ## `DEC-026` The stages must be a list
 
 | Step | Statement |
 | --- | --- |
-| Given | the document `stages = "move"` |
+| Given | the document `stages = "strip"` |
 | When | the pipeline is read |
 | Then | the pipeline is refused |
-
-## `DEC-027` A conflict suffix cannot reach outside the file name
-
-| Step | Statement |
-| --- | --- |
-| Given | the stage list `[{ move = { on_conflict = "suffix", suffix = "/../x" } }]` |
-| When | the pipeline is read |
-| Then | the pipeline is refused, naming the parameter `suffix` |
-
-## `DEC-028` A move rejects on conflict unless told otherwise
-
-| Step | Statement |
-| --- | --- |
-| Given | the stage list `["move"]` |
-| When | the pipeline is read |
-| Then | the move stage rejects a file whose target exists |
 
 ## `DEC-030` A literal replace needs something to look for
 
@@ -285,3 +243,11 @@ A pipeline is declared as a list of stages, each a bare name or a table with one
 | Given | each choice a stage's description lists for a parameter |
 | When | the stage is declared with its example and that choice |
 | Then | the declaration is accepted |
+
+## `DEC-039` Moving is not a stage
+
+| Step | Statement |
+| --- | --- |
+| Given | the stage list `["move"]` |
+| When | the pipeline is read |
+| Then | the pipeline is refused, naming the stage `move` |

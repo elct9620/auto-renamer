@@ -8,12 +8,26 @@ mod cleanup;
 mod relocate;
 mod tree;
 
+use globset::GlobMatcher;
+
 use crate::record::Record;
-use crate::stages::Effect;
 
 pub use cleanup::cleanup_folders;
 pub use relocate::move_file;
 pub use tree::{Kind, Tree};
+
+/// What a route does to a planned file: a move to its target, or in place, and a cleanup.
+#[derive(Debug, Clone)]
+pub enum Effect {
+    Move,
+    Cleanup(Cleanup),
+}
+
+/// What a cleanup keeps however empty it is: the folders the patterns name.
+#[derive(Debug, Clone, Default)]
+pub struct Cleanup {
+    pub keep: Vec<GlobMatcher>,
+}
 
 /// The source a file comes from and the target it goes to, which are one folder when files are renamed in place.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -83,14 +97,14 @@ impl fmt::Display for EffectError {
 
 impl std::error::Error for EffectError {}
 
-/// What one effect stage did.
+/// What one effect did.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Done {
     Moved(Applied),
     Cleaned(Vec<PathBuf>),
 }
 
-/// What the effect stages of a pipeline did to one file, and the failure that stopped them if there was one.
+/// What the effects of a route did to one file, and the failure that stopped them if there was one.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EffectsRun {
     pub done: Vec<Done>,
@@ -113,9 +127,7 @@ pub fn apply_effects(
     };
     for effect in effects {
         let done = match effect {
-            Effect::Move(policy) => {
-                move_file(tree, policy, record, roots, dry_run).map(Done::Moved)
-            }
+            Effect::Move => move_file(tree, record, roots, dry_run).map(Done::Moved),
             // A dry run leaves the file where it is, so no folder it would empty is empty yet.
             Effect::Cleanup(_) if dry_run => continue,
             Effect::Cleanup(policy) => {

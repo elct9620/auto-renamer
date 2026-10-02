@@ -7,8 +7,10 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
+use globset::Glob;
 use toml::{Table, Value as Toml};
 
+use crate::effects::{Cleanup, Effect};
 use crate::pipeline::{Pipeline, PipelineError};
 use crate::reader::{Reader, Scope};
 use crate::record::Value;
@@ -65,26 +67,52 @@ impl fmt::Display for ConfigError {
 
 impl std::error::Error for ConfigError {}
 
-/// What the operator configured: the watches, each with its pipelines and settings.
+/// What the operator configured: the watches, each with its routes and settings, and the targets they move to.
 #[derive(Debug, Clone)]
 pub struct Config {
     watches: Vec<Watch>,
+    targets: BTreeMap<String, PathBuf>,
 }
 
-/// One watched folder, with where its files go and how they are grouped and named.
+/// One watched folder, with how its files are grouped and the routes that name and move them.
 #[derive(Debug, Clone)]
 pub struct Watch {
     pub name: String,
     pub source: PathBuf,
-    pub target: Option<PathBuf>,
     pub unit: Unit,
     pub vars: BTreeMap<String, Value>,
     pub quiet: Duration,
     pub max_wait: Duration,
     pub max_files: usize,
     pub dry_run: bool,
-    pipeline_names: Vec<String>,
+    routes: Vec<Route>,
     definitions: BTreeMap<String, Pipeline>,
+}
+
+/// One entry of a watch's routes: the pipeline that claims and names files, the target root it moves them
+/// to, or none to rename them in place, and the folders its cleanup keeps when it cleans up.
+#[derive(Debug, Clone)]
+pub struct Route {
+    pub pipeline: String,
+    pub target: Option<PathBuf>,
+    pub cleanup: Option<Cleanup>,
+}
+
+impl Route {
+    /// What the route does to a file it planned: the move, then the cleanup if it has one.
+    pub fn effects(&self) -> Vec<Effect> {
+        let mut effects = vec![Effect::Move];
+        effects.extend(self.cleanup.clone().map(Effect::Cleanup));
+        effects
+    }
+}
+
+/// A route as it is written, before its pipeline and target are looked up.
+#[derive(Debug, Clone)]
+struct Written {
+    pipeline: String,
+    target: Option<String>,
+    cleanup: Option<Cleanup>,
 }
 
 /// What a folder says of the files in it: variables, pipelines and a batch limit.
@@ -101,7 +129,7 @@ struct Settings {
     quiet: Option<Duration>,
     max_wait: Option<Duration>,
     max_files: Option<usize>,
-    pipelines: Option<Vec<String>>,
+    routes: Option<Vec<Written>>,
     vars: BTreeMap<String, Value>,
     unit: Option<Unit>,
     dry_run: Option<bool>,
@@ -120,6 +148,7 @@ impl Config {
             None => Settings::default(),
         };
         let definitions = read_pipelines(root.table("pipeline")?.unwrap_or_default())?;
+        let targets = read_targets(root.table("target")?.unwrap_or_default())?;
         let declared = root.table("watch")?.unwrap_or_default();
         root.finish()?;
 
@@ -130,20 +159,19 @@ impl Config {
             let source = reader
                 .absolute_path("source")?
                 .ok_or_else(|| reader.invalid("source", "is required"))?;
-            let target = reader.absolute_path("target")?;
             let settings = read_settings(reader)?;
             watches.push(build_watch(
                 name,
                 source,
-                target,
                 settings,
                 &default,
                 &definitions,
+                &targets,
             )?);
         }
 
-        let config = Config { watches };
-        check_apart(&config.watches, None, |path| path.to_path_buf())?;
+        let config = Config { watches, targets };
+        config.check_apart(None, |path| path.to_path_buf())?;
         Ok(config)
     }
 
@@ -159,38 +187,73 @@ impl Config {
         config_file: &Path,
         resolve: impl Fn(&Path) -> PathBuf,
     ) -> Result<(), ConfigError> {
-        check_apart(&self.watches, Some(config_file), resolve)
+        self.check_apart(Some(config_file), resolve)
     }
 
-    /// What is legal but probably not what was meant, such as a pipeline that never moves anything.
-    pub fn warnings(&self) -> Vec<String> {
-        self.watches
+    /// Sources must not overlap one another or any target, or files would be planned again after they
+    /// are moved; the configuration file may not lie in a source either, or it would be taken for a file
+    /// to process. Each path is compared where `resolve` puts it.
+    fn check_apart(
+        &self,
+        config_file: Option<&Path>,
+        resolve: impl Fn(&Path) -> PathBuf,
+    ) -> Result<(), ConfigError> {
+        let config_file = config_file.map(&resolve);
+        let sources: Vec<(&Watch, PathBuf)> = self
+            .watches
             .iter()
-            .flat_map(|watch| {
-                watch
-                    .pipelines()
-                    .into_iter()
-                    .filter(|(_, pipeline)| !pipeline.has_effect())
-                    .map(|(name, _)| {
-                        format!(
-                            "watch `{}`: pipeline `{name}` has no effect stage, so it only previews",
-                            watch.name
-                        )
-                    })
-            })
-            .collect()
+            .map(|watch| (watch, resolve(&watch.source)))
+            .collect();
+        let overlap = |a: &Path, b: &Path| a.starts_with(b) || b.starts_with(a);
+
+        for (index, (watch, source)) in sources.iter().enumerate() {
+            if let Some(file) = &config_file
+                && file.starts_with(source)
+            {
+                return Err(invalid(
+                    &format!("watch.{}", watch.name),
+                    "source",
+                    format!("holds the configuration file `{}`", file.display()),
+                ));
+            }
+            for (other, other_source) in &sources[index + 1..] {
+                if overlap(source, other_source) {
+                    return Err(invalid(
+                        &format!("watch.{}", other.name),
+                        "source",
+                        format!("overlaps the source of `{}`", watch.name),
+                    ));
+                }
+            }
+            for (name, target) in &self.targets {
+                if overlap(&resolve(target), source) {
+                    return Err(invalid(
+                        &format!("target.{name}"),
+                        "path",
+                        format!("overlaps the source of `{}`", watch.name),
+                    ));
+                }
+            }
+        }
+        Ok(())
     }
 }
 
 impl Watch {
-    /// The pipelines of the watch, in the order it lists them.
+    /// The routes of the watch, in the order they claim.
+    pub fn routes(&self) -> &[Route] {
+        &self.routes
+    }
+
+    /// The pipeline of each of the watch's routes, at the same place as its route.
     pub fn pipelines(&self) -> Vec<(String, Pipeline)> {
-        self.pipeline_names
+        self.routes
             .iter()
-            .filter_map(|name| {
-                self.definitions
-                    .get(name)
-                    .map(|pipeline| (name.clone(), pipeline.clone()))
+            .map(|route| {
+                let pipeline = self.definitions.get(&route.pipeline).expect(
+                    "a route names a pipeline that reading the configuration found defined",
+                );
+                (route.pipeline.clone(), pipeline.clone())
             })
             .collect()
     }
@@ -201,7 +264,7 @@ impl Watch {
         for folder in folders {
             watch.vars.extend(folder.vars.clone());
             for (name, pipeline) in &folder.pipelines {
-                if watch.pipeline_names.contains(name) {
+                if watch.routes.iter().any(|route| &route.pipeline == name) {
                     watch.definitions.insert(name.clone(), pipeline.clone());
                 }
             }
@@ -243,7 +306,7 @@ fn read_settings(mut reader: Reader<String>) -> Result<Settings, ConfigError> {
     let quiet = reader.duration("quiet")?;
     let max_wait = reader.duration("max_wait")?;
     let max_files = read_max_files(&mut reader)?;
-    let pipelines = reader.strings("pipelines")?;
+    let routes = read_routes(&mut reader)?;
     let dry_run = reader.boolean("dry_run")?;
     let vars = read_vars(&mut reader)?;
     let unit = read_unit(&mut reader)?;
@@ -252,11 +315,69 @@ fn read_settings(mut reader: Reader<String>) -> Result<Settings, ConfigError> {
         quiet,
         max_wait,
         max_files,
-        pipelines,
+        routes,
         vars,
         unit,
         dry_run,
     })
+}
+
+/// The routes a table lists, in their order, as they are written.
+fn read_routes(reader: &mut Reader<String>) -> Result<Option<Vec<Written>>, ConfigError> {
+    let Some(value) = reader.take("routes") else {
+        return Ok(None);
+    };
+    let Toml::Array(entries) = value else {
+        return Err(reader.invalid("routes", "must be a list of routes"));
+    };
+    entries
+        .iter()
+        .map(|entry| {
+            let mut route = table_reader("routes".to_string(), entry)?;
+            let pipeline = route.required_string("pipeline")?;
+            let target = route.string("move")?;
+            let cleanup = match route.table("cleanup")? {
+                Some(table) => Some(read_cleanup(Reader::new("cleanup".to_string(), table))?),
+                None => None,
+            };
+            route.finish()?;
+            Ok(Written {
+                pipeline,
+                target,
+                cleanup,
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()
+        .map(Some)
+}
+
+fn read_cleanup(mut reader: Reader<String>) -> Result<Cleanup, ConfigError> {
+    let keep = reader
+        .strings("keep")?
+        .unwrap_or_default()
+        .iter()
+        .map(|pattern| {
+            Glob::new(pattern)
+                .map(|glob| glob.compile_matcher())
+                .map_err(|error| reader.invalid("keep", error.to_string()))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    reader.finish()?;
+    Ok(Cleanup { keep })
+}
+
+/// The targets by name, each with the root it stands for.
+fn read_targets(declared: Table) -> Result<BTreeMap<String, PathBuf>, ConfigError> {
+    let mut targets = BTreeMap::new();
+    for (name, value) in declared {
+        let mut reader = table_reader(format!("target.{name}"), &value)?;
+        let path = reader
+            .absolute_path("path")?
+            .ok_or_else(|| reader.invalid("path", "is required"))?;
+        reader.finish()?;
+        targets.insert(name, path);
+    }
+    Ok(targets)
 }
 
 fn read_vars(reader: &mut Reader<String>) -> Result<BTreeMap<String, Value>, ConfigError> {
@@ -307,10 +428,10 @@ fn read_pipelines(declared: Table) -> Result<BTreeMap<String, Pipeline>, ConfigE
 fn build_watch(
     name: String,
     source: PathBuf,
-    target: Option<PathBuf>,
     settings: Settings,
     default: &Settings,
     definitions: &BTreeMap<String, Pipeline>,
+    targets: &BTreeMap<String, PathBuf>,
 ) -> Result<Watch, ConfigError> {
     let scope = format!("watch.{name}");
     let quiet = settings.quiet.or(default.quiet).unwrap_or(DEFAULT_QUIET);
@@ -325,27 +446,42 @@ fn build_watch(
             "may not be shorter than `quiet`",
         ));
     }
-    let pipeline_names = settings
-        .pipelines
-        .or_else(|| default.pipelines.clone())
-        .unwrap_or_default();
-    if let Some(missing) = pipeline_names
-        .iter()
-        .find(|listed| !definitions.contains_key(*listed))
-    {
-        return Err(invalid(
-            &scope,
-            "pipelines",
-            format!("`{missing}` is not defined"),
-        ));
-    }
+    let routes = settings
+        .routes
+        .or_else(|| default.routes.clone())
+        .unwrap_or_default()
+        .into_iter()
+        .map(|written| {
+            if !definitions.contains_key(&written.pipeline) {
+                return Err(invalid(
+                    &scope,
+                    "routes",
+                    format!("the pipeline `{}` is not defined", written.pipeline),
+                ));
+            }
+            let target = match written.target {
+                Some(target) => Some(targets.get(&target).cloned().ok_or_else(|| {
+                    invalid(
+                        &scope,
+                        "routes",
+                        format!("the target `{target}` is not declared"),
+                    )
+                })?),
+                None => None,
+            };
+            Ok(Route {
+                pipeline: written.pipeline,
+                target,
+                cleanup: written.cleanup,
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
     let mut vars = default.vars.clone();
     vars.extend(settings.vars);
     Ok(Watch {
         name,
         source,
-        target,
         unit: settings
             .unit
             .or_else(|| default.unit.clone())
@@ -358,72 +494,9 @@ fn build_watch(
             .or(default.max_files)
             .unwrap_or(DEFAULT_MAX_FILES),
         dry_run: settings.dry_run.or(default.dry_run).unwrap_or(false),
-        pipeline_names,
+        routes,
         definitions: definitions.clone(),
     })
-}
-
-/// Watches must not overlap, and no target may lie among the sources, or files would be planned again
-/// after they are moved; the configuration file may not lie in a source either, or it would be taken for
-/// a file to process. Each path is compared where `resolve` puts it.
-fn check_apart(
-    watches: &[Watch],
-    config_file: Option<&Path>,
-    resolve: impl Fn(&Path) -> PathBuf,
-) -> Result<(), ConfigError> {
-    let config_file = config_file.map(&resolve);
-    let placed: Vec<(&Watch, PathBuf, Option<PathBuf>)> = watches
-        .iter()
-        .map(|watch| {
-            let target = watch.target.as_deref().map(&resolve);
-            (watch, resolve(&watch.source), target)
-        })
-        .collect();
-    let overlap = |a: &Path, b: &Path| a.starts_with(b) || b.starts_with(a);
-
-    for (index, (watch, source, target)) in placed.iter().enumerate() {
-        let scope = format!("watch.{}", watch.name);
-        if let Some(target) = target
-            && target.starts_with(source)
-        {
-            return Err(invalid(
-                &scope,
-                "target",
-                "may not be inside its own source",
-            ));
-        }
-        if let Some(file) = &config_file
-            && file.starts_with(source)
-        {
-            return Err(invalid(
-                &scope,
-                "source",
-                format!("holds the configuration file `{}`", file.display()),
-            ));
-        }
-        for (other, other_source, _) in &placed[index + 1..] {
-            if overlap(source, other_source) {
-                return Err(invalid(
-                    &format!("watch.{}", other.name),
-                    "source",
-                    format!("overlaps the source of `{}`", watch.name),
-                ));
-            }
-        }
-        for (other, other_source, _) in placed.iter().filter(|(other, ..)| other.name != watch.name)
-        {
-            if let Some(target) = target
-                && overlap(target, other_source)
-            {
-                return Err(invalid(
-                    &format!("watch.{}", other.name),
-                    "source",
-                    format!("overlaps the target of `{}`", watch.name),
-                ));
-            }
-        }
-    }
-    Ok(())
 }
 
 /// The batch limit a table says, which may not be more than the ceiling.

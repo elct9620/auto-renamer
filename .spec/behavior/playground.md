@@ -38,19 +38,19 @@ The playground checks, reads and writes a configuration, and simulates a watch o
 | When | the watch is simulated |
 | Then | both are moved, since neither batch holds more than one file |
 
-## `PLG-005` A taken name is settled by the move's rule
+## `PLG-005` A taken name is refused
 
 | Step | Statement |
 | --- | --- |
-| Given | the same configuration as the first with `on_conflict = "suffix"`, a virtual source holding `Show/x.mkv`, and a virtual target already holding `Show/Alpha.mkv` |
+| Given | the same configuration as the first, a virtual source holding `Show/x.mkv`, and a virtual target already holding `Show/Alpha.mkv` |
 | When | the watch is simulated |
-| Then | the virtual target holds `Show/Alpha_v2.mkv` |
+| Then | `Show/x.mkv` is reported as refused and stays in the virtual source |
 
 ## `PLG-006` A folder the move left empty is cleaned up
 
 | Step | Statement |
 | --- | --- |
-| Given | a configuration whose watch takes each folder as a unit, moves and cleans up, and a virtual source holding `Show/Season/x.mkv` |
+| Given | a configuration whose watch takes each folder as a unit and whose route moves and cleans up, and a virtual source holding `Show/Season/x.mkv` |
 | When | the watch is simulated |
 | Then | the virtual source no longer holds the folder `Show/Season` |
 

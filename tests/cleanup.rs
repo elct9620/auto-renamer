@@ -3,7 +3,7 @@ mod common;
 use std::path::{Path, PathBuf};
 
 use auto_renamer::{FsTree, Roots, cleanup_folders};
-use common::{Sandbox, cleanup_stage};
+use common::{Sandbox, cleanup_keeping};
 
 /// The folders cleaned up after the file `origin` left, given the unit it belongs to.
 fn cleaned(sandbox: &Sandbox, keep: &str, origin: &str, unit: &str) -> Vec<PathBuf> {
@@ -11,10 +11,16 @@ fn cleaned(sandbox: &Sandbox, keep: &str, origin: &str, unit: &str) -> Vec<PathB
         source: sandbox.path("source"),
         target: sandbox.path("target"),
     };
-    let stage = cleanup_stage(&format!("{{ cleanup = {{ keep = [{keep}] }} }}"));
+    let cleanup = cleanup_keeping(keep);
 
-    cleanup_folders(&FsTree, &stage, Path::new(origin), Path::new(unit), &roots)
-        .expect("the cleanup should not fail")
+    cleanup_folders(
+        &FsTree,
+        &cleanup,
+        Path::new(origin),
+        Path::new(unit),
+        &roots,
+    )
+    .expect("the cleanup should not fail")
 }
 
 fn paths(names: &[&str]) -> Vec<PathBuf> {

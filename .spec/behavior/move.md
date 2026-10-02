@@ -47,30 +47,6 @@ A move puts a file at its plan under the target, and it is the only thing that t
 | When | the file is moved |
 | Then | the move is refused as a conflict and both files are as they were |
 
-## `MV-006` A conflict can be settled by a suffix
-
-| Step | Statement |
-| --- | --- |
-| Given | a file `x.mkv`, the plan `y.mkv` where the target already holds `y.mkv`, and a suffix `_v2` asked for |
-| When | the file is moved |
-| Then | the target holds `y_v2.mkv` and the earlier `y.mkv` is as it was |
-
-## `MV-007` A suffix that also conflicts is refused
-
-| Step | Statement |
-| --- | --- |
-| Given | a file `x.mkv`, the plan `y.mkv`, a suffix `_v2` asked for, and a target holding `y.mkv` and `y_v2.mkv` |
-| When | the file is moved |
-| Then | the move is refused as a conflict and nothing is overwritten |
-
-## `MV-008` The suffix goes before the extension
-
-| Step | Statement |
-| --- | --- |
-| Given | a file `x`, the plan `y` where the target already holds `y`, and a suffix `_v2` asked for |
-| When | the file is moved |
-| Then | the target holds `y_v2` |
-
 ## `MV-009` A plan that leaves the target is refused
 
 | Step | Statement |

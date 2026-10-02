@@ -2,15 +2,13 @@
 
 use std::path::{Path, PathBuf};
 
-use super::{Effect, Flow};
+use super::Flow;
 use crate::record::Record;
 
 /// One file of a batch: going on while its flow holds a record, and stopped once a stage ended its way.
 pub(crate) struct File {
     pub origin: PathBuf,
     pub flow: Flow,
-    /// What is to be done to the file once it is planned.
-    pub effects: Vec<Effect>,
 }
 
 /// The files a pipeline claimed in the order of their paths, each going on with its record or stopped by
@@ -27,7 +25,6 @@ impl Batch {
             .map(|record| File {
                 origin: record.origin().to_path_buf(),
                 flow: Ok(record),
-                effects: Vec::new(),
             })
             .collect();
         Batch { files }
@@ -44,14 +41,6 @@ impl Batch {
                 file
             })
             .collect();
-        self
-    }
-
-    /// Notes an effect to be done to every file still going on.
-    pub(crate) fn schedule(mut self, effect: Effect) -> Batch {
-        for file in self.files.iter_mut().filter(|file| file.flow.is_ok()) {
-            file.effects.push(effect.clone());
-        }
         self
     }
 

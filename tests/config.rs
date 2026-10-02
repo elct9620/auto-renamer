@@ -8,16 +8,19 @@ use common::names;
 
 const PIPELINES: &str = r#"
 [pipeline.video]
-stages = [{ filter = { ext = ["mkv"] } }, "move"]
+stages = [{ filter = { ext = ["mkv"] } }]
 
 [pipeline.photo]
-stages = ["move"]
+stages = []
+
+[target.library]
+path = "/library"
 "#;
 
 /// A configuration of the two pipelines above and a watch `series` with the extra lines added to it.
 fn with_watch(extra: &str) -> String {
     format!(
-        "{PIPELINES}\n[watch.series]\nsource = \"/downloads\"\ntarget = \"/library\"\npipelines = [\"video\"]\n{extra}\n"
+        "{PIPELINES}\n[watch.series]\nsource = \"/downloads\"\nroutes = [{{ pipeline = \"video\", move = \"library\" }}]\n{extra}\n"
     )
 }
 
@@ -46,19 +49,23 @@ fn pipeline_names(watch: &Watch) -> Vec<String> {
 
 // @behavior CFG-001
 #[test]
-fn should_read_the_source_target_and_pipelines_of_a_watch() {
+fn should_read_the_source_and_routes_of_a_watch() {
     let watch = series("");
 
     assert_eq!(watch.source, Path::new("/downloads"));
-    assert_eq!(watch.target.as_deref(), Some(Path::new("/library")));
-    assert_eq!(pipeline_names(&watch), ["video"]);
+    assert_eq!(watch.routes().len(), 1);
+    assert_eq!(watch.routes()[0].pipeline, "video");
+    assert_eq!(
+        watch.routes()[0].target.as_deref(),
+        Some(Path::new("/library"))
+    );
 }
 
 // @behavior CFG-002
 #[test]
 fn should_give_every_watch_the_pipelines_the_default_lists() {
     let text = format!(
-        "{PIPELINES}\n[default]\npipelines = [\"video\"]\n\n[watch.series]\nsource = \"/downloads\"\n"
+        "{PIPELINES}\n[default]\nroutes = [{{ pipeline = \"video\" }}]\n\n[watch.series]\nsource = \"/downloads\"\n"
     );
 
     assert_eq!(pipeline_names(&read(&text)[0]), ["video"]);
@@ -68,7 +75,7 @@ fn should_give_every_watch_the_pipelines_the_default_lists() {
 #[test]
 fn should_let_a_watch_override_the_default() {
     let text = format!(
-        "{PIPELINES}\n[default]\npipelines = [\"video\"]\n\n[watch.series]\nsource = \"/downloads\"\npipelines = [\"photo\"]\n"
+        "{PIPELINES}\n[default]\nroutes = [{{ pipeline = \"video\" }}]\n\n[watch.series]\nsource = \"/downloads\"\nroutes = [{{ pipeline = \"photo\" }}]\n"
     );
 
     assert_eq!(pipeline_names(&read(&text)[0]), ["photo"]);
@@ -145,28 +152,26 @@ fn should_refuse_a_source_that_is_not_absolute() {
 // @behavior CFG-013
 #[test]
 fn should_refuse_a_watch_without_a_source() {
-    let text = format!("{PIPELINES}\n[watch.series]\ntarget = \"/library\"\n");
+    let text = format!("{PIPELINES}\n[watch.series]\ndry_run = true\n");
 
     assert!(names(&refused(&text), "source"));
 }
 
 // @behavior CFG-014
 #[test]
-fn should_refuse_a_target_inside_its_own_source() {
-    let text = format!(
-        "{PIPELINES}\n[watch.series]\nsource = \"/downloads\"\ntarget = \"/downloads/library\"\n"
-    );
+fn should_refuse_a_target_inside_a_source() {
+    let text = "[target.library]\npath = \"/downloads/library\"\n\n[watch.series]\nsource = \"/downloads\"\n";
 
-    assert!(names(&refused(&text), "target"));
+    assert!(names(&refused(text), "path"));
 }
 
 // @behavior CFG-015
 #[test]
-fn should_refuse_a_target_that_is_its_own_source() {
+fn should_refuse_a_target_that_is_a_source() {
     let text =
-        format!("{PIPELINES}\n[watch.series]\nsource = \"/downloads\"\ntarget = \"/downloads\"\n");
+        "[target.library]\npath = \"/downloads\"\n\n[watch.series]\nsource = \"/downloads\"\n";
 
-    assert!(names(&refused(&text), "target"));
+    assert!(names(&refused(text), "path"));
 }
 
 // @behavior CFG-016
@@ -181,22 +186,21 @@ fn should_refuse_two_watches_whose_sources_overlap() {
 
 // @behavior CFG-017
 #[test]
-fn should_refuse_a_target_that_holds_the_source_of_another_watch() {
-    let text = format!(
-        "{PIPELINES}\n[watch.a]\nsource = \"/downloads\"\ntarget = \"/library\"\n\n[watch.b]\nsource = \"/library/incoming\"\ntarget = \"/other\"\n"
-    );
+fn should_refuse_a_source_inside_a_target() {
+    let text =
+        "[target.library]\npath = \"/library\"\n\n[watch.b]\nsource = \"/library/incoming\"\n";
 
-    assert!(names(&refused(&text), "source"));
+    assert!(names(&refused(text), "path"));
 }
 
 // @behavior CFG-018
 #[test]
-fn should_refuse_a_watch_naming_a_pipeline_that_is_not_defined() {
+fn should_refuse_a_route_naming_a_pipeline_that_is_not_defined() {
     let text = format!(
-        "{PIPELINES}\n[watch.series]\nsource = \"/downloads\"\npipelines = [\"missing\"]\n"
+        "{PIPELINES}\n[watch.series]\nsource = \"/downloads\"\nroutes = [{{ pipeline = \"missing\" }}]\n"
     );
 
-    assert!(names(&refused(&text), "pipelines"));
+    assert!(names(&refused(&text), "routes"));
 }
 
 // @behavior CFG-019
@@ -216,10 +220,12 @@ fn should_refuse_an_unknown_key_by_name() {
 
 // @behavior CFG-021
 #[test]
-fn should_let_a_watch_without_a_target_rename_in_place() {
-    let text = format!("{PIPELINES}\n[watch.series]\nsource = \"/downloads\"\n");
+fn should_let_a_route_without_a_move_rename_in_place() {
+    let text = format!(
+        "{PIPELINES}\n[watch.series]\nsource = \"/downloads\"\nroutes = [{{ pipeline = \"video\" }}]\n"
+    );
 
-    assert_eq!(read(&text)[0].target, None);
+    assert_eq!(read(&text)[0].routes()[0].target, None);
 }
 
 // @behavior CFG-022
@@ -280,28 +286,11 @@ fn should_accept_the_ceiling_as_the_file_limit() {
     assert_eq!(series("max_files = 100000").max_files, 100_000);
 }
 
-// @behavior CFG-030
-#[test]
-fn should_warn_about_a_pipeline_without_an_effect_stage() {
-    let config = Config::parse(
-        "[pipeline.preview]\nstages = [{ format = \"{name}\" }]\n\n[watch.w]\nsource = \"/s\"\npipelines = [\"preview\"]\n",
-    )
-    .expect("the configuration should be accepted");
-
-    let warnings = config.warnings();
-
-    assert_eq!(warnings.len(), 1);
-    assert!(
-        warnings[0].contains("`w`") && warnings[0].contains("`preview`"),
-        "{warnings:?}"
-    );
-}
-
 // @behavior CFG-031
 #[test]
 fn should_refuse_a_source_written_with_a_parent_folder() {
     let text = format!(
-        "{PIPELINES}\n[watch.series]\nsource = \"/downloads/../library\"\npipelines = [\"video\"]\n"
+        "{PIPELINES}\n[watch.series]\nsource = \"/downloads/../library\"\nroutes = [{{ pipeline = \"video\" }}]\n"
     );
 
     assert!(names(&refused(&text), "source"));
@@ -319,7 +308,7 @@ fn linked(to: &'static str) -> impl Fn(&Path) -> std::path::PathBuf {
 #[test]
 fn should_refuse_sources_that_overlap_once_their_real_paths_are_known() {
     let config = Config::parse(&format!(
-        "{PIPELINES}\n[watch.a]\nsource = \"/link\"\npipelines = [\"video\"]\n\n[watch.b]\nsource = \"/downloads\"\npipelines = [\"video\"]\n"
+        "{PIPELINES}\n[watch.a]\nsource = \"/link\"\nroutes = [{{ pipeline = \"video\" }}]\n\n[watch.b]\nsource = \"/downloads\"\nroutes = [{{ pipeline = \"video\" }}]\n"
     ))
     .expect("the configuration should be accepted as written");
 
@@ -338,7 +327,7 @@ fn should_refuse_sources_that_overlap_once_their_real_paths_are_known() {
 #[test]
 fn should_refuse_a_configuration_file_inside_a_source_once_real_paths_are_known() {
     let config = Config::parse(&format!(
-        "{PIPELINES}\n[watch.a]\nsource = \"/link\"\npipelines = [\"video\"]\n"
+        "{PIPELINES}\n[watch.a]\nsource = \"/link\"\nroutes = [{{ pipeline = \"video\" }}]\n"
     ))
     .expect("the configuration should be accepted as written");
 
@@ -351,4 +340,22 @@ fn should_refuse_a_configuration_file_inside_a_source_once_real_paths_are_known(
         &checked.expect_err("the paths should be refused"),
         "source"
     ));
+}
+
+// @behavior CFG-034
+#[test]
+fn should_refuse_a_route_moving_to_a_target_that_is_not_declared() {
+    let text = format!(
+        "{PIPELINES}\n[watch.series]\nsource = \"/downloads\"\nroutes = [{{ pipeline = \"video\", move = \"missing\" }}]\n"
+    );
+
+    assert!(names(&refused(&text), "routes"));
+}
+
+// @behavior CFG-035
+#[test]
+fn should_refuse_a_target_without_a_path() {
+    let text = "[target.library]\n\n[watch.series]\nsource = \"/downloads\"\n";
+
+    assert!(names(&refused(text), "path"));
 }

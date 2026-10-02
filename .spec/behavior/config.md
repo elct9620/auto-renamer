@@ -1,35 +1,32 @@
 # Config
 
-The configuration says which folders are watched, where their files go, and by which pipelines. It comes from a file the operator owns, and everything wrong with it is refused when it is read, so a running watcher never meets a configuration it cannot follow.
+The configuration says which folders are watched, which routes take their files, and the targets those routes move them to. It comes from a file the operator owns, and everything wrong with it is refused when it is read, so a running watcher never meets a configuration it cannot follow.
 
 ## Includes
 
 - `tests/config.rs`
 
-## `CFG-001` A watch reads its source, target and pipelines
+## `CFG-001` A watch reads its source and routes
 
 | Step | Statement |
 | --- | --- |
-| Given | a configuration with a pipeline `video` and a watch `series` for `/downloads` into `/library` listing `video` |
+| Given | a configuration with a pipeline `video`, a target `library` at `/library`, and a watch `series` for `/downloads` with a route of `video` into `library` |
 | When | the configuration is read |
-| Then | the watch has that source and target and the pipeline `video` |
-
-## `CFG-002` The default gives every watch the pipelines it lists
+| Then | the watch has that source and one route of `video` into `/library` |
+## `CFG-002` The default gives every watch the routes it lists
 
 | Step | Statement |
 | --- | --- |
-| Given | a configuration whose default lists `video` and a watch `series` that lists none |
+| Given | a configuration whose default has a route of `video` and a watch `series` that has none |
 | When | the configuration is read |
-| Then | the watch has the pipeline `video` |
-
+| Then | the watch has the route of `video` |
 ## `CFG-003` A watch overrides the default
 
 | Step | Statement |
 | --- | --- |
-| Given | a configuration whose default lists `video` and a watch that lists `photo` |
+| Given | a configuration whose default has a route of `video` and a watch with a route of `photo` |
 | When | the configuration is read |
-| Then | the watch has only the pipeline `photo` |
-
+| Then | the watch has only the route of `photo` |
 ## `CFG-004` Variables of the default and the watch are merged by name
 
 | Step | Statement |
@@ -42,7 +39,7 @@ The configuration says which folders are watched, where their files go, and by w
 
 | Step | Statement |
 | --- | --- |
-| Given | a configuration with a pipeline `video` and a watch `series` for `/downloads` into `/library` listing `video` |
+| Given | a configuration with a pipeline `video`, a target `library` at `/library`, and a watch `series` for `/downloads` with a route of `video` into `library` |
 | When | the configuration is read |
 | Then | the quiet period is five minutes |
 
@@ -50,7 +47,7 @@ The configuration says which folders are watched, where their files go, and by w
 
 | Step | Statement |
 | --- | --- |
-| Given | a configuration with a pipeline `video` and a watch `series` for `/downloads` into `/library` listing `video` |
+| Given | a configuration with a pipeline `video`, a target `library` at `/library`, and a watch `series` for `/downloads` with a route of `video` into `library` |
 | When | the configuration is read |
 | Then | the maximum wait is thirty minutes |
 
@@ -58,7 +55,7 @@ The configuration says which folders are watched, where their files go, and by w
 
 | Step | Statement |
 | --- | --- |
-| Given | a configuration with a pipeline `video` and a watch `series` for `/downloads` into `/library` listing `video` |
+| Given | a configuration with a pipeline `video`, a target `library` at `/library`, and a watch `series` for `/downloads` with a route of `video` into `library` |
 | When | the configuration is read |
 | Then | the limit is 1000 files |
 
@@ -66,7 +63,7 @@ The configuration says which folders are watched, where their files go, and by w
 
 | Step | Statement |
 | --- | --- |
-| Given | a configuration with a pipeline `video` and a watch `series` for `/downloads` into `/library` listing `video` |
+| Given | a configuration with a pipeline `video`, a target `library` at `/library`, and a watch `series` for `/downloads` with a route of `video` into `library` |
 | When | the configuration is read |
 | Then | the watch is not a dry run |
 
@@ -110,22 +107,20 @@ The configuration says which folders are watched, where their files go, and by w
 | When | the configuration is read |
 | Then | the configuration is refused, naming `source` |
 
-## `CFG-014` A target inside its own source is refused
+## `CFG-014` A target inside a source is refused
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch for `/downloads` with the target `/downloads/library` |
+| Given | a watch for `/downloads` and a target at `/downloads/library` |
 | When | the configuration is read |
-| Then | the configuration is refused, naming `target` |
-
-## `CFG-015` A target that is its own source is refused
+| Then | the configuration is refused, naming `path` |
+## `CFG-015` A target that is a source is refused
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch for `/downloads` with the target `/downloads` |
+| Given | a watch for `/downloads` and a target at `/downloads` |
 | When | the configuration is read |
-| Then | the configuration is refused, naming `target` |
-
+| Then | the configuration is refused, naming `path` |
 ## `CFG-016` Two watches whose sources overlap are refused
 
 | Step | Statement |
@@ -134,22 +129,20 @@ The configuration says which folders are watched, where their files go, and by w
 | When | the configuration is read |
 | Then | the configuration is refused, naming `source` |
 
-## `CFG-017` A target inside the source of another watch is refused
+## `CFG-017` A source inside a target is refused
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch for `/downloads` into `/library` and a watch for `/library/incoming` into `/other` |
+| Given | a target at `/library` and a watch for `/library/incoming` |
 | When | the configuration is read |
-| Then | the configuration is refused, naming `source` |
-
-## `CFG-018` A watch naming a pipeline that is not defined is refused
+| Then | the configuration is refused, naming `path` |
+## `CFG-018` A route naming a pipeline that is not defined is refused
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch that lists `missing` |
+| Given | a watch with a route of `missing` |
 | When | the configuration is read |
-| Then | the configuration is refused, naming `pipelines` |
-
+| Then | the configuration is refused, naming `routes` |
 ## `CFG-019` A mistake in a pipeline is refused with its name
 
 | Step | Statement |
@@ -166,14 +159,13 @@ The configuration says which folders are watched, where their files go, and by w
 | When | the configuration is read |
 | Then | the configuration is refused, naming `colour` |
 
-## `CFG-021` A watch without a target renames in place
+## `CFG-021` A route without a move renames in place
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch that has a source and no target |
+| Given | a watch with a route of `video` that names no target |
 | When | the configuration is read |
-| Then | the watch has no target |
-
+| Then | the route has no target |
 ## `CFG-022` A file limit must be a positive whole number
 
 | Step | Statement |
@@ -231,14 +223,6 @@ The configuration says which folders are watched, where their files go, and by w
 | When | the configuration is read |
 | Then | the watch has the limit 100000 |
 
-## `CFG-030` A pipeline without an effect stage is warned about
-
-| Step | Statement |
-| --- | --- |
-| Given | a watch listing a pipeline whose stages only rewrite the plan |
-| When | the configuration is read |
-| Then | the warnings name the watch and the pipeline |
-
 ## `CFG-031` A source or target written with `.` or `..` is refused
 
 | Step | Statement |
@@ -262,3 +246,19 @@ The configuration says which folders are watched, where their files go, and by w
 | Given | a watch with the source `/link`, where `/link` really is `/etc/auto-renamer`, and the configuration file `/etc/auto-renamer/config.toml` |
 | When | the paths are checked with their real locations |
 | Then | the check is refused, naming `source` |
+
+## `CFG-034` A route moving to a target that is not declared is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch with a route of `video` into `missing` |
+| When | the configuration is read |
+| Then | the configuration is refused, naming `routes` |
+
+## `CFG-035` A target without a path is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | a target `library` with no `path` |
+| When | the configuration is read |
+| Then | the configuration is refused, naming `path` |

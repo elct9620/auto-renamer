@@ -4,8 +4,6 @@
   "download": "Download",
   "status": {
     "valid": "valid",
-    "warnings_one": "{{count}} warning",
-    "warnings_other": "{{count}} warnings",
     "refused": "refused"
   },
   "message": {

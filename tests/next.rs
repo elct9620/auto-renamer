@@ -176,6 +176,10 @@ impl Target for Asked<'_> {
         self.times.set(self.times.get() + 1);
         self.files.files_in(folder)
     }
+
+    fn root(&self) -> &Path {
+        self.files.root()
+    }
 }
 
 // @behavior NXT-015

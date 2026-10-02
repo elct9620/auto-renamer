@@ -12,9 +12,9 @@ use common::{Sandbox, eventually, eventually_within};
 
 fn config_of(sandbox: &Sandbox, stages: &str) -> String {
     format!(
-        "[pipeline.p]\nstages = {stages}\n\n[watch.w]\nsource = \"{}\"\ntarget = \"{}\"\npipelines = [\"p\"]\nunit = \"source\"\nquiet = \"1s\"\nmax_wait = \"3s\"\n",
-        sandbox.path("source").display(),
+        "[pipeline.p]\nstages = {stages}\n\n[target.t]\npath = \"{}\"\n\n[watch.w]\nsource = \"{}\"\nroutes = [{{ pipeline = \"p\", move = \"t\" }}]\nunit = \"source\"\nquiet = \"1s\"\nmax_wait = \"3s\"\n",
         sandbox.path("target").display(),
+        sandbox.path("source").display(),
     )
 }
 
@@ -71,7 +71,7 @@ fn let_the_configuration_settle() {
 #[test]
 fn should_move_a_file_dropped_in_the_source_to_the_target() {
     let sandbox = Sandbox::new();
-    let _running = Running::start(&sandbox, r#"["move"]"#);
+    let _running = Running::start(&sandbox, r#"[]"#);
 
     sandbox.write("source/a.mkv", "video");
 
@@ -84,7 +84,7 @@ fn should_move_a_file_dropped_in_the_source_to_the_target() {
 fn should_process_the_files_already_there_at_start() {
     let sandbox = Sandbox::new();
     sandbox.write("source/a.mkv", "video");
-    let _running = Running::start(&sandbox, r#"["move"]"#);
+    let _running = Running::start(&sandbox, r#"[]"#);
 
     assert!(eventually(|| sandbox.exists("target/a.mkv")));
 }
@@ -93,11 +93,11 @@ fn should_process_the_files_already_there_at_start() {
 #[test]
 fn should_follow_a_change_to_the_configuration() {
     let sandbox = Sandbox::new();
-    let _running = Running::start(&sandbox, r#"["move"]"#);
+    let _running = Running::start(&sandbox, r#"[]"#);
 
     sandbox.write(
         "config.toml",
-        &config_of(&sandbox, r#"[{ format = "renamed" }, "move"]"#),
+        &config_of(&sandbox, r#"[{ format = "renamed" }]"#),
     );
     let_the_configuration_settle();
     sandbox.write("source/a.mkv", "video");
@@ -109,7 +109,7 @@ fn should_follow_a_change_to_the_configuration() {
 #[test]
 fn should_keep_the_running_configuration_when_the_new_one_is_not_valid() {
     let sandbox = Sandbox::new();
-    let _running = Running::start(&sandbox, r#"[{ format = "kept" }, "move"]"#);
+    let _running = Running::start(&sandbox, r#"[{ format = "kept" }]"#);
 
     sandbox.write("config.toml", "this is not toml");
     let_the_configuration_settle();
@@ -122,7 +122,7 @@ fn should_keep_the_running_configuration_when_the_new_one_is_not_valid() {
 #[test]
 fn should_process_a_folder_moved_into_the_source_with_what_it_holds() {
     let sandbox = Sandbox::new();
-    let _running = Running::start(&sandbox, r#"["move"]"#);
+    let _running = Running::start(&sandbox, r#"[]"#);
     sandbox.write("outside/Show/a.mkv", "video");
 
     std::fs::rename(sandbox.path("outside/Show"), sandbox.path("source/Show")).unwrap();
@@ -134,7 +134,7 @@ fn should_process_a_folder_moved_into_the_source_with_what_it_holds() {
 #[test]
 fn should_not_miss_a_file_written_into_a_folder_that_has_just_appeared() {
     let sandbox = Sandbox::new();
-    let _running = Running::start(&sandbox, r#"["move"]"#);
+    let _running = Running::start(&sandbox, r#"[]"#);
     let folders: Vec<String> = (0..300).map(|number| format!("Big/{number:04}")).collect();
     for folder in &folders {
         sandbox.make_dir(&format!("outside/{folder}"));
@@ -162,7 +162,7 @@ fn should_not_miss_a_file_written_into_a_folder_that_has_just_appeared() {
 #[test]
 fn should_process_a_folder_renamed_inside_the_source_under_its_new_name() {
     let sandbox = Sandbox::new();
-    let _running = Running::start(&sandbox, r#"["move"]"#);
+    let _running = Running::start(&sandbox, r#"[]"#);
     sandbox.write("source/Old/a.mkv", "video");
     thread::sleep(Duration::from_millis(200));
 
@@ -181,8 +181,7 @@ fn should_not_hand_a_batch_over_before_the_scan_that_finds_its_files_is_finished
     }
     thread::sleep(Duration::from_millis(1200));
 
-    let numbered =
-        r#"[{ rank = { into = "index", by = ["ext"] } }, { format = "{index:03}" }, "move"]"#;
+    let numbered = r#"[{ rank = { into = "index", by = ["ext"] } }, { format = "{index:03}" }]"#;
     let _running = Running::start(&sandbox, numbered);
 
     assert!(
@@ -201,7 +200,7 @@ fn should_answer_a_stop_between_batches() {
     }
     sandbox.make_dir("target");
     let each_folder_a_unit =
-        config_of(&sandbox, r#"["move"]"#).replace(r#"unit = "source""#, r#"unit = "directory""#);
+        config_of(&sandbox, r#"[]"#).replace(r#"unit = "source""#, r#"unit = "directory""#);
     sandbox.write("config.toml", &each_folder_a_unit);
     thread::sleep(Duration::from_millis(1200));
     let running = Running::spawn_without_waiting(&sandbox);
@@ -227,7 +226,7 @@ fn should_answer_a_stop_between_batches() {
 fn should_process_a_file_written_into_a_folder_that_was_there_at_start() {
     let sandbox = Sandbox::new();
     sandbox.make_dir("source/Show/Season 01");
-    let _running = Running::start(&sandbox, r#"["move"]"#);
+    let _running = Running::start(&sandbox, r#"[]"#);
 
     sandbox.write("source/Show/Season 01/a.mkv", "video");
 
@@ -238,11 +237,11 @@ fn should_process_a_file_written_into_a_folder_that_was_there_at_start() {
 #[test]
 fn should_follow_a_configuration_replaced_by_another_file() {
     let sandbox = Sandbox::new();
-    let _running = Running::start(&sandbox, r#"["move"]"#);
+    let _running = Running::start(&sandbox, r#"[]"#);
 
     sandbox.write(
         "next.toml",
-        &config_of(&sandbox, r#"[{ format = "replaced" }, "move"]"#),
+        &config_of(&sandbox, r#"[{ format = "replaced" }]"#),
     );
     std::fs::rename(sandbox.path("next.toml"), sandbox.path("config.toml")).unwrap();
     let_the_configuration_settle();
@@ -259,7 +258,7 @@ fn should_refuse_a_configuration_file_inside_a_source() {
     sandbox.make_dir("target");
     sandbox.write(
         "source/config.toml",
-        &config_of(&sandbox, r#"[{ format = "renamed" }, "move"]"#),
+        &config_of(&sandbox, r#"[{ format = "renamed" }]"#),
     );
     let options = Options {
         config: sandbox.path("source/config.toml"),
@@ -283,7 +282,7 @@ fn should_refuse_a_configuration_file_reached_through_a_link_to_a_source() {
     std::os::unix::fs::symlink(sandbox.path("settings"), sandbox.path("source")).unwrap();
     sandbox.write(
         "settings/config.toml",
-        &config_of(&sandbox, r#"[{ format = "renamed" }, "move"]"#),
+        &config_of(&sandbox, r#"[{ format = "renamed" }]"#),
     );
     let options = Options {
         config: sandbox.path("settings/config.toml"),

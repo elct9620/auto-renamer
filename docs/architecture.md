@@ -33,8 +33,9 @@ core 不碰檔案系統與通知，所以能編成 WASM 給 playground 用。
                          └─► scan ────► watcher
   ─────────────────────────────────────────────────── crate boundary
   core   service ─┬─► engine ──► pipeline ─► stages ─┬─► template ─► record
-                  ├─► effects ─► stages               ├─► context ──► record
-                  └─► config ──► pipeline, reader     └─► reader ───► record
+                  ├─► effects ─► record               ├─► context ──► record
+                  └─► config ──► pipeline, reader,    └─► reader ───► record
+                                 effects
   only filesystem, scan and runner touch the filesystem
 ```
 
@@ -46,13 +47,13 @@ core 不碰檔案系統與通知，所以能編成 WASM 給 playground 用。
 |---|---|---|
 | `record` | 記錄與欄位 | 否 |
 | `template` | 名稱樣板輸出與反推 | 否 |
-| `context` | 同批共用：target、號碼、前面結果 | 否 |
+| `context` | 同批共用：路線的 target、號碼、前面結果 | 否 |
 | `stages` | 階段、宣告解析、批次與 effect 描述 | 否 |
 | `pipeline` | 階段清單與順序驗證 | 否 |
 | `engine` | 認領順序與每個檔案的結論 | 否 |
 | `reader` | 逐鍵讀取 TOML 表格，拒絕剩下的鍵 | 否 |
-| `config` | 設定解析、層疊與驗證 | 否 |
-| `effects` | `move` 與 `cleanup` 的規則，與它們經過的 `Tree` | 否 |
+| `config` | 設定解析、層疊與驗證，路線與 target | 否 |
+| `effects` | 路線的效果 `move` 與 `cleanup`，與它們經過的 `Tree` | 否 |
 | `watcher` | 事件、單元與批次收束的狀態機 | 否 |
 | `watcher` 的翻譯 | notify 事件轉成單元事件 | 否 |
 | `watcher` 的佇列 | 篩選通知、限制數量、記下遺失 | 否 |
@@ -94,7 +95,6 @@ debug 建置讀到表上沒列的參數就中止，測試因此會擋下描述�
 | filter、map | `each` | `filter`、`number` |
 | scan | `each` 加 `Context` | `next` |
 | group | `live` 或 `Context` 的 `earlier`，再 `each` | `rank`、`take` |
-| effect | `schedule` | `move`、`cleanup` |
 
 形狀是階段向 `Batch` 與 `Context` 要的東西，不是階段的分類。`each` 是唯一決定檔案能否繼續的地方：階段回 `Err(Stop)`，之後的階段就看不到那個檔案。
 
@@ -109,11 +109,11 @@ let rewritten = change(text_field(stage, &record, field)?);
 ### Effect 描述
 
 ```
-  plan     move.run ──► batch.schedule(Effect::Move)    no filesystem
-  perform  service  ──► apply_effects(file.effects)     per file, in order
+  plan     engine  ──► each route's pipeline, its own target   no filesystem
+  perform  service ──► apply_effects(route.effects())          per file, move then cleanup
 ```
 
-effect 階段在規劃時只記下要做的事，整批規劃完才由 `effects` 經 `Tree` 逐檔執行。規劃因此不碰任何檔案；乾跑時 `move` 只回報會搬到哪裡，`cleanup` 不執行。「effect 排在最後」是 `pipeline` 的宣告規則，引擎不依賴它。
+效果不是階段，而是路線上的資料：`Route::effects` 給出先 `move` 再 `cleanup`。整批規劃完才由 `effects` 經 `Tree` 逐檔執行，規劃因此不碰任何檔案；乾跑時 `move` 只回報會搬到哪裡，`cleanup` 不執行。管線裡寫不出效果，前純後動是結構上的保證。
 
 ### 檢視時機
 

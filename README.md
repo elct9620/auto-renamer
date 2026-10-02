@@ -21,22 +21,21 @@
 
 ```toml
 [pipeline.video]
-stages = [
-  { filter = { ext = ["mkv", "mp4"] } },
-  "move",
-]
+stages = [{ filter = { ext = ["mkv", "mp4"] } }]
+
+[target.video]
+path = "/Video"
 
 [watch.downloads]
 source = "/Downloads"
-target = "/Video"
-pipelines = ["video"]
+routes = [{ pipeline = "video", move = "video" }]
 ```
 
 ```
 auto-renamer --config /etc/auto-renamer/config.toml
 ```
 
-不給 `--config` 時讀取 `/etc/auto-renamer/config.toml`。檔案穩定並安靜一個視窗（預設 5 分鐘）後才會處理。
+不給 `--config` 時讀取 `/etc/auto-renamer/config.toml`。檔案穩定並安靜 `quiet`（預設 5 分鐘）後才會處理。
 
 ## Playground
 

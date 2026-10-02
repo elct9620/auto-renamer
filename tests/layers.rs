@@ -5,14 +5,14 @@ use common::names;
 
 const BASE: &str = r#"
 [pipeline.video]
-stages = [{ filter = { ext = ["mkv"] } }, "move"]
+stages = [{ filter = { ext = ["mkv"] } }]
 
 [pipeline.photo]
-stages = ["move"]
+stages = ["strip"]
 
 [watch.series]
 source = "/downloads"
-pipelines = ["video", "photo"]
+routes = [{ pipeline = "video" }, { pipeline = "photo" }]
 vars = { show = "Alpha" }
 max_files = 100
 "#;
@@ -77,9 +77,9 @@ fn should_replace_a_pipeline_whole_by_name() {
 // @behavior LAY-004
 #[test]
 fn should_keep_the_pipelines_of_other_names() {
-    let under = watch().under(&[folder("[pipeline.video]\nstages = [\"move\"]")]);
+    let under = watch().under(&[folder("[pipeline.video]\nstages = []")]);
 
-    assert_eq!(stage_names(&under, "photo"), ["move"]);
+    assert_eq!(stage_names(&under, "photo"), ["strip"]);
 }
 
 // @behavior LAY-005
@@ -98,8 +98,8 @@ fn should_not_let_a_folder_set_the_source() {
 
 // @behavior LAY-007
 #[test]
-fn should_not_let_a_folder_set_the_target() {
-    assert!(names(&refused("target = \"/etc\""), "target"));
+fn should_not_let_a_folder_set_the_routes() {
+    assert!(names(&refused("routes = []"), "routes"));
 }
 
 // @behavior LAY-008
@@ -146,7 +146,7 @@ fn should_refuse_a_mistake_in_a_folder_pipeline_with_its_name() {
 // @behavior LAY-015
 #[test]
 fn should_not_run_a_pipeline_a_folder_defines_unless_the_watch_lists_it() {
-    let under = watch().under(&[folder("[pipeline.extra]\nstages = [\"move\"]")]);
+    let under = watch().under(&[folder("[pipeline.extra]\nstages = []")]);
 
     let names: Vec<_> = under
         .pipelines()
@@ -160,4 +160,10 @@ fn should_not_run_a_pipeline_a_folder_defines_unless_the_watch_lists_it() {
 #[test]
 fn should_refuse_a_folder_batch_limit_above_the_ceiling() {
     assert!(names(&refused("max_files = 100001"), "max_files"));
+}
+
+// @behavior LAY-017
+#[test]
+fn should_not_let_a_folder_declare_a_target() {
+    assert!(names(&refused("[target.t]\npath = \"/etc\""), "target"));
 }

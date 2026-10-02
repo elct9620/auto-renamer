@@ -7,6 +7,9 @@ use crate::record::Record;
 pub trait Target {
     /// The names of the files in a folder of the target, relative to its root.
     fn files_in(&self, folder: &Path) -> Vec<String>;
+
+    /// Where the target lies, which tells two targets apart.
+    fn root(&self) -> &Path;
 }
 
 /// What an earlier pipeline made of one file, as far as a later stage needs to know.
@@ -16,9 +19,10 @@ pub(crate) struct Earlier {
     pub planned: Option<Record>,
 }
 
-/// What a run of stages shares: the target, what it was already asked, the numbers already handed out
-/// in the batch, and what the pipelines before made of their files. Planning changes nothing in the
-/// target, so a folder is asked for once.
+/// What a run of stages shares: the target of the running pipeline, what each target was already asked,
+/// the numbers already handed out in the batch, and what the pipelines before made of their files.
+/// Planning changes nothing in a target, so a folder is asked for once, and pipelines moving into one
+/// target count on from each other's numbers.
 pub struct Context<'a> {
     target: &'a dyn Target,
     listed: BTreeMap<PathBuf, Vec<String>>,
@@ -37,19 +41,29 @@ impl<'a> Context<'a> {
         }
     }
 
+    /// Looks into the target of the next pipeline to run.
+    pub(crate) fn enter(&mut self, target: &'a dyn Target) {
+        self.target = target;
+    }
+
     pub(crate) fn files_in(&mut self, folder: &Path) -> &[String] {
         let target = self.target;
         self.listed
-            .entry(folder.to_path_buf())
+            .entry(target.root().join(folder))
             .or_insert_with(|| target.files_in(folder))
     }
 
-    pub(crate) fn last_handed_out(&self, key: &(PathBuf, String)) -> Option<u64> {
-        self.handed_out.get(key).copied()
+    pub(crate) fn last_handed_out(&self, folder: &Path, pattern: &str) -> Option<u64> {
+        self.handed_out.get(&self.key(folder, pattern)).copied()
     }
 
-    pub(crate) fn hand_out(&mut self, key: (PathBuf, String), number: u64) {
+    pub(crate) fn hand_out(&mut self, folder: &Path, pattern: &str, number: u64) {
+        let key = self.key(folder, pattern);
         self.handed_out.insert(key, number);
+    }
+
+    fn key(&self, folder: &Path, pattern: &str) -> (PathBuf, String) {
+        (self.target.root().join(folder), pattern.to_string())
     }
 
     /// What the pipelines before the running one made of their files.

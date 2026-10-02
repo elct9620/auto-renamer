@@ -8,7 +8,7 @@ use common::{Program, Sandbox};
 #[test]
 fn should_stop_cleanly_on_a_termination_signal() {
     let sandbox = Sandbox::new();
-    let mut program = Program::start(&sandbox, r#"["move"]"#, "");
+    let mut program = Program::start(&sandbox, r#"[]"#, "");
 
     program.signal("TERM");
 
@@ -19,7 +19,7 @@ fn should_stop_cleanly_on_a_termination_signal() {
 #[test]
 fn should_stop_cleanly_on_an_interrupt() {
     let sandbox = Sandbox::new();
-    let mut program = Program::start(&sandbox, r#"["move"]"#, "");
+    let mut program = Program::start(&sandbox, r#"[]"#, "");
 
     program.signal("INT");
 

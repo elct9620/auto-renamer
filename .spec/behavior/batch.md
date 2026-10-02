@@ -62,14 +62,6 @@ A batch is planned as a whole: files are put in name order, each is claimed by t
 | When | the batch is planned |
 | Then | `a.mkv` gets 1 and `b.mkv` gets 2 |
 
-## `BAT-008` A pipeline stops before the first effect stage
-
-| Step | Statement |
-| --- | --- |
-| Given | a pipeline that formats and then moves, and the file `a.mkv` |
-| When | the batch is planned |
-| Then | `a.mkv` is planned as the formatted name |
-
 ## `BAT-009` Numbers handed out are kept across the pipelines of a batch
 
 | Step | Statement |

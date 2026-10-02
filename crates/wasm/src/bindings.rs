@@ -18,9 +18,9 @@ fn from_js<T: serde::de::DeserializeOwned>(value: JsValue) -> Result<T, JsError>
 }
 
 #[wasm_bindgen(js_name = check)]
-pub fn check_js(kind: JsValue, text: &str) -> Result<JsValue, JsError> {
+pub fn check_js(kind: JsValue, text: &str) -> Result<(), JsError> {
     let kind: Configuration = from_js(kind)?;
-    to_js(&crate::check(kind, text).map_err(|reason| JsError::new(&reason))?)
+    crate::check(kind, text).map_err(|reason| JsError::new(&reason))
 }
 
 #[wasm_bindgen(js_name = read)]

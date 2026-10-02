@@ -61,8 +61,9 @@ export interface Simulation {
 export const init = wasm.default
 export const initSync = wasm.initSync
 
-export function check(kind: Kind, text: string): string[] {
-  return wasm.check(kind, text)
+/** Throws why the configuration is refused, as the CLI would refuse it. */
+export function check(kind: Kind, text: string): void {
+  wasm.check(kind, text)
 }
 
 export function read(text: string): Table {

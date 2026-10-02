@@ -437,6 +437,20 @@ pub trait Target {
 }
 ```
 
+## `Target::root`
+
+Where the target lies, which tells two targets apart.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub trait Target {
+    fn root(&self) -> &Path;
+}
+```
+
 ## `Context`
 
 What a run of stages shares: the target, what it was already asked, the numbers already handed out in the batch, and what the pipelines before made of their files.
@@ -593,7 +607,7 @@ impl Config {
 
 ## `Watch`
 
-One watched folder with where its files go and how they are grouped and named.
+One watched folder with how its files are grouped and the routes that name and move them.
 
 | Attribute | Value |
 | --- | --- |
@@ -605,7 +619,7 @@ pub struct Watch {}
 
 ## `Watch::pipelines`
 
-The pipelines of the watch, in the order it lists them.
+The pipeline of each of the watch's routes, at the same place as its route.
 
 | Attribute | Value |
 | --- | --- |
@@ -614,6 +628,32 @@ The pipelines of the watch, in the order it lists them.
 ```rust
 impl Watch {
     pub fn pipelines(&self) -> Vec<(String, Pipeline)> {}
+}
+```
+
+## `Route`
+
+One entry of a watch's routes: the pipeline that claims and names files, the target root it moves them to, or none to rename them in place, and the folders its cleanup keeps when it cleans up.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+pub struct Route {}
+```
+
+## `Watch::routes`
+
+The routes of the watch, in the order they claim.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Watch {
+    pub fn routes(&self) -> &[Route] {}
 }
 ```
 
@@ -752,7 +792,7 @@ Move the file of a planned record to its plan under the target, or say where it 
 | internal | yes |
 
 ```rust
-pub fn move_file(tree: &dyn Tree, stage: &Move, record: &Record, roots: &Roots, dry_run: bool) -> Result<Applied, EffectError> {}
+pub fn move_file(tree: &dyn Tree, record: &Record, roots: &Roots, dry_run: bool) -> Result<Applied, EffectError> {}
 ```
 
 ## `cleanup_folders`
@@ -781,7 +821,7 @@ pub enum Done {}
 
 ## `Effect`
 
-What an effect stage asks to be done to a planned file: a move or a cleanup, with the settings the stage was declared with.
+What a route does to a planned file: a move, or a cleanup with the folders it keeps.
 
 | Attribute | Value |
 | --- | --- |
@@ -793,7 +833,7 @@ pub enum Effect {}
 
 ## `EffectsRun`
 
-What the effect stages of a pipeline did to one file, and the failure that stopped them if there was one.
+What the effects of a route did to one file, and the failure that stopped them if there was one.
 
 | Attribute | Value |
 | --- | --- |
@@ -1237,20 +1277,6 @@ Why the watcher could not start or stopped.
 
 ```rust
 pub enum RunError {}
-```
-
-## `Config::warnings`
-
-What is legal but probably not what was meant, such as a pipeline that never moves anything.
-
-| Attribute | Value |
-| --- | --- |
-| internal | yes |
-
-```rust
-impl Config {
-    pub fn warnings(&self) -> Vec<String> {}
-}
 ```
 
 ## `rewrites`

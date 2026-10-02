@@ -16,10 +16,10 @@ pub enum Configuration {}
 
 ## `check`
 
-Read a configuration as the CLI reads it, answering its warnings, or why it is refused.
+Read a configuration as the CLI reads it, answering why it is refused when it is.
 
 ```rust
-pub fn check(kind: Configuration, text: &str) -> Result<Vec<String>, String> {}
+pub fn check(kind: Configuration, text: &str) -> Result<(), String> {}
 ```
 
 ## `read`

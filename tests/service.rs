@@ -3,11 +3,12 @@ mod common;
 use std::path::{Path, PathBuf};
 
 use auto_renamer::{
-    Config, FsTree, Processed, Renames, SkipReason, What, process_batch, replaced_pipelines,
+    Config, EffectError, FsTree, Kind, Processed, Renames, SkipReason, Tree, What, process_batch,
+    replaced_pipelines,
 };
 use common::Sandbox;
 
-const MOVE_AS_SHOW: &str = r#"[{ format = "{show}" }, "move"]"#;
+const MOVE_AS_SHOW: &str = r#"[{ format = "{show}" }]"#;
 
 /// A sandbox with a `source` and a `target` folder, and a watch over them with the extra settings.
 struct Setup {
@@ -17,13 +18,18 @@ struct Setup {
 }
 
 fn setup(stages: &str, extra: &str) -> Setup {
+    setup_route(stages, "", extra)
+}
+
+/// A watch whose one route moves into `target`, with `route` written into the route.
+fn setup_route(stages: &str, route: &str, extra: &str) -> Setup {
     let sandbox = Sandbox::new();
     sandbox.make_dir("source");
     sandbox.make_dir("target");
     let text = format!(
-        "[pipeline.p]\nstages = {stages}\n\n[watch.w]\nsource = \"{}\"\ntarget = \"{}\"\npipelines = [\"p\"]\nunit = \"directory\"\n{extra}\n",
-        sandbox.path("source").display(),
+        "[pipeline.p]\nstages = {stages}\n\n[target.t]\npath = \"{}\"\n\n[watch.w]\nsource = \"{}\"\nroutes = [{{ pipeline = \"p\", move = \"t\"{route} }}]\nunit = \"directory\"\n{extra}\n",
         sandbox.path("target").display(),
+        sandbox.path("source").display(),
     );
     let config = Config::parse(&text).expect("the configuration should be accepted");
     Setup {
@@ -33,12 +39,16 @@ fn setup(stages: &str, extra: &str) -> Setup {
     }
 }
 
-/// A watch without a target, so that files are renamed where they are.
+/// A watch whose route names no target, so that files are renamed where they are.
 fn in_place(stages: &str) -> Setup {
+    in_place_route(stages, "")
+}
+
+fn in_place_route(stages: &str, route: &str) -> Setup {
     let sandbox = Sandbox::new();
     sandbox.make_dir("source");
     let text = format!(
-        "[pipeline.p]\nstages = {stages}\n\n[watch.w]\nsource = \"{}\"\npipelines = [\"p\"]\nunit = \"source\"\n",
+        "[pipeline.p]\nstages = {stages}\n\n[watch.w]\nsource = \"{}\"\nroutes = [{{ pipeline = \"p\"{route} }}]\nunit = \"source\"\n",
         sandbox.path("source").display(),
     );
     let config = Config::parse(&text).expect("the configuration should be accepted");
@@ -51,9 +61,13 @@ fn in_place(stages: &str) -> Setup {
 
 impl Setup {
     fn process(&self, unit: &str, files: &[&str]) -> Vec<Processed> {
+        self.process_on(&FsTree, unit, files)
+    }
+
+    fn process_on(&self, tree: &dyn Tree, unit: &str, files: &[&str]) -> Vec<Processed> {
         let files: Vec<PathBuf> = files.iter().map(PathBuf::from).collect();
         process_batch(
-            &FsTree,
+            tree,
             &self.config.watches()[0],
             Path::new(unit),
             &files,
@@ -131,7 +145,7 @@ fn should_let_a_nearer_folder_configuration_beat_a_farther_one() {
 #[test]
 fn should_leave_a_file_no_pipeline_claims() {
     let run = setup(
-        r#"[{ filter = { ext = ["mkv"] } }, { format = "{show}" }, "move"]"#,
+        r#"[{ filter = { ext = ["mkv"] } }, { format = "{show}" }]"#,
         "vars = { show = \"Alpha\" }",
     );
     run.sandbox.write("source/Show/notes.nfo", "text");
@@ -190,7 +204,7 @@ fn should_leave_a_batch_over_the_limit_as_it_is() {
 #[test]
 fn should_let_a_folder_configuration_raise_the_limit_for_its_batch() {
     let run = setup(
-        r#"[{ format = "{name}-{show}" }, "move"]"#,
+        r#"[{ format = "{name}-{show}" }]"#,
         "vars = { show = \"Alpha\" }\nmax_files = 1",
     );
     run.sandbox.write("source/Show/x.mkv", "a");
@@ -222,7 +236,7 @@ fn should_skip_a_file_that_vanished() {
 #[test]
 fn should_number_after_what_the_target_already_holds() {
     let run = setup(
-        r#"[{ next = { into = "episode", like = "{show} s01e{episode:02}" } }, { format = "{show} s01e{episode:02}" }, "move"]"#,
+        r#"[{ next = { into = "episode", like = "{show} s01e{episode:02}" } }, { format = "{show} s01e{episode:02}" }]"#,
         "vars = { show = \"Alpha\" }",
     );
     run.sandbox.write("target/Show/Alpha s01e04.mkv", "old");
@@ -253,16 +267,59 @@ fn should_ignore_and_report_a_folder_configuration_that_cannot_be_used() {
     ));
 }
 
-const PREFIX: &str = r#"[{ format = "x{name}" }, "move"]"#;
+const PREFIX: &str = r#"[{ format = "x{name}" }]"#;
 
 /// Renames the file the way the prefix pipeline does, and says what became of it.
 fn rename_again(run: &Setup, current: &mut String) -> What {
-    let processed = run.process("", &[current.as_str()]);
+    rename_again_on(&FsTree, run, current)
+}
+
+/// Processes the file once more through `tree`, following it to its new name when it was renamed.
+fn rename_again_on(tree: &dyn Tree, run: &Setup, current: &mut String) -> What {
+    let processed = run.process_on(tree, "", &[current.as_str()]);
     let what = run.what(&processed, current);
     if matches!(what, What::Moved(_) | What::MovedThenFailed { .. }) {
-        *current = format!("x{current}");
+        let path = Path::new(current.as_str());
+        let name = path.file_name().unwrap().to_str().unwrap();
+        *current = path
+            .with_file_name(format!("x{name}"))
+            .display()
+            .to_string();
     }
     what
+}
+
+/// The filesystem, except that every folder looks empty and none can be removed, so a cleanup fails.
+struct Unremovable;
+
+impl Tree for Unremovable {
+    fn kind(&self, path: &Path) -> std::io::Result<Kind> {
+        FsTree.kind(path)
+    }
+
+    fn modified(&self, path: &Path) -> std::io::Result<chrono::DateTime<chrono::Utc>> {
+        FsTree.modified(path)
+    }
+
+    fn read(&self, path: &Path, limit: u64) -> std::io::Result<String> {
+        FsTree.read(path, limit)
+    }
+
+    fn files(&self, folder: &Path) -> Vec<String> {
+        FsTree.files(folder)
+    }
+
+    fn is_empty(&self, _: &Path) -> std::io::Result<bool> {
+        Ok(true)
+    }
+
+    fn place(&self, from: &Path, to: &Path) -> Result<(), EffectError> {
+        FsTree.place(from, to)
+    }
+
+    fn remove_folder(&self, _: &Path) -> std::io::Result<()> {
+        Err(std::io::Error::from(std::io::ErrorKind::PermissionDenied))
+    }
 }
 
 // @behavior SVC-013
@@ -296,7 +353,7 @@ fn should_forget_the_renames_of_a_file_that_is_left_as_it_is() {
 
     run.sandbox.write(
         "source/auto-renamer.toml",
-        "[pipeline.p]\nstages = [{ format = \"{name}\" }, \"move\"]\n",
+        "[pipeline.p]\nstages = [{ format = \"{name}\" }]\n",
     );
     let settled = run.process("", &[current.as_str()]);
     assert_eq!(run.what(&settled, &current), What::Unchanged);
@@ -309,34 +366,21 @@ fn should_forget_the_renames_of_a_file_that_is_left_as_it_is() {
 
 // @behavior SVC-015
 #[test]
-fn should_report_a_file_moved_before_a_later_effect_failed_as_moved_with_the_failure() {
-    let run = setup(
-        r#"[{ format = "{show}" }, "move", "move"]"#,
+fn should_report_a_file_moved_before_its_cleanup_failed_as_moved_with_the_failure() {
+    let run = setup_route(
+        r#"[{ format = "{show}" }]"#,
+        ", cleanup = {}",
         "vars = { show = \"Alpha\" }",
     );
     run.sandbox.write("source/Show/x.mkv", "video");
 
-    let processed = run.process("Show", &["Show/x.mkv"]);
+    let processed = run.process_on(&Unremovable, "Show", &["Show/x.mkv"]);
 
     assert!(matches!(
         run.what(&processed, "Show/x.mkv"),
         What::MovedThenFailed { to, reason }
-            if to == run.sandbox.path("target/Show/Alpha.mkv") && reason.contains("is not there")
+            if to == run.sandbox.path("target/Show/Alpha.mkv") && reason.contains("remove")
     ));
-}
-
-// @behavior SVC-016
-#[test]
-fn should_preview_where_each_file_would_go_with_a_pipeline_without_an_effect_stage() {
-    let run = setup(r#"[{ format = "{show}" }]"#, "vars = { show = \"Alpha\" }");
-    run.sandbox.write("source/Show/x.mkv", "video");
-
-    let processed = run.process("Show", &["Show/x.mkv"]);
-
-    assert_eq!(
-        run.what(&processed, "Show/x.mkv"),
-        What::Previewed(run.sandbox.path("target/Show/Alpha.mkv"))
-    );
 }
 
 // @behavior SVC-017
@@ -345,7 +389,7 @@ fn should_preview_a_file_whose_plan_is_where_it_already_is_in_a_dry_run() {
     let sandbox = Sandbox::new();
     sandbox.make_dir("source");
     let text = format!(
-        "[pipeline.p]\nstages = [\"move\"]\n\n[watch.w]\nsource = \"{}\"\npipelines = [\"p\"]\ndry_run = true\n",
+        "[pipeline.p]\nstages = []\n\n[watch.w]\nsource = \"{}\"\nroutes = [{{ pipeline = \"p\" }}]\ndry_run = true\n",
         sandbox.path("source").display(),
     );
     let config = Config::parse(&text).expect("the configuration should be accepted");
@@ -368,15 +412,15 @@ fn should_preview_a_file_whose_plan_is_where_it_already_is_in_a_dry_run() {
 // @behavior SVC-013
 #[test]
 fn should_count_a_rename_in_place_that_a_later_effect_failed_after() {
-    let run = in_place(r#"[{ format = "x{name}" }, "move", "move"]"#);
-    run.sandbox.write("source/a.mkv", "video");
-    let mut current = "a.mkv".to_string();
+    let run = in_place_route(r#"[{ format = "x{name}" }]"#, ", cleanup = {}");
+    run.sandbox.write("source/Sub/a.mkv", "video");
+    let mut current = "Sub/a.mkv".to_string();
 
     for _ in 0..5 {
-        let what = rename_again(&run, &mut current);
+        let what = rename_again_on(&Unremovable, &run, &mut current);
         assert!(matches!(what, What::MovedThenFailed { .. }), "{what:?}");
     }
-    let sixth = rename_again(&run, &mut current);
+    let sixth = rename_again_on(&Unremovable, &run, &mut current);
 
     assert!(
         matches!(&sixth, What::Refused(reason) if reason.contains("in a row")),
@@ -429,7 +473,7 @@ fn should_refuse_a_folder_configuration_one_byte_over_the_limit_on_disk() {
 #[test]
 fn should_not_count_a_folder_in_the_target_as_a_numbered_file() {
     let run = setup(
-        r#"[{ next = { into = "episode", like = "e{episode}" } }, { format = "e{episode}" }, "move"]"#,
+        r#"[{ next = { into = "episode", like = "e{episode}" } }, { format = "e{episode}" }]"#,
         "",
     );
     run.sandbox.write("source/Show/x.mkv", "video");
@@ -448,10 +492,10 @@ fn should_name_the_pipelines_a_folder_configuration_replaces() {
     sandbox.make_dir("source/Show");
     sandbox.write(
         "source/Show/auto-renamer.toml",
-        "[pipeline.video]\nstages = [\"move\"]\n",
+        "[pipeline.video]\nstages = []\n",
     );
     let text = format!(
-        "[pipeline.video]\nstages = []\n\n[pipeline.subtitle]\nstages = []\n\n[watch.w]\nsource = \"{}\"\npipelines = [\"video\", \"subtitle\"]\n",
+        "[pipeline.video]\nstages = []\n\n[pipeline.subtitle]\nstages = []\n\n[watch.w]\nsource = \"{}\"\nroutes = [{{ pipeline = \"video\" }}, {{ pipeline = \"subtitle\" }}]\n",
         sandbox.path("source").display(),
     );
     let config = Config::parse(&text).expect("the configuration should be accepted");

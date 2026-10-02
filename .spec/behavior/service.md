@@ -98,7 +98,7 @@ Processing a batch is what a ready batch of settled files turns into: the files 
 
 | Step | Statement |
 | --- | --- |
-| Given | a watch without a target whose pipeline puts a prefix before the name, and a file processed again each time it was renamed |
+| Given | a watch whose route has no target and whose pipeline puts a prefix before the name, and a file processed again each time it was renamed |
 | When | it has been renamed five times in a row and is processed once more |
 | Then | it is refused, saying it was renamed too many times in a row, and it stays as it is |
 
@@ -110,27 +110,19 @@ Processing a batch is what a ready batch of settled files turns into: the files 
 | When | it is processed with that pipeline and then renamed by the prefix pipeline five more times |
 | Then | every one of those renames is done |
 
-## `SVC-015` A file moved before a later effect failed is reported as moved, with the failure
+## `SVC-015` A file moved before its cleanup failed is reported as moved, with the failure
 
 | Step | Statement |
 | --- | --- |
-| Given | the same watch whose pipeline moves the file and then has an effect that fails, and a file in `Show` |
+| Given | the same watch whose route moves the file and then cleans up, a cleanup that fails, and a file in `Show` |
 | When | the batch is processed |
-| Then | the file is reported as moved to the target together with why the later effect failed |
-
-## `SVC-016` A pipeline without an effect stage reports where each file would go
-
-| Step | Statement |
-| --- | --- |
-| Given | the same watch whose pipeline only formats the name, and the file `Show/x.mkv` |
-| When | the batch is processed |
-| Then | the file is reported as previewed at its planned path under the target |
+| Then | the file is reported as moved to the target together with why the cleanup failed |
 
 ## `SVC-017` A dry run reports a file whose plan is where it already is
 
 | Step | Statement |
 | --- | --- |
-| Given | a dry run of a watch without a target whose pipeline keeps the name, and the file `x.mkv` |
+| Given | a dry run of a watch whose route has no target and whose pipeline keeps the name, and the file `x.mkv` |
 | When | the batch is processed |
 | Then | the file is reported as previewed at the path it already has |
 

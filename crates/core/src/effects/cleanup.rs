@@ -1,8 +1,7 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
-use super::{EffectError, Kind, Roots, Tree, io_error};
-use crate::stages::Cleanup;
+use super::{Cleanup, EffectError, Kind, Roots, Tree, io_error};
 
 /// Removes the folders a moved file left empty, from the folder it was in upward.
 ///

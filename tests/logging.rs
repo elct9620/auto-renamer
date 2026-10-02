@@ -14,7 +14,7 @@ fn should_not_follow_a_linked_folder() {
     sandbox.make_dir("outside");
     sandbox.make_dir("source");
     std::os::unix::fs::symlink(sandbox.path("outside"), sandbox.path("source/Linked")).unwrap();
-    let program = Program::start(&sandbox, r#"["move"]"#, "");
+    let program = Program::start(&sandbox, r#"[]"#, "");
 
     sandbox.write("outside/a.mkv", "video");
     thread::sleep(Duration::from_secs(5));
@@ -28,7 +28,7 @@ fn should_not_follow_a_linked_folder() {
 #[test]
 fn should_report_where_a_file_would_go_in_a_dry_run() {
     let sandbox = Sandbox::new();
-    let program = Program::start(&sandbox, r#"["move"]"#, "dry_run = true");
+    let program = Program::start(&sandbox, r#"[]"#, "dry_run = true");
 
     sandbox.write("source/a.mkv", "video");
 
@@ -44,7 +44,7 @@ fn should_report_where_a_file_would_go_in_a_dry_run() {
 #[test]
 fn should_report_why_a_file_was_refused() {
     let sandbox = Sandbox::new();
-    let program = Program::start(&sandbox, r#"[{ format = "{show}" }, "move"]"#, "");
+    let program = Program::start(&sandbox, r#"[{ format = "{show}" }]"#, "");
 
     sandbox.write("source/a.mkv", "video");
 
@@ -60,7 +60,7 @@ fn should_report_why_a_file_was_refused() {
 #[test]
 fn should_report_a_file_that_no_pipeline_claims() {
     let sandbox = Sandbox::new();
-    let program = Program::start(&sandbox, r#"[{ filter = { ext = ["mkv"] } }, "move"]"#, "");
+    let program = Program::start(&sandbox, r#"[{ filter = { ext = ["mkv"] } }]"#, "");
 
     sandbox.write("source/notes.nfo", "text");
 
@@ -75,7 +75,7 @@ fn should_report_a_file_that_no_pipeline_claims() {
 #[test]
 fn should_read_the_configuration_again_once_for_one_change() {
     let sandbox = Sandbox::new();
-    let program = Program::start(&sandbox, r#"["move"]"#, "");
+    let program = Program::start(&sandbox, r#"[]"#, "");
     let changed = format!("{}\n# changed\n", sandbox.read("config.toml").unwrap());
 
     sandbox.write("config.toml", &changed);
@@ -94,7 +94,7 @@ fn should_read_the_configuration_again_on_a_hangup() {
     let sandbox = Sandbox::new();
     // The configuration is reached through a link, so that changing the file it points at sends
     // no notification to the folder the program watches for it.
-    let program = Program::start(&sandbox, r#"["move"]"#, "");
+    let program = Program::start(&sandbox, r#"[]"#, "");
     sandbox.make_dir("real");
     std::fs::rename(
         sandbox.path("config.toml"),
@@ -110,7 +110,7 @@ fn should_read_the_configuration_again_on_a_hangup() {
     let renamed = sandbox
         .read("real/config.toml")
         .unwrap()
-        .replace(r#"["move"]"#, r#"[{ format = "renamed" }, "move"]"#);
+        .replace(r#"[]"#, r#"[{ format = "renamed" }]"#);
 
     sandbox.write("real/config.toml", &renamed);
     program.signal("HUP");
@@ -128,7 +128,7 @@ fn should_read_the_configuration_again_on_a_hangup() {
 #[test]
 fn should_not_let_a_file_renamed_in_place_hold_the_folder() {
     let sandbox = Sandbox::new();
-    let program = Program::start_in_place(&sandbox, r#"[{ strip = {} }, "move"]"#);
+    let program = Program::start_in_place(&sandbox, r#"[{ strip = {} }]"#);
 
     sandbox.write("source/[Team] a.mkv", "one");
     assert!(
@@ -149,7 +149,7 @@ fn should_not_let_a_file_renamed_in_place_hold_the_folder() {
 #[test]
 fn should_stop_a_pipeline_that_names_its_own_result_again() {
     let sandbox = Sandbox::new();
-    let program = Program::start_in_place(&sandbox, r#"[{ format = "x{name}" }, "move"]"#);
+    let program = Program::start_in_place(&sandbox, r#"[{ format = "x{name}" }]"#);
 
     sandbox.write("source/a.mkv", "video");
 
@@ -168,7 +168,7 @@ fn should_stop_a_pipeline_that_names_its_own_result_again() {
 fn should_name_a_folder_that_cannot_be_watched() {
     use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
     let sandbox = Sandbox::new();
-    let program = Program::start_unprivileged(&sandbox, r#"["move"]"#, "");
+    let program = Program::start_unprivileged(&sandbox, r#"[]"#, "");
 
     std::fs::DirBuilder::new()
         .mode(0o000)
@@ -190,7 +190,7 @@ fn should_make_up_for_lost_notifications_by_scanning_again() {
         sandbox.write(&format!("source/old/{number:06}.mkv"), "video");
     }
     thread::sleep(Duration::from_millis(1200));
-    let program = Program::start_without_waiting(&sandbox, r#"["move"]"#, "max_files = 100000");
+    let program = Program::start_without_waiting(&sandbox, r#"[]"#, "max_files = 100000");
 
     // Every file moved out of the source is reported, so by now more wait than the queue has room for,
     // and the batch is far from done.
@@ -204,7 +204,7 @@ fn should_make_up_for_lost_notifications_by_scanning_again() {
     let renaming = sandbox
         .read("config.toml")
         .unwrap()
-        .replace(r#"["move"]"#, r#"[{ format = "renamed-{name}" }, "move"]"#);
+        .replace(r#"[]"#, r#"[{ format = "renamed-{name}" }]"#);
     sandbox.write("config.toml", &renaming);
     let moved_by_then = sandbox.names_in("target/old").len();
     assert!(
@@ -250,7 +250,7 @@ fn should_go_on_running_past_a_folder_that_cannot_be_watched_when_reading_the_co
 {
     use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
     let sandbox = Sandbox::new();
-    let mut program = Program::start_unprivileged(&sandbox, r#"["move"]"#, "");
+    let mut program = Program::start_unprivileged(&sandbox, r#"[]"#, "");
     std::fs::DirBuilder::new()
         .mode(0o000)
         .create(sandbox.path("source/Locked"))
@@ -290,12 +290,12 @@ fn should_move_nothing_in_a_start_that_a_folder_stops() {
     thread::sleep(Duration::from_millis(1200));
     // Watches are taken in the order of their names, so this one is scanned after the first.
     let second = format!(
-        "\n[watch.z]\nsource = \"{}\"\ntarget = \"{}\"\npipelines = [\"p\"]\n",
-        sandbox.path("second").display(),
+        "\n[target.z]\npath = \"{}\"\n\n[watch.z]\nsource = \"{}\"\nroutes = [{{ pipeline = \"p\", move = \"z\" }}]\n",
         sandbox.path("second-target").display(),
+        sandbox.path("second").display(),
     );
 
-    let mut program = Program::start_unprivileged(&sandbox, r#"["move"]"#, &second);
+    let mut program = Program::start_unprivileged(&sandbox, r#"[]"#, &second);
 
     let failed = program.exits_with_a_failure();
     std::fs::set_permissions(sandbox.path("second/Locked"), open).unwrap();
@@ -307,7 +307,7 @@ fn should_move_nothing_in_a_start_that_a_folder_stops() {
 #[test]
 fn should_use_next_to_no_cpu_with_nothing_to_do() {
     let sandbox = Sandbox::new();
-    let program = Program::start(&sandbox, r#"["move"]"#, "");
+    let program = Program::start(&sandbox, r#"[]"#, "");
     sandbox.write("source/a.mkv", "video");
     assert!(eventually(|| sandbox.exists("target/a.mkv")));
     thread::sleep(Duration::from_secs(1));

@@ -2,7 +2,6 @@
 
 mod batch;
 mod declare;
-mod effect;
 mod filter;
 mod format;
 mod next;
@@ -23,7 +22,6 @@ use crate::template::Template;
 
 pub use batch::Batch;
 pub use declare::{Declaration, DeclareError, Parameter, ParameterKind};
-pub use effect::Effect;
 
 /// What a stage answers for one record: the record to go on with, or what stops it.
 pub type Flow = Result<Record, Stop>;
@@ -131,8 +129,6 @@ pub enum Declared {
     Next(Next),
     Rank(Rank),
     Take(Take),
-    Move(Move),
-    Cleanup(Cleanup),
 }
 
 impl Declared {
@@ -153,8 +149,6 @@ impl Declared {
             Declared::Next(stage) => stage,
             Declared::Rank(stage) => stage,
             Declared::Take(stage) => stage,
-            Declared::Move(stage) => stage,
-            Declared::Cleanup(stage) => stage,
         }
     }
 
@@ -175,11 +169,6 @@ impl Declared {
             .pop()
             .map(|file| file.flow)
             .expect("a batch of one holds its file")
-    }
-
-    /// Whether the stage touches the filesystem, and so must come after every stage that only rewrites the plan.
-    pub fn is_effect(&self) -> bool {
-        matches!(self, Declared::Move(_) | Declared::Cleanup(_))
     }
 
     /// Whether the stage rewrites the folders of the plan.
@@ -300,21 +289,4 @@ pub struct Rank {
 pub struct Take {
     pub fields: Vec<String>,
     pub from: Option<String>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum OnConflict {
-    Reject,
-    Suffix,
-}
-
-#[derive(Debug, Clone)]
-pub struct Move {
-    pub on_conflict: OnConflict,
-    pub suffix: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct Cleanup {
-    pub keep: Vec<GlobMatcher>,
 }

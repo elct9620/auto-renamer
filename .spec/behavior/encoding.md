@@ -22,10 +22,3 @@ File names on Linux are bytes and need not be valid UTF-8, while fields and temp
 | When | the batch is processed |
 | Then | the file is refused for its name and is still in the source |
 
-## `ENC-003` A conflict suffix is not made from a name that is not valid UTF-8
-
-| Step | Statement |
-| --- | --- |
-| Given | a target already holding the file a move would make, whose name is not valid UTF-8, and `on_conflict` set to suffix |
-| When | the file is moved |
-| Then | the move is refused as a conflict and the file stays |

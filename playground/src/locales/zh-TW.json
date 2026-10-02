@@ -4,8 +4,6 @@
   "download": "下載",
   "status": {
     "valid": "有效",
-    "warnings_one": "{{count}} 則警告",
-    "warnings_other": "{{count}} 則警告",
     "refused": "無效"
   },
   "message": {

@@ -27,11 +27,11 @@ pub enum Configuration {
     Folder,
 }
 
-/// Reads a configuration as the CLI reads it, answering its warnings, or why it is refused.
-pub fn check(kind: Configuration, text: &str) -> Result<Vec<String>, String> {
+/// Reads a configuration as the CLI reads it, answering why it is refused when it is.
+pub fn check(kind: Configuration, text: &str) -> Result<(), String> {
     match kind {
-        Configuration::Global => Config::parse(text).map(|config| config.warnings()),
-        Configuration::Folder => FolderConfig::parse(text).map(|_| Vec::new()),
+        Configuration::Global => Config::parse(text).map(|_| ()),
+        Configuration::Folder => FolderConfig::parse(text).map(|_| ()),
     }
     .map_err(|error| error.to_string())
 }

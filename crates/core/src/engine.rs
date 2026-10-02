@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use crate::context::{Context, Earlier, Target};
 use crate::pipeline::Pipeline;
 use crate::record::Record;
-use crate::stages::{Batch, Effect, Flow, Stop};
+use crate::stages::{Batch, Flow, Stop};
 
 /// What a batch made of one file.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -31,8 +31,6 @@ pub struct Judged {
     /// Where the pipeline that claimed the file stands in the list planned with, or none when no pipeline did.
     pub pipeline: Option<usize>,
     pub verdict: Verdict,
-    /// What the pipeline asks to be done to a planned file, in the order its effect stages are written.
-    pub effects: Vec<Effect>,
 }
 
 /// What one file holds at one point of its planning.
@@ -51,15 +49,13 @@ struct Outcome {
     origin: PathBuf,
     pipeline: usize,
     stopped: Result<(), Stop>,
-    effects: Vec<Effect>,
 }
 
-/// Plans a whole batch through the pipelines of a watch, in the order they are listed.
+/// Plans a whole batch through pipelines that all look into one target, in the order they are listed.
 ///
 /// Files are taken in the order of their paths, each path at most once in a batch. Each is claimed by the
 /// first pipeline whose leading filters accept it, and the stages of a pipeline run over all of its files
-/// one stage at a time. Nothing touches the filesystem: a stage that would only notes its effect on the files
-/// that reach it.
+/// one stage at a time. Nothing touches the filesystem.
 ///
 /// What the stages share lives only for this one batch, so files of different units never share numbers
 /// or fields.
@@ -68,7 +64,7 @@ pub fn plan_batch(
     records: Vec<Record>,
     target: &dyn Target,
 ) -> Vec<Judged> {
-    plan(pipelines, records, target, None)
+    plan(&into_one(pipelines, target), records, None)
 }
 
 /// Plans a batch as [`plan_batch`] does, telling `observe` each step of every file as it happens: the claim,
@@ -79,22 +75,38 @@ pub fn plan_batch_observed(
     target: &dyn Target,
     observe: &mut dyn FnMut(Step),
 ) -> Vec<Judged> {
-    plan(pipelines, records, target, Some(observe))
+    plan(&into_one(pipelines, target), records, Some(observe))
 }
 
-/// Plans a batch, telling the steps only when someone observes them, so planning without an observer keeps
-/// nothing for them.
+/// Pipelines that all look into the same target.
+fn into_one<'a>(
+    pipelines: &'a [(String, Pipeline)],
+    target: &'a dyn Target,
+) -> Vec<(&'a str, &'a Pipeline, &'a dyn Target)> {
+    pipelines
+        .iter()
+        .map(|(name, pipeline)| (name.as_str(), pipeline, target))
+        .collect()
+}
+
+/// Plans a batch through pipelines, each looking into the target of its route, telling the steps only when
+/// someone observes them, so planning without an observer keeps nothing for them.
 pub(crate) fn plan(
-    pipelines: &[(String, Pipeline)],
+    pipelines: &[(&str, &Pipeline, &dyn Target)],
     records: Vec<Record>,
-    target: &dyn Target,
     mut observe: Option<&mut dyn FnMut(Step)>,
 ) -> Vec<Judged> {
-    let mut context = Context::new(target);
+    let Some(&(_, _, first)) = pipelines.first() else {
+        let mut judged = unclaimed(records);
+        judged.sort_by(|a, b| a.origin.cmp(&b.origin));
+        return judged;
+    };
+    let mut context = Context::new(first);
     let mut waiting = records;
     let mut outcomes = Vec::new();
 
-    for (index, (name, pipeline)) in pipelines.iter().enumerate() {
+    for (index, &(name, pipeline, target)) in pipelines.iter().enumerate() {
+        context.enter(target);
         let (filters, rest) = pipeline.split_at_claim();
         let (claimed, unclaimed): (Vec<Record>, Vec<Record>) = waiting
             .into_iter()
@@ -147,10 +159,9 @@ pub(crate) fn plan(
                 origin: file.origin.clone(),
                 pipeline: index,
                 stopped,
-                effects: file.effects,
             });
             context.remember(Earlier {
-                pipeline: name.clone(),
+                pipeline: name.to_string(),
                 origin: file.origin,
                 planned,
             });
@@ -175,17 +186,22 @@ pub(crate) fn plan(
                 origin: outcome.origin,
                 pipeline: Some(outcome.pipeline),
                 verdict: Verdict::of(flow),
-                effects: outcome.effects,
             }
         })
         .collect();
 
-    judged.extend(waiting.into_iter().map(|record| Judged {
-        origin: record.origin().to_path_buf(),
-        pipeline: None,
-        verdict: Verdict::Unclaimed,
-        effects: Vec::new(),
-    }));
+    judged.extend(unclaimed(waiting));
     judged.sort_by(|a, b| a.origin.cmp(&b.origin));
     judged
+}
+
+fn unclaimed(records: Vec<Record>) -> Vec<Judged> {
+    records
+        .into_iter()
+        .map(|record| Judged {
+            origin: record.origin().to_path_buf(),
+            pipeline: None,
+            verdict: Verdict::Unclaimed,
+        })
+        .collect()
 }

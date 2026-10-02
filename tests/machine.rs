@@ -6,7 +6,7 @@ use auto_renamer::{Config, Event, Machine, Ready};
 /// A machine for a watch with a quiet period of 5 minutes and a maximum wait of 30, plus the extra settings.
 fn machine(extra: &str) -> Machine {
     let text = format!(
-        "[pipeline.p]\nstages = [\"move\"]\n\n[watch.w]\nsource = \"/s\"\npipelines = [\"p\"]\nquiet = \"5m\"\nmax_wait = \"30m\"\n{extra}\n"
+        "[pipeline.p]\nstages = []\n\n[watch.w]\nsource = \"/s\"\nroutes = [{{ pipeline = \"p\" }}]\nquiet = \"5m\"\nmax_wait = \"30m\"\n{extra}\n"
     );
     let config = Config::parse(&text).expect("the configuration should be accepted");
     Machine::new(&config.watches()[0])
