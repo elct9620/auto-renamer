@@ -1,11 +1,9 @@
 import {
   Background,
-  BaseEdge,
   type Connection,
   ControlButton,
   Controls,
   type Edge,
-  EdgeLabelRenderer,
   type EdgeProps,
   Handle,
   type Node,
@@ -13,7 +11,6 @@ import {
   Position,
   ReactFlow,
   ReactFlowProvider,
-  getBezierPath,
   useEdgesState,
   useNodesState,
   useReactFlow,
@@ -24,6 +21,8 @@ import { type DragEvent, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { BaseNode, BaseNodeContent, BaseNodeHeader, BaseNodeHeaderTitle } from '@/components/base-node'
+import { ButtonEdge } from '@/components/button-edge'
+import { GroupNode } from '@/components/labeled-group-node'
 import { StageName } from '@/components/Fields'
 import { Button } from '@/components/ui/button'
 import { KIND_ICONS, stageIcon } from '@/components/kinds'
@@ -59,19 +58,18 @@ const tones = {
 
 type Kind = keyof typeof tones
 
-/** A node's header and detail; a watch or a pipeline is drawn as a box holding its routes or stages. */
+/** A route, a stage or a target: its header and detail. */
 function ConfigNode({ data, kind }: { data: NodeData; kind: Kind }) {
   const Icon = kind === 'stage' ? stageIcon(data.label) : KIND_ICONS[kind]
-  const holds = kind === 'watch' || kind === 'pipeline'
   return (
-    <BaseNode className={cn('text-sm', holds ? 'size-full' : 'min-w-36', tones[kind], data.followed && 'border-dashed',
+    <BaseNode className={cn('min-w-36 text-sm', tones[kind], data.followed && 'border-dashed',
       data.locked && 'opacity-70', data.locked && kind === 'stage' && 'cursor-default')}>
       <BaseNodeHeader className="justify-start">
         <Icon className="size-3.5 shrink-0 text-muted-foreground" />
         <BaseNodeHeaderTitle className="truncate text-sm font-medium">{kind === 'stage' ? <StageName name={data.label} /> : data.label}</BaseNodeHeaderTitle>
         {data.locked && kind === 'pipeline' && <Lock className="ml-auto size-3.5 shrink-0 text-muted-foreground" />}
       </BaseNodeHeader>
-      {data.detail && !holds && (
+      {data.detail && (
         <BaseNodeContent className="pt-0">
           <small className="max-w-48 truncate font-mono text-xs text-muted-foreground">{data.detail}</small>
         </BaseNodeContent>
@@ -80,12 +78,26 @@ function ConfigNode({ data, kind }: { data: NodeData; kind: Kind }) {
   )
 }
 
+/** A watch or a pipeline: a React Flow UI group holding its routes or stages, labelled with its kind and name. */
+function ConfigGroup({ data, kind }: { data: NodeData; kind: 'watch' | 'pipeline' }) {
+  const Icon = KIND_ICONS[kind]
+  return (
+    <GroupNode className={cn('text-sm', tones[kind], data.locked && 'opacity-70')}
+      label={
+        <span className="flex items-center gap-1.5 font-medium">
+          <Icon className="size-3.5 shrink-0 text-muted-foreground" />{data.label}
+          {data.locked && <Lock className="size-3.5 shrink-0 text-muted-foreground" />}
+        </span>
+      } />
+  )
+}
+
 // Everything flows right: a watch is joined to pipelines by its handle, and each of its routes to its pipeline and
 // its targets; stages follow each other only by order.
 const nodeTypes = {
   watch: ({ data }: NodeProps<Node<NodeData>>) => (
     <>
-      <ConfigNode data={data} kind="watch" />
+      <ConfigGroup data={data} kind="watch" />
       <Handle type="source" position={Position.Right} />
     </>
   ),
@@ -98,7 +110,7 @@ const nodeTypes = {
   ),
   pipeline: ({ data }: NodeProps<Node<NodeData>>) => (
     <>
-      <ConfigNode data={data} kind="pipeline" />
+      <ConfigGroup data={data} kind="pipeline" />
       <Handle type="target" position={Position.Left} />
     </>
   ),
@@ -122,24 +134,17 @@ const nodeTypes = {
 const ABOVE_JOINTS = 1001
 
 /** A joint of a route to its pipeline, with a button removing the route, the way deleting the edge would. */
-function JointEdge({ id, data, ...path }: EdgeProps<Edge<Joint>>) {
+function JointEdge(props: EdgeProps<Edge<Joint>>) {
   const { t } = useTranslation()
   const { deleteElements } = useReactFlow()
-  const [line, x, y] = getBezierPath(path)
   return (
-    <>
-      <BaseEdge id={id} path={line} style={path.style} />
-      <EdgeLabelRenderer>
-        <div className="nodrag nopan pointer-events-auto absolute rounded-full border bg-background text-xs"
-          style={{ transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`, zIndex: ABOVE_JOINTS }}>
-          <Button variant="ghost" size="icon-xs" className="rounded-full"
-            aria-label={t('canvas.part', { watch: data?.watch, pipeline: data?.pipeline })}
-            onClick={() => deleteElements({ edges: [{ id }] })}>
-            <X />
-          </Button>
-        </div>
-      </EdgeLabelRenderer>
-    </>
+    <ButtonEdge {...props} labelStyle={{ zIndex: ABOVE_JOINTS }}>
+      <Button variant="outline" size="icon-xs" className="rounded-full"
+        aria-label={t('canvas.part', { watch: props.data?.watch, pipeline: props.data?.pipeline })}
+        onClick={() => deleteElements({ edges: [{ id: props.id }] })}>
+        <X />
+      </Button>
+    </ButtonEdge>
   )
 }
 
