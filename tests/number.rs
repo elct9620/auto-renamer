@@ -120,8 +120,13 @@ fn should_accept_four_digits_as_an_episode() {
 
 // @behavior NUM-018
 #[test]
-fn should_leave_the_field_unset_when_several_candidates_remain() {
-    assert_eq!(episode_of("[Team-7][Show 17][03].mkv"), None);
+fn should_refuse_when_several_candidates_remain() {
+    let outcome = apply(
+        r#"{ number = { into = "episode" } }"#,
+        record("[Team-7][Show 17][03].mkv"),
+    );
+
+    assert_rejected_by(outcome, "number");
 }
 
 fn with_season_17(name: &str) -> Record {
@@ -152,8 +157,13 @@ fn should_count_a_negative_nth_from_the_end() {
 
 // @behavior NUM-021
 #[test]
-fn should_leave_the_field_unset_when_nth_is_beyond_the_candidates() {
-    assert_eq!(episode(", nth = 2", record("Show [12].mkv")), None);
+fn should_refuse_when_nth_is_beyond_the_candidates() {
+    let outcome = apply(
+        r#"{ number = { into = "episode", nth = 2 } }"#,
+        record("Show [12].mkv"),
+    );
+
+    assert_rejected_by(outcome, "number");
 }
 
 // @behavior NUM-022
@@ -251,4 +261,42 @@ fn should_not_count_a_season_written_in_chinese() {
 #[test]
 fn should_not_count_an_ordinal() {
     assert_eq!(episode_of("Show 2nd [10].mkv"), Some(10));
+}
+
+// @behavior NUM-034
+#[test]
+fn should_refuse_several_numbers_after_the_prefix() {
+    let outcome = apply(
+        r#"{ number = { into = "season", from = "path", prefix = "Season" } }"#,
+        record("Series/Alpha/Season 1/Season 2/x.mkv"),
+    );
+
+    assert_rejected_by(outcome, "number");
+}
+
+// @behavior NUM-035
+#[test]
+fn should_refuse_a_decimal_after_a_dash() {
+    let outcome = apply(
+        r#"{ number = { into = "episode" } }"#,
+        record("[Team] Show - 12.5 [1080p].mkv"),
+    );
+
+    assert_rejected_by(outcome, "number");
+}
+
+// @behavior NUM-036
+#[test]
+fn should_refuse_a_decimal_after_an_episode_marker() {
+    for name in ["Show S01E12.5.1080p.mkv", "Show EP12.5 [1080p].mkv"] {
+        let outcome = apply(r#"{ number = { into = "episode" } }"#, record(name));
+
+        assert_rejected_by(outcome, "number");
+    }
+}
+
+// @behavior NUM-001
+#[test]
+fn should_read_the_episode_before_a_dotted_resolution() {
+    assert_eq!(episode_of("Show.S01E12.1080p.WEB.mkv"), Some(12));
 }

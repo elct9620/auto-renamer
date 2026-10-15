@@ -11,7 +11,7 @@ const EXPECTED: Record<string, Record<string, string | null>> = {
     'Alpha/Season 02/[Team] Alpha Next - 03 [1080p].mkv': '/video/Alpha/Season 02/Alpha Next s02e03.mkv',
     'Beta Show/[Studio] Beta Show [12][WEB][HEVC-10bit 1080p AAC][EN].mp4': '/conflict/Beta Show/[Studio] Beta Show [12][WEB][HEVC-10bit 1080p AAC][EN].mp4',
     'Beta Show/[Studio] Beta Show [12][WEB][HEVC-10bit 1080p AAC][EN].ass': '/conflict/Beta Show/[Studio] Beta Show [12][WEB][HEVC-10bit 1080p AAC][EN].ass',
-    'Eta Show/Season 17/[Team-7][Eta Show 17][03][x264 1080p][TC].mp4': '/video/Eta Show/Season 17/Eta Show s17e01.mp4',
+    'Eta Show/Season 17/[Team-7][Eta Show 17][03][x264 1080p][TC].mp4': '/conflict/Eta Show/Season 17/[Team-7][Eta Show 17][03][x264 1080p][TC].mp4',
     'Theta_Show/Season 01/[Team][Theta_Show][27][1080p]/[Team][Theta_Show][27][1080p].mkv': '/video/Theta_Show/Season 01/Theta_Show s01e27.mkv',
     'Theta_Show/Season 01/[Team][Theta_Show][27][1080p]/[Team][Theta_Show][27][1080p].cht.ass': '/video/Theta_Show/Season 01/Theta_Show s01e27.zh.01.ass',
     'Theta_Show/Season 01/[Team][Theta_Show][27][1080p]/[Team][Theta_Show][27][1080p].ass': '/video/Theta_Show/Season 01/Theta_Show s01e27.zh.02.ass',
@@ -26,7 +26,7 @@ const EXPECTED: Record<string, Record<string, string | null>> = {
     'Zeta-Show/Season 03/[Team³] 示範作品 第3季 Zeta-Show! S03 ｜ 10 [繁中] 1080p h.265 OPUS 2.0.mkv': '/downloads/Zeta-Show/Season 03/Zeta-Show s03e10.mkv',
   },
   unsure: {
-    'Eta Show/Season 17/[Team-7][Eta Show 17][03][x264 1080p][TC].mp4': '/downloads/Eta Show/Season 17/Eta Show s17e01.mp4',
+    'Eta Show/Season 17/[Team-7][Eta Show 17][03][x264 1080p][TC].mp4': null,
     'Eta Nth/Season 17/[Team-7][Eta Show 17][03][x264 1080p][TC].mp4': '/downloads/Eta Nth/Season 17/Eta Show s17e03.mp4',
   },
   subtitles: {

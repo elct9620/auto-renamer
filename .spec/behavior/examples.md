@@ -46,13 +46,13 @@ The examples of the design, each run through the pipeline it gives. They show th
 | When | the pipeline is planned |
 | Then | the plan is `Alpha/Season 01/Alpha s01e01.mkv` |
 
-## `EX-013` A number that cannot be told falls back to the next one
+## `EX-013` A number that cannot be told is refused, not counted on
 
 | Step | Statement |
 | --- | --- |
 | Given | the `series-video` pipeline, `show` Eta Show, an empty target, and the file `Eta Show/Season 17/[Team-7][Eta Show 17][03][x264 1080p][TC].mp4` |
 | When | the pipeline is planned |
-| Then | the plan is `Eta Show/Season 17/Eta Show s17e01.mp4` |
+| Then | the file is refused, naming the stage `number` |
 
 
 ## `EX-015` The number follows the folder the file is lifted into

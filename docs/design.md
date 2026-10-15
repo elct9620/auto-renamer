@@ -528,11 +528,13 @@ dry_run = true      # log each plan, run no effect
 
 ```
   strong marker   S01E02 | EP02 | - 02     ─► use it
-  scan            drop noise ─► one candidate     ─► use it
-                             ─► several candidates ─► unset, unless nth
+                  - 12.5 | EP12.5          ─► reject
+  scan            drop noise ─► one candidate      ─► use it
+                             ─► no candidate       ─► unset
+                             ─► several candidates ─► reject, unless nth
 ```
 
-強標記優先，不受 `exclude` 影響。掃描恰好一個候選才採用，多個視為不確定，欄位維持未設；明指 `nth` 時只做掃描並依它挑選。
+強標記優先，不受 `exclude` 影響；帶一位小數的是兩集間的特別篇，拒絕。掃描恰好一個候選才採用，沒有候選就留給 `next` 或 `default`，多個就拒絕。明指 `nth` 時只依它挑選，該位置沒有候選也拒絕。欄位已有答案時不拒絕（2.8）。
 
 ### 5.4 雜訊清單
 

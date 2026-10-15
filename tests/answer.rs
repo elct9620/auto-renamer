@@ -30,6 +30,18 @@ fn should_leave_a_field_an_answer_gave_to_a_number() {
     assert_eq!(episode, Some(number(3)));
 }
 
+// @behavior ANS-007
+#[test]
+fn should_leave_an_answer_where_the_number_cannot_be_told() {
+    let episode = after(
+        r#"[{ number = { into = "episode" } }]"#,
+        "[Team-7][Show 17][03].mkv",
+        &[("episode", number(3))],
+    );
+
+    assert_eq!(episode, Some(number(3)));
+}
+
 // @behavior ANS-002
 #[test]
 fn should_leave_a_field_an_answer_gave_to_a_regex_capture() {

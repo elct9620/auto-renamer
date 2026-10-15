@@ -3,22 +3,32 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use super::{Batch, Flow, Number, Prefix, Stage, fill_field, written_field};
+use super::{Batch, Flow, Number, Prefix, Stage, fill_field, unfit, written_field};
 use crate::context::Context;
 use crate::record::{Record, Value};
 
-/// Markers that say outright which number is the episode, in the order they are tried.
-static MARKERS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
-    [
-        r"(?i)\bS[0-9]{1,2}E([0-9]{1,3})\b",
-        r"(?i)\bEP?[\s._-]?([0-9]{1,3})\b",
-        r"(?:^|[\s_-])-[\s_]*([0-9]{1,3})(?:[\s_]|$|\[|\()",
-        r"(?i)\bepisode[\s._-]?([0-9]{1,3})\b",
-    ]
-    .iter()
-    .map(|pattern| Regex::new(pattern).expect("the marker patterns are fixed"))
-    .collect()
-});
+/// Markers that say outright which number is the episode, in the order they are tried, each with what
+/// may follow its number.
+const MARKER_PARTS: [(&str, &str); 4] = [
+    (r"(?i)\bS[0-9]{1,2}E([0-9]{1,3})", r"\b"),
+    (r"(?i)\bEP?[\s._-]?([0-9]{1,3})", r"\b"),
+    (r"(?:^|[\s_-])-[\s_]*([0-9]{1,3})", r"(?:[\s_]|$|\[|\()"),
+    (r"(?i)\bepisode[\s._-]?([0-9]{1,3})", r"\b"),
+];
+
+static MARKERS: LazyLock<Vec<Regex>> = LazyLock::new(|| markers_ending_in(None));
+
+/// A marker whose number goes on with one decimal, as a special between two episodes is numbered.
+static DECIMAL_MARKERS: LazyLock<Vec<Regex>> =
+    LazyLock::new(|| markers_ending_in(Some(r"\.[0-9](?:[^0-9]|$)")));
+
+fn markers_ending_in(ending: Option<&str>) -> Vec<Regex> {
+    MARKER_PARTS
+        .iter()
+        .map(|(marker, whole)| format!("{marker}{}", ending.unwrap_or(whole)))
+        .map(|pattern| Regex::new(&pattern).expect("the marker patterns are fixed"))
+        .collect()
+}
 
 /// Noise that is a number as a whole.
 static WHOLE_NOISE: LazyLock<Vec<Regex>> = LazyLock::new(|| {
@@ -68,18 +78,42 @@ impl Stage for Number {
     }
 }
 
+/// What a number stage made of its text.
+enum Found {
+    Number(u64),
+    Nothing,
+    /// Numbers are there, but which one is meant cannot be told.
+    Uncertain,
+}
+
 fn apply(number: &Number, mut record: Record) -> Flow {
     let text = written_field("number", &record, &number.from)?;
+    if record.is_answer(&number.into) {
+        return Ok(record);
+    }
     let excluded = excluded_values(&record, &number.exclude);
 
     let found = match (&number.prefix, number.nth) {
         (Some(prefix), nth) => pick(after_prefix(prefix, &text, &excluded), nth),
-        (None, None) => marker(&text).or_else(|| pick(scan(&text, &excluded), None)),
+        (None, None) => match marker(&text) {
+            Found::Nothing => pick(scan(&text, &excluded), None),
+            told => told,
+        },
         (None, nth) => pick(scan(&text, &excluded), nth),
     };
 
-    if let Some(found) = found {
-        fill_field("number", &mut record, &number.into, Value::Number(found))?;
+    match found {
+        Found::Number(found) => {
+            fill_field("number", &mut record, &number.into, Value::Number(found))?
+        }
+        Found::Uncertain => {
+            return Err(unfit(
+                "number",
+                &number.into,
+                "cannot be told from its numbers",
+            ));
+        }
+        Found::Nothing => {}
     }
     Ok(record)
 }
@@ -95,11 +129,15 @@ fn excluded_values(record: &Record, fields: &[String]) -> Vec<u64> {
         .collect()
 }
 
-fn marker(text: &str) -> Option<u64> {
+fn marker(text: &str) -> Found {
+    if DECIMAL_MARKERS.iter().any(|marker| marker.is_match(text)) {
+        return Found::Uncertain;
+    }
     MARKERS
         .iter()
         .find_map(|marker| marker.captures(text))
         .and_then(|captures| captures[1].parse().ok())
+        .map_or(Found::Nothing, Found::Number)
 }
 
 fn after_prefix(prefix: &Prefix, text: &str, excluded: &[u64]) -> Vec<u64> {
@@ -154,17 +192,21 @@ fn is_noise(text: &str, digits: Range<usize>, noise: &[Range<usize>]) -> bool {
 }
 
 /// One candidate is taken only when it is the only one, unless the wanted position is given:
-/// counted from 1, or from the end when negative.
-fn pick(candidates: Vec<u64>, nth: Option<i64>) -> Option<u64> {
+/// counted from 1, or from the end when negative. Several candidates, or a position that is not
+/// there, cannot be told.
+fn pick(candidates: Vec<u64>, nth: Option<i64>) -> Found {
+    let at = |index: Option<usize>| {
+        index
+            .and_then(|index| candidates.get(index))
+            .map_or(Found::Uncertain, |found| Found::Number(*found))
+    };
     match nth {
-        None if candidates.len() == 1 => candidates.first().copied(),
-        None => None,
-        Some(nth) if nth > 0 => candidates.get(usize::try_from(nth - 1).ok()?).copied(),
-        Some(nth) => {
-            let from_end = usize::try_from(nth.checked_neg()?).ok()?;
-            candidates
-                .get(candidates.len().checked_sub(from_end)?)
-                .copied()
-        }
+        None if candidates.is_empty() => Found::Nothing,
+        None if candidates.len() == 1 => Found::Number(candidates[0]),
+        None => Found::Uncertain,
+        Some(nth) if nth > 0 => at(usize::try_from(nth - 1).ok()),
+        Some(nth) => at(usize::try_from(nth.unsigned_abs())
+            .ok()
+            .and_then(|from_end| candidates.len().checked_sub(from_end))),
     }
 }

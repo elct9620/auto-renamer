@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use auto_renamer::{Judged, Pipeline, Verdict, plan_batch};
-use common::{Files, record_on, text};
+use common::{Files, assert_refused_by, record_on, text};
 
 /// The pipelines the design gives as examples, read from the design itself so they cannot drift from it.
 fn design_pipelines() -> BTreeMap<String, Pipeline> {
@@ -34,13 +34,13 @@ fn design_pipelines() -> BTreeMap<String, Pipeline> {
     pipelines
 }
 
-fn planned_against(
+fn judged_against(
     files: &Files,
     pipeline: &str,
     show: Option<&str>,
     path: &str,
     month: (i32, u32, u32),
-) -> PathBuf {
+) -> Vec<Judged> {
     let pipelines = design_pipelines();
     let listed = vec![(
         pipeline.to_string(),
@@ -55,8 +55,17 @@ fn planned_against(
     let record = record_on(path, month.0, month.1, month.2).with_vars(vars);
 
     // One file is a batch of one.
-    let judged = plan_batch(&listed, vec![record], files);
-    match &judged[..] {
+    plan_batch(&listed, vec![record], files)
+}
+
+fn planned_against(
+    files: &Files,
+    pipeline: &str,
+    show: Option<&str>,
+    path: &str,
+    month: (i32, u32, u32),
+) -> PathBuf {
+    match &judged_against(files, pipeline, show, path, month)[..] {
         [
             Judged {
                 verdict: Verdict::Planned(planned),
@@ -137,16 +146,18 @@ fn should_not_take_the_first_episode_for_the_default_season() {
 
 // @behavior EX-013
 #[test]
-fn should_fall_back_to_the_next_number_when_the_number_cannot_be_told() {
-    let plan = series(
-        "Eta Show",
-        "Eta Show/Season 17/[Team-7][Eta Show 17][03][x264 1080p][TC].mp4",
+fn should_refuse_a_number_that_cannot_be_told() {
+    let path = "Eta Show/Season 17/[Team-7][Eta Show 17][03][x264 1080p][TC].mp4";
+
+    let judged = judged_against(
+        &Files::none(),
+        "series-video",
+        Some("Eta Show"),
+        path,
+        (2026, 9, 27),
     );
 
-    assert_eq!(
-        plan,
-        PathBuf::from("Eta Show/Season 17/Eta Show s17e01.mp4")
-    );
+    assert_refused_by(&judged, path, "number");
 }
 
 // @behavior EX-015

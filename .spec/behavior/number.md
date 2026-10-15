@@ -1,6 +1,6 @@
 # Number
 
-A number stage reads one number out of a field and writes it into another. A marker that says outright what the number is wins; otherwise the numbers left after the noise is set aside must be exactly one, or the field stays unset rather than guessed.
+A number stage reads one number out of a field and writes it into another. A marker that says outright what the number is wins; otherwise the numbers left after the noise is set aside must be exactly one. A number the stage cannot tell — several candidates, an asked position that is not there, an episode with a decimal — refuses the record rather than guessing; no number at all leaves the field unset.
 
 ## Includes
 
@@ -142,13 +142,13 @@ A number stage reads one number out of a field and writes it into another. A mar
 | When | the stage is applied |
 | Then | `episode` is 1354 |
 
-## `NUM-018` Several candidates leave the field unset
+## `NUM-018` Several candidates refuse the record
 
 | Step | Statement |
 | --- | --- |
 | Given | a number stage writing into `episode` and a record for `[Team-7][Show 17][03].mkv` |
 | When | the stage is applied |
-| Then | `episode` is unset |
+| Then | the record is refused, naming the stage `number` |
 
 ## `NUM-019` The nth candidate is taken when asked for
 
@@ -166,13 +166,13 @@ A number stage reads one number out of a field and writes it into another. A mar
 | When | the stage is applied |
 | Then | `episode` is 7 |
 
-## `NUM-021` An nth beyond the candidates leaves the field unset
+## `NUM-021` An nth beyond the candidates refuses the record
 
 | Step | Statement |
 | --- | --- |
 | Given | a number stage writing into `episode` taking the 2nd candidate and a record for `Show [12].mkv` |
 | When | the stage is applied |
-| Then | `episode` is unset |
+| Then | the record is refused, naming the stage `number` |
 
 ## `NUM-022` A number equal to an excluded field is not a candidate
 
@@ -261,3 +261,39 @@ A number stage reads one number out of a field and writes it into another. A mar
 | Given | the file `Show 2nd [10].mkv` |
 | When | a number into `episode` runs |
 | Then | `episode` is 10 |
+
+## `NUM-034` Several numbers after a prefix refuse the record
+
+| Attribute | Value |
+| --- | --- |
+| refines | `NUM-025` |
+
+| Step | Statement |
+| --- | --- |
+| Given | a number stage writing into `season` from `path` after the word `Season` and a record for `Series/Alpha/Season 1/Season 2/x.mkv` |
+| When | the stage is applied |
+| Then | the record is refused, naming the stage `number` |
+
+## `NUM-035` A decimal after a dash refuses the record
+
+| Attribute | Value |
+| --- | --- |
+| refines | `NUM-003` |
+
+| Step | Statement |
+| --- | --- |
+| Given | a number stage writing into `episode` and a record for `[Team] Show - 12.5 [1080p].mkv` |
+| When | the stage is applied |
+| Then | the record is refused, naming the stage `number` |
+
+## `NUM-036` A decimal after an episode marker refuses the record
+
+| Attribute | Value |
+| --- | --- |
+| refines | `NUM-001`, `NUM-002` |
+
+| Step | Statement |
+| --- | --- |
+| Given | a number stage writing into `episode` and a record for `Show S01E12.5.1080p.mkv` |
+| When | the stage is applied |
+| Then | the record is refused, naming the stage `number` |

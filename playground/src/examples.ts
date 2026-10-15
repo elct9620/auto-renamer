@@ -53,8 +53,9 @@ const VIDEO_TARGET = '[target.video]\npath = "/video"\n\n'
 
 // Every series scenario at once, with the source and the target apart: shows named by their folders,
 // seasons by theirs, episodes found among noise or counted on, a release folder with its subtitles, a
-// clash sent with its group to a second target, and folder configurations only where a folder is an
-// exception: a season that bears another name, and a folder that always counts on.
+// clash sent with its group and an episode that cannot be told to a second target, and folder
+// configurations only where a folder is an exception: a season that bears another name, and a folder
+// that always counts on.
 const FULL: Example = {
   id: 'full',
   watch: 'series',

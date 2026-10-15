@@ -53,3 +53,15 @@ The `vars` of a configuration are answers: what detection could not find, or fou
 | Given | a video `Show 27.mkv` with `episode` 27, and a subtitle `Show 27.cht.ass` whose `vars` give `episode` 3, taking `episode` |
 | When | the batch is planned |
 | Then | the subtitle's `episode` is still 3 |
+
+## `ANS-007` A number the stage cannot tell leaves an answer instead of refusing
+
+| Attribute | Value |
+| --- | --- |
+| refines | `NUM-018` |
+
+| Step | Statement |
+| --- | --- |
+| Given | a file `[Team-7][Show 17][03].mkv` whose `vars` give `episode = 3` |
+| When | a number stage writes into `episode` |
+| Then | `episode` stays 3 |

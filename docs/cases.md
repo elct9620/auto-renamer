@@ -25,10 +25,10 @@
 
 | 案例 | 輸入 | 輸出 |
 |---|---|---|
-| Eta Show，target 空 | `Eta Show/Season 17/[Team-7][Eta Show 17][03][x264 1080p][TC].mp4` | `Eta Show/Season 17/Eta Show s17e01.mp4` |
+| Eta Show，target 空 | `Eta Show/Season 17/[Team-7][Eta Show 17][03][x264 1080p][TC].mp4` | 拒絕，留在 source |
 | 目錄設定 `nth = 2` | 同上 | `Eta Show/Season 17/Eta Show s17e03.mp4` |
 
-候選是前綴標籤裡的 7 與集數 03，17 因等於季數而排除。兩個候選視為不確定，交給 `next`；指定 `nth` 才取第二個。
+候選是前綴標籤裡的 7 與集數 03，17 因等於季數而排除。兩個候選視為不確定，拒絕而不猜；指定 `nth` 才取第二個。
 
 ## 2 字幕與整批
 
@@ -137,6 +137,8 @@ target 的 `Show/Season 01/` 已有 `Show s01e05.mkv`，`Season 02/` 有 `Show s
 |---|---|
 | 整包資料夾內的 `notes.nfo` | 沒有路線認領，留在 source |
 | 直接放在 source 根的 `x.mkv` | 沒有作品資料夾，缺 `show`，拒絕 |
+| 分不出集數，如 1.2 的 Eta Show | `number` 拒絕 |
+| `Show - 12.5 [1080p].mkv` | 帶小數的集數，`number` 拒絕 |
 | `max_files = 5`，一批有 6 個檔案 | 整批留在 source |
 | 沒設 `max_files`，一批有 1001 個檔案 | 整批留在 source |
 | 路徑不是有效 UTF-8 | 不進管線，拒絕 |
@@ -200,7 +202,7 @@ target 的 `Show/Season 01/` 已有 `Show s01e05.mkv`，`Season 02/` 有 `Show s
 
 ## 6 完整組合
 
-Playground 的完整組合把影集情境疊在一起。路線是 5.13 的兩條內建管線，撞名或連帶時以原檔名搬到 `/Conflict`，`group` 是作品、季與集。只有例外的資料夾放目錄設定。
+Playground 的完整組合把影集情境疊在一起。路線是 5.13 的兩條內建管線，被拒絕的檔案以原檔名搬到 `/Conflict`，`group` 是作品、季與集。只有例外的資料夾放目錄設定。
 
 | 情境 | 輸入 | 輸出 |
 |---|---|---|
@@ -208,7 +210,7 @@ Playground 的完整組合把影集情境疊在一起。路線是 5.13 的兩條
 | 換名的季 | `Alpha/Season 02/[Team] Alpha Next - 03 [1080p].mkv` | `Alpha/Season 02/Alpha Next s02e03.mkv` |
 | 撞名 | `Beta Show/[Studio] Beta Show [12][WEB][HEVC-10bit 1080p AAC][EN].mp4` | `/Conflict` 的同一路徑 |
 | 連帶的字幕 | 同上，副檔名 `.ass` | `/Conflict` 的同一路徑 |
-| 分不出集數 | `Eta Show/Season 17/[Team-7][Eta Show 17][03][x264 1080p][TC].mp4` | `Eta Show/Season 17/Eta Show s17e01.mp4` |
+| 分不出集數 | `Eta Show/Season 17/[Team-7][Eta Show 17][03][x264 1080p][TC].mp4` | `/Conflict` 的同一路徑 |
 | 整包資料夾 | 2.2 的三個檔案 | 2.2 的輸出，整包資料夾刪除 |
 | 一律遞增 | `Kappa/Season 01/[Group] Kappa - 07 [1080p].mkv` | `Kappa/Season 01/Kappa s01e03.mkv` |
 
