@@ -126,7 +126,8 @@
     "movie": "電影",
     "music": "音樂",
     "photo": "照片",
-    "cleanup": "清理"
+    "cleanup": "清理",
+    "sorted": "已分季的下載"
   },
   "unit": {
     "directory": "directory（父資料夾）",

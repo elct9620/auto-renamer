@@ -217,7 +217,72 @@ const CLEANUP: Example = {
   ],
 }
 
-export const EXAMPLES: Example[] = [FULL, SINGLE, UNSURE, SUBTITLES, RELEASE, SUBS, NEXT, LIFTED, CLASH, MOVIE, MUSIC, PHOTO, CLEANUP]
+// Downloads already sorted into a folder per show and season: each show folder answers its name, a
+// file outside a season folder stays put, a special between two episodes goes to season 0, and only the
+// Traditional Chinese subtitle joins its video while the others are set aside.
+const SORTED: Example = {
+  id: 'sorted',
+  watch: 'sorted',
+  config: `${VIDEO_TARGET}[target.leftover]
+path = "/leftover"
+
+[pipeline.special]
+stages = [
+  { filter = { ext = ["mkv", "mp4"], glob = "* - *.5 *" } },
+  { set = { season = 0 } },
+  { lift = { keep = 0 } },
+  { folder = "{show}/Season {season:02}" },
+  { next = { into = "episode", like = "{show} s{season:02}e{episode:02}" } },
+  { format = "{show} s{season:02}e{episode:02}" },
+]
+
+[pipeline.sorted-video]
+stages = [
+  { filter = { ext = ["mkv", "mp4"] } },
+  { number = { from = "path", into = "season", prefix = "Season" } },
+  { number = { into = "episode", exclude = ["season"] } },
+  { lift = { keep = 0 } },
+  { folder = "{show}/Season {season:02}" },
+  { format = "{show} s{season:02}e{episode:02}" },
+]
+
+[pipeline.cht-subtitle]
+stages = [
+  { filter = { ext = ["ass", "srt"], glob = "*cht*" } },
+  { number = { from = "path", into = "season", prefix = "Season" } },
+  { number = { into = "episode", exclude = ["season"] } },
+  { lift = { keep = 0 } },
+  { folder = "{show}/Season {season:02}" },
+  { format = "{show} s{season:02}e{episode:02}.zh" },
+]
+
+[pipeline.other-subtitle]
+stages = [{ filter = { ext = ["ass", "srt"] } }]
+
+[watch.sorted]
+source = "/downloads"
+group = ["show", "season", "episode"]
+routes = [
+  { pipeline = "special", move = "video", ${KEEP_SEASONS} },
+  { pipeline = "sorted-video", move = "video", ${KEEP_SEASONS} },
+  { pipeline = "cht-subtitle", move = "video", ${KEEP_SEASONS} },
+  { pipeline = "other-subtitle", move = "leftover", ${KEEP_SEASONS} },
+]
+`,
+  entries: [
+    file('/downloads/[秋｜冒險｜示範作品]Mu Show/auto-renamer.toml', 'vars = { show = "Mu Show" }\n'),
+    file('/downloads/[秋｜冒險｜示範作品]Mu Show/Season 02(2026.10)/[Team] Mu Show S2 - 04 [WebRip 1080p].mkv'),
+    file('/downloads/[秋｜冒險｜示範作品]Mu Show/[Team] Mu Show S2 - 03 [WebRip 1080p].mkv'),
+    file('/downloads/[夏｜日常｜示範作品]Nu Show/auto-renamer.toml', 'vars = { show = "Nu Show" }\n'),
+    file('/downloads/[夏｜日常｜示範作品]Nu Show/Season 01(2026.07)/[Team] Nu Show - 12 [1080P][WEB-DL].mkv'),
+    file('/downloads/[夏｜日常｜示範作品]Nu Show/Season 01(2026.07)/[Team] Nu Show - 12.5 [1080P][WEB-DL].mkv'),
+    file('/downloads/[春｜奇幻｜示範作品]Xi Show/auto-renamer.toml', 'vars = { show = "Xi Show" }\n'),
+    ...['mkv', 'cht&jpn.ass', 'chs&jpn.ass'].map((ext) =>
+      file(`/downloads/[春｜奇幻｜示範作品]Xi Show/Season 01(2026.04)/[Team][Xi_Show][36][1080p]/[Team][Xi_Show][36][1080p].${ext}`)),
+  ],
+}
+
+export const EXAMPLES: Example[] = [FULL, SINGLE, UNSURE, SUBTITLES, RELEASE, SUBS, NEXT, LIFTED, CLASH, MOVIE, MUSIC, PHOTO, CLEANUP, SORTED]
 
 /** The example the page opens with. */
 export const FIRST = SINGLE

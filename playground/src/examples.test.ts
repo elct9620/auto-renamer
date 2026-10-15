@@ -74,6 +74,15 @@ const EXPECTED: Record<string, Record<string, string | null>> = {
     'Show/Season 01/[Rel 06]/Show 06.mkv': '/downloads/Show/Season 01/Show s01e06.mkv',
     'Show/Season 01/[Rel 06]/notes.nfo': null,
   },
+  sorted: {
+    '[秋｜冒險｜示範作品]Mu Show/Season 02(2026.10)/[Team] Mu Show S2 - 04 [WebRip 1080p].mkv': '/video/Mu Show/Season 02/Mu Show s02e04.mkv',
+    '[秋｜冒險｜示範作品]Mu Show/[Team] Mu Show S2 - 03 [WebRip 1080p].mkv': null,
+    '[夏｜日常｜示範作品]Nu Show/Season 01(2026.07)/[Team] Nu Show - 12 [1080P][WEB-DL].mkv': '/video/Nu Show/Season 01/Nu Show s01e12.mkv',
+    '[夏｜日常｜示範作品]Nu Show/Season 01(2026.07)/[Team] Nu Show - 12.5 [1080P][WEB-DL].mkv': '/video/Nu Show/Season 00/Nu Show s00e01.mkv',
+    '[春｜奇幻｜示範作品]Xi Show/Season 01(2026.04)/[Team][Xi_Show][36][1080p]/[Team][Xi_Show][36][1080p].mkv': '/video/Xi Show/Season 01/Xi Show s01e36.mkv',
+    '[春｜奇幻｜示範作品]Xi Show/Season 01(2026.04)/[Team][Xi_Show][36][1080p]/[Team][Xi_Show][36][1080p].cht&jpn.ass': '/video/Xi Show/Season 01/Xi Show s01e36.zh.ass',
+    '[春｜奇幻｜示範作品]Xi Show/Season 01(2026.04)/[Team][Xi_Show][36][1080p]/[Team][Xi_Show][36][1080p].chs&jpn.ass': '/leftover/[春｜奇幻｜示範作品]Xi Show/Season 01(2026.04)/[Team][Xi_Show][36][1080p]/[Team][Xi_Show][36][1080p].chs&jpn.ass',
+  },
 }
 
 // Folders the cases expect gone after the trigger, or kept.
@@ -83,6 +92,10 @@ const FOLDERS: Record<string, { gone: string[]; kept: string[] }> = {
   cleanup: {
     gone: ['/downloads/Show/Season 01/[Rel 05]/Subs', '/downloads/Show/Season 01/[Rel 05]'],
     kept: ['/downloads/Show/Season 01/[Rel 06]', '/downloads/Show/Season 01'],
+  },
+  sorted: {
+    gone: ['/downloads/[春｜奇幻｜示範作品]Xi Show/Season 01(2026.04)/[Team][Xi_Show][36][1080p]'],
+    kept: ['/downloads/[春｜奇幻｜示範作品]Xi Show/Season 01(2026.04)', '/downloads/[夏｜日常｜示範作品]Nu Show/Season 01(2026.07)'],
   },
 }
 

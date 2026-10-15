@@ -126,7 +126,8 @@
     "movie": "Movies",
     "music": "Music",
     "photo": "Photos",
-    "cleanup": "Cleaning up"
+    "cleanup": "Cleaning up",
+    "sorted": "Downloads sorted by season"
   },
   "unit": {
     "directory": "directory (parent folder)",

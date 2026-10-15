@@ -216,7 +216,40 @@ Playground 的完整組合把影集情境疊在一起。路線是 5.13 的兩條
 
 target 原有 `Beta Show/Season 01/Beta Show s01e12.mp4` 與 Kappa 的 `s01e01`、`s01e02`。Kappa 的目錄設定把 `series-video` 換成不擷取集數的一條，檔名中的 07 因此不採用。
 
-## 7 驗證方式
+## 7 已分季的下載
+
+下載已按作品與季分好資料夾，作品名由各作品資料夾的目錄設定給答案。Playground 範例「已分季的下載」照這一章設定。
+
+### 7.1 路線
+
+四條路線依序認領，清理時都保留 `Season *`。
+
+| 順序 | 管線 | 認領 | 搬到 |
+|---|---|---|---|
+| 1 | `special` | 集數帶 `.5` 的影片 | `/Video` |
+| 2 | `sorted-video` | 其他影片 | `/Video` |
+| 3 | `cht-subtitle` | 名稱含 `cht` 的字幕 | `/Video` |
+| 4 | `other-subtitle` | 其他字幕 | `/Leftover` |
+
+影片管線不寫 `default`，季數只來自 `Season` 資料夾；作品名只來自答案，沒給的作品留在 source。路徑以 `lift = { keep = 0 }` 清空，再依 `{show}/Season NN` 建立。
+
+### 7.2 去向
+
+作品資料夾的 `vars` 分別給 Mu Show、Nu Show、Xi Show。
+
+| 情境 | 輸入 | 輸出 |
+|---|---|---|
+| 季資料夾 | `[秋｜冒險｜示範作品]Mu Show/Season 02(2026.10)/[Team] Mu Show S2 - 04 [WebRip 1080p].mkv` | `Mu Show/Season 02/Mu Show s02e04.mkv` |
+| 放錯層 | `[秋｜冒險｜示範作品]Mu Show/[Team] Mu Show S2 - 03 [WebRip 1080p].mkv` | 缺季數，留在 source |
+| 正集 | `[夏｜日常｜示範作品]Nu Show/Season 01(2026.07)/[Team] Nu Show - 12 [1080P][WEB-DL].mkv` | `Nu Show/Season 01/Nu Show s01e12.mkv` |
+| 特別篇 | 同上，集數 `12.5` | `Nu Show/Season 00/Nu Show s00e01.mkv` |
+| 整包影片 | `[春｜奇幻｜示範作品]Xi Show/Season 01(2026.04)/[Team][Xi_Show][36][1080p]/` 下的 `.mkv` | `Xi Show/Season 01/Xi Show s01e36.mkv` |
+| 繁中字幕 | 同上，`.cht&jpn.ass` | `Xi Show/Season 01/Xi Show s01e36.zh.ass` |
+| 其他字幕 | 同上，`.chs&jpn.ass` | `/Leftover` 的同一路徑 |
+
+整包資料夾搬空後刪除，季資料夾保留。
+
+## 8 驗證方式
 
 | 範圍 | 方式 |
 |---|---|
