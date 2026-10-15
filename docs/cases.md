@@ -3,7 +3,7 @@
 每個案例是管線的輸入與預期輸出，純階段不需要檔案系統就能驗證。預期輸出由 `design.md` 推得，實作後以測試確認。
 
 ```
-  source /Downloads    targets /Video, /Conflict    paths relative to a root
+  source /Downloads    targets /Video, /Conflict, /Leftover    paths relative to a root
 ```
 
 ## 1 影集影片
