@@ -39,7 +39,6 @@ One small function from a batch to a batch. A pipeline is a stack of stages, and
 
 #### Rejected
 
-- `Step` - Stage is what the design calls it.
 - `Processor` - Stage is what the design calls it.
 
 ### Parameter
@@ -69,6 +68,8 @@ One file as it moves through a pipeline: a plan path together with named fields.
 #### Rejected
 
 - `Item` - Record is what the design calls it.
+  - `.spec/contract/library.md:114` - Rust's `Iterator::Item`, not a word of ours.
+  - `.spec/contract/library.md:1267` - Rust's `Iterator::Item`, not a word of ours.
 
 ### Plan
 
@@ -129,6 +130,8 @@ What a stage answers for one record: the record to go on with, or the stop that 
 #### Rejected
 
 - `Outcome` - Flow is a result, so a stage passes a stop on instead of matching on it.
+  - `.spec/contract/playground.md:57` - The playground's name for what became of a simulated file, not a stage's result.
+  - `.spec/contract/playground.md:62` - The playground's name for what became of a simulated file, not a stage's result.
 
 ### Answer
 

@@ -141,14 +141,6 @@ A pipeline is declared as a list of stages, each a bare name or a table with one
 | When | the pipeline is read |
 | Then | the pipeline is refused, naming the parameter `to` |
 
-## `DEC-038` A lift naming both a pattern and folders to keep is refused
-
-| Step | Statement |
-| --- | --- |
-| Given | the stage list `[{ lift = { to = "Season *", keep = 1 } }]` |
-| When | the pipeline is read |
-| Then | the pipeline is refused, naming the stage `lift` |
-
 ## `DEC-020` Ranking needs the fields that make a group
 
 | Step | Statement |
@@ -172,6 +164,7 @@ A pipeline is declared as a list of stages, each a bare name or a table with one
 | Given | the stage list `[{ filter = { ext = ["mkv"] } }, { format = "{name}" }, "strip"]` |
 | When | the pipeline is read |
 | Then | the pipeline holds `filter`, `format` and `strip` in that order |
+
 ## `DEC-026` The stages must be a list
 
 | Step | Statement |
@@ -179,7 +172,6 @@ A pipeline is declared as a list of stages, each a bare name or a table with one
 | Given | the document `stages = "strip"` |
 | When | the pipeline is read |
 | Then | the pipeline is refused |
-
 ## `DEC-030` A literal replace needs something to look for
 
 | Step | Statement |
@@ -243,6 +235,14 @@ A pipeline is declared as a list of stages, each a bare name or a table with one
 | Given | each choice a stage's description lists for a parameter |
 | When | the stage is declared with its example and that choice |
 | Then | the declaration is accepted |
+
+## `DEC-038` A lift naming both a pattern and folders to keep is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | the stage list `[{ lift = { to = "Season *", keep = 1 } }]` |
+| When | the pipeline is read |
+| Then | the pipeline is refused, naming the stage `lift` |
 
 ## `DEC-039` Moving is not a stage
 

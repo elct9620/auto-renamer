@@ -6,6 +6,30 @@ Stages that move a file to another folder of its plan, up or down, without touch
 
 - `tests/path.rs`
 
+## `FLD-002` A template that cannot be rendered is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | a folder stage for `{missing}` and a record for `Photos/x.jpg` |
+| When | the stage is applied |
+| Then | the record is refused, naming the stage `folder` |
+
+## `FLD-003` A folder named with dots only is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | a folder stage for `{show}` and a record whose `show` is `..` |
+| When | the stage is applied |
+| Then | the record is refused, naming the stage `folder` |
+
+## `FLD-004` An empty folder name is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | a folder stage for `/{show}` and a record for `Photos/x.jpg` with `show` Alpha |
+| When | the stage is applied |
+| Then | the record is refused, naming the stage `folder` |
+
 ## `LIFT-001` A number of levels lifts the plan that many folders
 
 | Step | Statement |
@@ -61,27 +85,3 @@ Stages that move a file to another folder of its plan, up or down, without touch
 | Given | a lift keeping 1 folder and a record for `Alpha/x.mkv` |
 | When | the stage is applied |
 | Then | the plan is `Alpha/x.mkv` |
-
-## `FLD-002` A template that cannot be rendered is refused
-
-| Step | Statement |
-| --- | --- |
-| Given | a folder stage for `{missing}` and a record for `Photos/x.jpg` |
-| When | the stage is applied |
-| Then | the record is refused, naming the stage `folder` |
-
-## `FLD-003` A folder named with dots only is refused
-
-| Step | Statement |
-| --- | --- |
-| Given | a folder stage for `{show}` and a record whose `show` is `..` |
-| When | the stage is applied |
-| Then | the record is refused, naming the stage `folder` |
-
-## `FLD-004` An empty folder name is refused
-
-| Step | Statement |
-| --- | --- |
-| Given | a folder stage for `/{show}` and a record for `Photos/x.jpg` with `show` Alpha |
-| When | the stage is applied |
-| Then | the record is refused, naming the stage `folder` |

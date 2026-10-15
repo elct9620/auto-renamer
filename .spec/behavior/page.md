@@ -167,6 +167,14 @@ The playground page draws a configuration for people who do not read TOML: each 
 | When | the folder `/downloads/Alpha` is renamed `Beta` |
 | Then | the file is `/downloads/Beta/x.mkv` |
 
+## `PGE-021` A file a simulation moved is marked where it arrived
+
+| Step | Statement |
+| --- | --- |
+| Given | a simulation that moved `/downloads/Alpha/x.mkv` to `/video/Alpha/Alpha.mkv` |
+| When | the trees are drawn from it |
+| Then | `/video/Alpha/Alpha.mkv` is marked as moved |
+
 ## `PGE-022` A parameter set in a stage's form is written into the stage
 
 | Step | Statement |
@@ -182,14 +190,6 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | a strip stage whose `groups` is set |
 | When | `groups` is cleared in the form |
 | Then | the stage is written as the text `strip` |
-
-## `PGE-021` A file a simulation moved is marked where it arrived
-
-| Step | Statement |
-| --- | --- |
-| Given | a simulation that moved `/downloads/Alpha/x.mkv` to `/video/Alpha/Alpha.mkv` |
-| When | the trees are drawn from it |
-| Then | `/video/Alpha/Alpha.mkv` is marked as moved |
 
 ## `PGE-024` A browser preferring Chinese is shown the page in Traditional Chinese
 

@@ -6,54 +6,6 @@ Stages that set fixed values and rewrite text fields, one small change each.
 
 - `tests/text.rs`
 
-## `SET-001` Set replaces a field
-
-| Step | Statement |
-| --- | --- |
-| Given | a set stage giving `season` the number 1 and a record whose `season` is 5 |
-| When | the stage is applied |
-| Then | `season` is 1 |
-
-## `SET-002` Default fills a field that is unset
-
-| Step | Statement |
-| --- | --- |
-| Given | a default stage giving `season` the number 1 and a record with no `season` |
-| When | the stage is applied |
-| Then | `season` is 1 |
-
-## `SET-003` Default keeps a field that is set
-
-| Step | Statement |
-| --- | --- |
-| Given | a default stage giving `season` the number 1 and a record whose `season` is 5 |
-| When | the stage is applied |
-| Then | `season` is 5 |
-
-## `REP-002` A replace swaps every occurrence
-
-| Step | Statement |
-| --- | --- |
-| Given | a replace stage changing `_` into a space and a record for `a_b_c.mkv` |
-| When | the stage is applied |
-| Then | `name` is `a b c` |
-
-## `REP-003` A replace on a field that does not exist is refused
-
-| Step | Statement |
-| --- | --- |
-| Given | a replace stage on the field `missing` and a record for `a.mkv` |
-| When | the stage is applied |
-| Then | the record is refused, naming the stage `replace` |
-
-## `REP-004` A replace on a number is refused
-
-| Step | Statement |
-| --- | --- |
-| Given | a replace stage on the field `episode` and a record whose `episode` is the number 3 |
-| When | the stage is applied |
-| Then | the record is refused, naming the stage `replace` |
-
 ## `CAS-001` Lower case
 
 | Step | Statement |
@@ -85,6 +37,54 @@ Stages that set fixed values and rewrite text fields, one small change each.
 | Given | a case stage to lower on the field `missing` and a record for `a.mkv` |
 | When | the stage is applied |
 | Then | the record is refused, naming the stage `case` |
+
+## `REP-002` A replace swaps every occurrence
+
+| Step | Statement |
+| --- | --- |
+| Given | a replace stage changing `_` into a space and a record for `a_b_c.mkv` |
+| When | the stage is applied |
+| Then | `name` is `a b c` |
+
+## `REP-003` A replace on a field that does not exist is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | a replace stage on the field `missing` and a record for `a.mkv` |
+| When | the stage is applied |
+| Then | the record is refused, naming the stage `replace` |
+
+## `REP-004` A replace on a number is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | a replace stage on the field `episode` and a record whose `episode` is the number 3 |
+| When | the stage is applied |
+| Then | the record is refused, naming the stage `replace` |
+
+## `SET-001` Set replaces a field
+
+| Step | Statement |
+| --- | --- |
+| Given | a set stage giving `season` the number 1 and a record whose `season` is 5 |
+| When | the stage is applied |
+| Then | `season` is 1 |
+
+## `SET-002` Default fills a field that is unset
+
+| Step | Statement |
+| --- | --- |
+| Given | a default stage giving `season` the number 1 and a record with no `season` |
+| When | the stage is applied |
+| Then | `season` is 1 |
+
+## `SET-003` Default keeps a field that is set
+
+| Step | Statement |
+| --- | --- |
+| Given | a default stage giving `season` the number 1 and a record whose `season` is 5 |
+| When | the stage is applied |
+| Then | `season` is 5 |
 
 ## `STR-001` Square brackets and what they hold are removed
 
