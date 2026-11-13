@@ -220,6 +220,12 @@ export function renamePipeline(config: Table, from: string, to: string): Table {
   )
 }
 
+/** A folder configuration with its copy of the pipeline `from` renamed to `to`, so it still replaces the global one. */
+export function renameOverride(folder: Table, from: string, to: string): Table {
+  const pipelines = asTable(folder.pipeline)
+  return from in pipelines ? setIn(setIn(folder, ['pipeline', from], undefined), ['pipeline', to], pipelines[from]) : folder
+}
+
 export function removePipeline(config: Table, name: string): Table {
   return rewriteRouted(setIn(config, ['pipeline', name], undefined), (listed) => (listed === name ? undefined : listed))
 }

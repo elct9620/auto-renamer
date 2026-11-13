@@ -42,6 +42,9 @@ pub enum What {
     Refused(String),
     Unclaimed,
     LeftTooLarge,
+    /// A pipeline a folder configuration defines that no route of the watch uses; the rest of that
+    /// configuration still applies.
+    Unused(String),
 }
 
 /// One file of a processed batch and what became of it. A folder configuration that could not be
@@ -122,7 +125,7 @@ fn process(
     observe: Option<&mut dyn FnMut(Step)>,
 ) -> Vec<Processed> {
     let mut processed = Vec::new();
-    let layers = folder_configs(tree, &watch.source, unit, &mut processed);
+    let layers = folder_configs(tree, watch, unit, &mut processed);
     let effective = watch.under(&layers);
 
     if files.len() > effective.max_files {
@@ -318,12 +321,10 @@ fn effects_of(
     }
 }
 
-/// The folder configurations from the source down to the unit, from the farthest to the nearest.
-/// One that cannot be read or used is left out and reported.
 /// The pipelines of a watch that the folder configurations applying to a unit replace, in the watch's order.
 /// A folder configuration that cannot be read replaces nothing; processing the batch reports it.
 pub fn replaced_pipelines(tree: &dyn Tree, watch: &Watch, unit: &Path) -> Vec<String> {
-    let layers = folder_configs(tree, &watch.source, unit, &mut Vec::new());
+    let layers = folder_configs(tree, watch, unit, &mut Vec::new());
     watch
         .pipelines()
         .into_iter()
@@ -332,9 +333,12 @@ pub fn replaced_pipelines(tree: &dyn Tree, watch: &Watch, unit: &Path) -> Vec<St
         .collect()
 }
 
+/// The folder configurations from the source down to the unit, from the farthest to the nearest.
+/// One that cannot be read or used is left out and reported, and so is each pipeline one defines that
+/// the watch does not use.
 fn folder_configs(
     tree: &dyn Tree,
-    source: &Path,
+    watch: &Watch,
     unit: &Path,
     processed: &mut Vec<Processed>,
 ) -> Vec<FolderConfig> {
@@ -348,14 +352,20 @@ fn folder_configs(
     let mut configs = Vec::new();
     for layer in layers {
         let relative = layer.join(FOLDER_CONFIG);
-        let Some(text) = read_folder_config(tree, &source.join(&relative)) else {
+        let Some(text) = read_folder_config(tree, &watch.source.join(&relative)) else {
             continue;
         };
         match text
             .map_err(|error| error.to_string())
             .and_then(|text| FolderConfig::parse(&text).map_err(|error| error.to_string()))
         {
-            Ok(config) => configs.push(config),
+            Ok(config) => {
+                processed.extend(watch.unused(&config).into_iter().map(|pipeline| Processed {
+                    origin: relative.clone(),
+                    what: What::Unused(pipeline),
+                }));
+                configs.push(config);
+            }
             Err(reason) => processed.push(Processed {
                 origin: relative,
                 what: What::Refused(reason),

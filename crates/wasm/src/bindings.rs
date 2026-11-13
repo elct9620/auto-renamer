@@ -28,6 +28,11 @@ pub fn check_js(kind: JsValue, text: &str) -> Result<(), JsError> {
     crate::check(kind, text).map_err(|reason| JsError::new(&reason))
 }
 
+#[wasm_bindgen(js_name = checkFolder)]
+pub fn check_folder_js(global: &str, folder: &str, text: &str) -> Result<(), JsError> {
+    crate::check_folder(global, folder, text).map_err(|reason| JsError::new(&reason))
+}
+
 #[wasm_bindgen(js_name = read)]
 pub fn read_js(text: &str) -> Result<JsValue, JsError> {
     to_js(&crate::read(text).map_err(|reason| JsError::new(&reason))?)

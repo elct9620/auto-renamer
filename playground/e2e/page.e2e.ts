@@ -353,6 +353,60 @@ test('overriding a pipeline says what a folder configuration reaches', async ({ 
   await expect(page.getByText('A folder configuration applies to files that arrive later.', { exact: false })).toBeVisible()
 })
 
+const UNUSED_PIPELINE = '[pipeline.extra]\nstages = [{ format = "x" }]\n'
+
+async function importIntoAlpha(page: Page, text: string) {
+  await openAlphaConfiguration(page)
+  await page.locator('input[type=file]').setInputFiles({
+    name: 'auto-renamer.toml',
+    mimeType: 'application/toml',
+    buffer: Buffer.from(text),
+  })
+}
+
+// @behavior PGE-115
+test('a folder configuration defining a pipeline no route uses is refused', async ({ page }) => {
+  await importIntoAlpha(page, UNUSED_PIPELINE)
+
+  await expect(page.locator('header').getByText('refused', { exact: true })).toBeVisible()
+})
+
+// @behavior PGE-116
+test('a simulation with a folder configuration the CLI would partly ignore is refused', async ({ page }) => {
+  await importIntoAlpha(page, UNUSED_PIPELINE)
+
+  await page.getByRole('button', { name: 'Trigger' }).click()
+
+  await expect(page.getByText('/downloads/Alpha/auto-renamer.toml: no route uses the pipeline `extra`')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Keep' })).toHaveCount(0)
+})
+
+// @behavior PGE-117
+test('renaming a global pipeline renames a folder configuration\'s copy of it', async ({ page }) => {
+  await ownSeriesVideo(page)
+  await title(page, 'series-video').click()
+  await page.getByRole('combobox', { name: /Override in a folder/ }).click()
+  await page.getByRole('option', { name: '/downloads/Alpha', exact: true }).click()
+  await page.getByRole('combobox', { name: 'Configuration being edited' }).click()
+  await page.getByRole('option', { name: 'Global configuration' }).click()
+  await title(page, 'series-video').click()
+
+  const name = page.getByRole('textbox', { name: 'Name', exact: true })
+  await name.fill('video')
+  await name.blur()
+
+  await page.getByRole('combobox', { name: 'Configuration being edited' }).click()
+  await page.getByRole('option', { name: 'Folder configuration of /downloads/Alpha' }).click()
+  expect(await configText(page)).toContain('pipeline.video.')
+})
+
+// @behavior PGE-118
+test('a folder configuration offers no pipeline to add', async ({ page }) => {
+  await openAlphaConfiguration(page)
+
+  await expect(page.getByRole('button', { name: 'Add pipeline' })).toHaveCount(0)
+})
+
 // @behavior PGE-066
 test('choosing a result shows how its file was planned', async ({ page }) => {
   await page.getByRole('button', { name: 'Trigger' }).click()

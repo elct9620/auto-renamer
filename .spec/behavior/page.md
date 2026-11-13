@@ -935,3 +935,35 @@ Files arrive in batches, so each kept batch is undone on its own.
 | Given | the pipeline `series-video` copied in as the global configuration's own |
 | When | it is selected |
 | Then | beside its override in a folder, the page says the folder configuration applies to files that arrive later and that a value given in its variables reaches every route |
+
+## `PGE-115` A folder configuration defining a pipeline no route uses is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | the folder configuration of `Alpha` being edited |
+| When | a file defining a pipeline `extra` is imported into it |
+| Then | the configuration is marked refused |
+
+## `PGE-116` A simulation with a folder configuration the CLI would partly ignore is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | the folder configuration of `Alpha` defining a pipeline `extra` |
+| When | the watch is triggered |
+| Then | the page names `Alpha/auto-renamer.toml` and the pipeline `extra`, and no result is shown |
+
+## `PGE-117` Renaming a global pipeline renames a folder configuration's copy of it
+
+| Step | Statement |
+| --- | --- |
+| Given | `series-video` copied in as the global configuration's own and overridden in `Alpha` |
+| When | the global pipeline is renamed `video` |
+| Then | the folder configuration of `Alpha` defines `video` |
+
+## `PGE-118` A folder configuration offers no pipeline to add
+
+| Step | Statement |
+| --- | --- |
+| Given | the opening example |
+| When | the folder configuration of `Alpha` is opened |
+| Then | the palette offers no pipeline to add |

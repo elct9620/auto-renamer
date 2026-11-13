@@ -286,3 +286,19 @@ Processing a batch is what a ready batch of settled files turns into: the files 
 | Given | a video route moving to an empty target, and a subtitle route moving to a target that holds `a.mkv` |
 | When | `x.mkv` is planned by the video route as `a.mkv` |
 | Then | it is moved, not refused |
+
+## `SVC-038` A pipeline a folder configuration defines that no route uses is reported
+
+| Step | Statement |
+| --- | --- |
+| Given | the same watch and a folder configuration in `Show` defining a pipeline `extra` and setting `show` to Beta |
+| When | the batch is processed |
+| Then | the folder configuration is reported as defining `extra`, which no route uses |
+
+## `SVC-039` A folder configuration with an unused pipeline still applies the rest
+
+| Step | Statement |
+| --- | --- |
+| Given | the same watch and a folder configuration in `Show` defining a pipeline `extra` and setting `show` to Beta |
+| When | the batch is processed |
+| Then | the target holds `Show/Beta.mkv` |

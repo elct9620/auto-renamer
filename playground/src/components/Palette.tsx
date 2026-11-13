@@ -12,14 +12,18 @@ function StageIcon({ name }: { name: string }) {
   return <Icon className="size-4 text-muted-foreground" />
 }
 
+/** What can be dragged in, and what can be added: a folder configuration only replaces pipelines, so it adds neither
+ * a watch nor a pipeline. */
 export function Palette({ global, onAdd }: { global: boolean; onAdd: (table: 'watch' | 'pipeline') => void }) {
   const { t } = useTranslation()
   return (
     <div className="grid content-start gap-4 p-3">
-      <div className="grid gap-2">
-        {global && <Button variant="outline" size="sm" onClick={() => onAdd('watch')}><KIND_ICONS.watch />{t('palette.addWatch')}</Button>}
-        <Button variant="outline" size="sm" onClick={() => onAdd('pipeline')}><KIND_ICONS.pipeline />{t('palette.addPipeline')}</Button>
-      </div>
+      {global && (
+        <div className="grid gap-2">
+          <Button variant="outline" size="sm" onClick={() => onAdd('watch')}><KIND_ICONS.watch />{t('palette.addWatch')}</Button>
+          <Button variant="outline" size="sm" onClick={() => onAdd('pipeline')}><KIND_ICONS.pipeline />{t('palette.addPipeline')}</Button>
+        </div>
+      )}
       <div className="grid gap-1">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('palette.stages')}</h2>
         <p className="text-xs text-muted-foreground">{t('palette.hint')}</p>

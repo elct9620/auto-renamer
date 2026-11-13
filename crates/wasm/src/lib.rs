@@ -7,7 +7,7 @@ mod bindings;
 mod tree;
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub use auto_renamer_core::Declaration;
 use auto_renamer_core::{
@@ -34,6 +34,31 @@ pub fn check(kind: Configuration, text: &str) -> Result<(), String> {
         Configuration::Folder => FolderConfig::parse(text).map(|_| ()),
     }
     .map_err(|error| error.to_string())
+}
+
+/// Reads a folder configuration as `check` does, refusing a pipeline that no watch over its folder routes,
+/// since the CLI would leave it unused. The global configuration says which watches cover the folder.
+pub fn check_folder(global: &str, folder: &str, text: &str) -> Result<(), String> {
+    let config = FolderConfig::parse(text).map_err(|error| error.to_string())?;
+    let Ok(global) = Config::parse(global) else {
+        return Ok(());
+    };
+    let covering: Vec<_> = global
+        .watches()
+        .iter()
+        .filter(|watch| Path::new(folder).starts_with(&watch.source))
+        .collect();
+    let Some((first, others)) = covering.split_first() else {
+        return Ok(());
+    };
+    match first.unused(&config).into_iter().find(|name| {
+        others
+            .iter()
+            .all(|watch| watch.unused(&config).contains(name))
+    }) {
+        Some(name) => Err(format!("no route uses the pipeline `{name}`")),
+        None => Ok(()),
+    }
 }
 
 /// The table a configuration text declares, for the page to edit.
@@ -196,6 +221,7 @@ fn outcome(entry: Processed) -> Outcome {
         What::Refused(reason) => ("refused", None, Some(reason)),
         What::Unclaimed => ("unclaimed", None, None),
         What::LeftTooLarge => ("left too large", None, None),
+        What::Unused(pipeline) => ("unused", None, Some(pipeline)),
     };
     Outcome {
         origin: entry.origin.display().to_string(),

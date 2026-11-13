@@ -66,6 +66,12 @@ export function check(kind: Kind, text: string): void {
   wasm.check(kind, text)
 }
 
+/** Throws why a folder configuration in `folder` is refused: as `check` would, or for a pipeline no watch of the
+ * global configuration over that folder routes, which the CLI would leave unused. */
+export function checkFolder(global: string, folder: string, text: string): void {
+  wasm.checkFolder(global, folder, text)
+}
+
 export function read(text: string): Table {
   return wasm.read(text)
 }

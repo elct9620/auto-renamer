@@ -141,3 +141,19 @@ The playground checks, reads and writes a configuration, and simulates a watch o
 | Given | a pipeline of a number, a format naming a field no stage gives, and a format after it, and a file it claims |
 | When | the watch is simulated |
 | Then | the file's steps are the claim, the number and the format that refused it, which says why |
+
+## `PLG-018` A folder configuration whose pipeline no route uses is refused
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch over `/src` whose one route runs the pipeline `p` |
+| When | a folder configuration in `/src/Show` defining a pipeline `extra` is checked |
+| Then | it is refused, naming `extra` |
+
+## `PLG-019` A folder configuration replacing a routed pipeline passes
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch over `/src` whose one route runs the pipeline `p` |
+| When | a folder configuration in `/src/Show` defining a pipeline `p` is checked |
+| Then | it is accepted |

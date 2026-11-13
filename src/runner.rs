@@ -389,5 +389,8 @@ fn report(entry: &Processed) {
         What::Skipped(reason) => eprintln!("[warn] {origin} skipped: {reason}"),
         What::Refused(reason) => eprintln!("[warn] {origin} refused: {reason}"),
         What::LeftTooLarge => eprintln!("[warn] {origin} left: the batch is too large"),
+        What::Unused(pipeline) => {
+            eprintln!("[warn] {origin}: no route uses the pipeline `{pipeline}`")
+        }
     }
 }

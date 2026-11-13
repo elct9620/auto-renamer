@@ -267,6 +267,38 @@ fn should_ignore_and_report_a_folder_configuration_that_cannot_be_used() {
     ));
 }
 
+const UNUSED_PIPELINE: &str =
+    "[vars]\nshow = \"Beta\"\n\n[pipeline.extra]\nstages = [{ format = \"{show} extra\" }]\n";
+
+// @behavior SVC-038
+#[test]
+fn should_report_a_folder_pipeline_no_route_uses() {
+    let run = alpha("");
+    run.sandbox.write("source/Show/x.mkv", "video");
+    run.sandbox
+        .write("source/Show/auto-renamer.toml", UNUSED_PIPELINE);
+
+    let processed = run.process("Show", &["Show/x.mkv"]);
+
+    assert_eq!(
+        run.what(&processed, "Show/auto-renamer.toml"),
+        What::Unused("extra".to_string())
+    );
+}
+
+// @behavior SVC-039
+#[test]
+fn should_apply_the_rest_of_a_folder_configuration_with_an_unused_pipeline() {
+    let run = alpha("");
+    run.sandbox.write("source/Show/x.mkv", "video");
+    run.sandbox
+        .write("source/Show/auto-renamer.toml", UNUSED_PIPELINE);
+
+    run.process("Show", &["Show/x.mkv"]);
+
+    assert!(run.sandbox.exists("target/Show/Beta.mkv"));
+}
+
 const PREFIX: &str = r#"[{ format = "x{name}" }]"#;
 
 /// Renames the file the way the prefix pipeline does, and says what became of it.

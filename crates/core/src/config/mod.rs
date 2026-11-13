@@ -315,13 +315,27 @@ impl Watch {
             .collect()
     }
 
+    /// The pipelines a folder configuration defines that none of the watch's routes uses, so they replace nothing.
+    pub fn unused(&self, folder: &FolderConfig) -> Vec<String> {
+        folder
+            .pipelines
+            .keys()
+            .filter(|name| !self.uses(name))
+            .cloned()
+            .collect()
+    }
+
+    fn uses(&self, pipeline: &str) -> bool {
+        self.pipeline_names().any(|named| named == pipeline)
+    }
+
     /// The watch as it is for the files of a folder that carries configurations of its own, from the farthest to the nearest.
     pub fn under(&self, folders: &[FolderConfig]) -> Watch {
         let mut watch = self.clone();
         for folder in folders {
             watch.vars.extend(folder.vars.clone());
             for (name, pipeline) in &folder.pipelines {
-                if watch.pipeline_names().any(|named| named == name) {
+                if watch.uses(name) {
                     watch.definitions.insert(name.clone(), pipeline.clone());
                 }
             }

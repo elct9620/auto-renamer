@@ -1,6 +1,6 @@
 use auto_renamer_wasm::{
-    Configuration, Entry, Outcome, Simulation, Table, built_ins, check, read, render, simulate,
-    stages,
+    Configuration, Entry, Outcome, Simulation, Table, built_ins, check, check_folder, read, render,
+    simulate, stages,
 };
 
 const MOVE_AS_SHOW: &str = r#"[{ format = "{show}" }]"#;
@@ -289,4 +289,28 @@ fn should_end_the_steps_of_a_refused_file_at_the_stage_that_refused_it() {
     let names: Vec<_> = steps.iter().map(|step| step.name).collect();
     assert_eq!(names, [None, Some("number"), Some("format")]);
     assert!(steps[2].stop.is_some());
+}
+
+// @behavior PLG-018
+#[test]
+fn should_refuse_a_folder_pipeline_no_route_uses() {
+    let checked = check_folder(
+        &config(MOVE_AS_SHOW, ""),
+        "/src/Show",
+        "[pipeline.extra]\nstages = [{ format = \"x\" }]\n",
+    );
+
+    assert!(checked.is_err_and(|reason| reason.contains("`extra`")));
+}
+
+// @behavior PLG-019
+#[test]
+fn should_accept_a_folder_pipeline_a_route_uses() {
+    let checked = check_folder(
+        &config(MOVE_AS_SHOW, ""),
+        "/src/Show",
+        "[pipeline.p]\nstages = [{ format = \"x\" }]\n",
+    );
+
+    assert!(checked.is_ok());
 }

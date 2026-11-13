@@ -11,8 +11,8 @@ import { TreePanel } from '@/components/TreePanel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { errorOf } from '@/lib/utils'
-import { type Table, asTable, download, folderStart, overridden, routable, setIn } from './config'
-import { type Entry, type Kind, type Simulation, builtIns, check, read, render, simulate } from './core'
+import { type Table, asTable, download, folderStart, overridden, renameOverride, renamePipeline, routable, setIn } from './config'
+import { type Entry, type Kind, type Simulation, builtIns, check, checkFolder, read, render, simulate } from './core'
 import { type Example, EXAMPLES, FIRST } from './examples'
 import type { Selected } from './graph'
 import { LANGUAGES } from './i18n'
@@ -22,9 +22,18 @@ import { FOLDER_CONFIGURATION, changedUnder, foldersUnder, marksOf, revertFiles,
 const GLOBAL = '\u0000global'
 const ADD = '\u0000add:'
 
-function checked(kind: Kind, text: string): { ok: boolean; lines: string[] } {
+const folderOf = (path: string) => path.slice(0, -FOLDER_CONFIGURATION.length - 1)
+
+/** Throws why a configuration is refused. A folder configuration, by its path, is read against the global
+ * configuration, whose watches say which pipelines it may replace. */
+function verify(kind: Kind, text: string, globalText: string, path: string | undefined): void {
+  if (kind === 'folder' && path !== undefined) checkFolder(globalText, folderOf(path), text)
+  else check(kind, text)
+}
+
+function checked(kind: Kind, text: string, globalText: string, path?: string): { ok: boolean; lines: string[] } {
   try {
-    check(kind, text)
+    verify(kind, text, globalText, path)
     return { ok: true, lines: [] }
   } catch (error) {
     return { ok: false, lines: [errorOf(error)] }
@@ -57,8 +66,8 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
   const edited = useMemo(() => (folder ? read(folder.text) : config), [folder, config])
   const globalText = useMemo(() => render(config), [config])
   const text = useMemo(() => (folder ? render(edited) : globalText), [folder, edited, globalText])
-  const status = useMemo(() => checked(kind, text), [kind, text])
-  const runnable = useMemo(() => checked('global', globalText).ok, [globalText])
+  const status = useMemo(() => checked(kind, text, globalText, folder?.path), [kind, text, globalText, folder?.path])
+  const runnable = useMemo(() => checked('global', globalText, globalText).ok, [globalText])
   const watches = Object.keys(asTable(config.watch))
   const roots = rootsOf(config, watch)
   const fileName = kind === 'global' ? 'config.toml' : FOLDER_CONFIGURATION
@@ -99,7 +108,7 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
   }
 
   const save = () => {
-    const offered = download(kind, edited, render, check)
+    const offered = download(kind, edited, render, (which, written) => verify(which, written, globalText, folder?.path))
     if (!offered.file) {
       setMessage(t('message.refused', { reason: offered.refused }))
       return
@@ -140,7 +149,6 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
 
   // The header offers the global configuration, every folder configuration of the source, and a new one for
   // each folder still without one.
-  const folderOf = (path: string) => path.slice(0, -FOLDER_CONFIGURATION.length - 1)
   const configurations = entries.filter((entry) => entry.path.startsWith(`${roots.source}/`) && entry.path.endsWith(`/${FOLDER_CONFIGURATION}`))
   const folders = [roots.source, ...foldersUnder(entries, roots.source).map((folder) => `${roots.source}/${folder.slice(0, -1)}`)]
   const bare = folders.filter((folder) => !configurations.some((entry) => folderOf(entry.path) === folder))
@@ -163,6 +171,18 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
     editEntries((all) => writeFile(all, path, render(overridden(table, routable(config, builtIns()), pipeline))))
     open(path)
   }
+  // A folder configuration replaces a global pipeline by its name, so renaming one renames the copies in the tree.
+  const rename = (from: string, to: string) => {
+    setConfig(renamePipeline(config, from, to))
+    editEntries((all) => all.map((entry) => {
+      if (!entry.path.endsWith(`/${FOLDER_CONFIGURATION}`)) return entry
+      try {
+        return { ...entry, text: render(renameOverride(read(entry.text), from, to)) }
+      } catch {
+        return entry
+      }
+    }))
+  }
   const choose = (value: string) => {
     if (value === GLOBAL) return open(null)
     if (value.startsWith(ADD)) {
@@ -173,7 +193,16 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
     open(value)
   }
 
+  // A folder configuration the CLI would partly ignore makes the simulation answer for something else.
   const run = () => {
+    for (const entry of configurations) {
+      const refused = checked('folder', entry.text, globalText, entry.path)
+      if (!refused.ok) {
+        setSimulation(null)
+        setMessage(`${entry.path}: ${refused.lines.join(' ')}`)
+        return
+      }
+    }
     try {
       setSimulation(simulate(globalText, watch, entries))
       setMessage('')
@@ -215,7 +244,7 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
         </div>
         <aside className="min-h-0 overflow-auto border-l p-3">
           <Inspector config={edited} kind={kind} selected={selected} folders={folders} onChange={edit} onSelect={setSelected}
-            onOverride={folder ? undefined : override} />
+            onOverride={folder ? undefined : override} onRename={folder ? undefined : rename} />
         </aside>
       </main>
 

@@ -145,13 +145,14 @@ function BuiltInInspector({ config, pipeline, folders, onChange, onOverride }: {
 }
 
 /** A pipeline the configuration defines: its name, a stage to add, an override in a folder, and its removal. */
-function PipelineInspector({ config, name: pipeline, folders, onChange, onSelect, onOverride }: {
+function PipelineInspector({ config, name: pipeline, folders, onChange, onSelect, onOverride, onRename }: {
   config: Table
   name: string
   folders: string[]
   onChange: (config: Table) => void
   onSelect: (selected: Selected | null) => void
   onOverride?: (pipeline: string, folder: string) => void
+  onRename?: (from: string, to: string) => void
 }) {
   const { t } = useTranslation()
   const [nameError, setNameError] = useState('')
@@ -166,7 +167,8 @@ function PipelineInspector({ config, name: pipeline, folders, onChange, onSelect
             return
           }
           setNameError('')
-          onChange(renamePipeline(config, pipeline, name))
+          if (onRename) onRename(pipeline, name)
+          else onChange(renamePipeline(config, pipeline, name))
           onSelect({ kind: 'pipeline', name })
         }} />
       </Field>
@@ -248,7 +250,7 @@ function WatchInspector({ config, name, onChange, onSelect }: {
   )
 }
 
-export function Inspector({ config, kind, selected, folders = [], onChange, onSelect, onOverride }: {
+export function Inspector({ config, kind, selected, folders = [], onChange, onSelect, onOverride, onRename }: {
   config: Table
   kind: Kind
   selected: Selected | null
@@ -257,6 +259,8 @@ export function Inspector({ config, kind, selected, folders = [], onChange, onSe
   onChange: (config: Table) => void
   onSelect: (selected: Selected | null) => void
   onOverride?: (pipeline: string, folder: string) => void
+  /** Renames a pipeline together with whatever refers to it outside this configuration. */
+  onRename?: (from: string, to: string) => void
 }) {
   if (selected === null) return <DefaultsInspector config={config} kind={kind} onChange={onChange} />
 
@@ -276,7 +280,7 @@ export function Inspector({ config, kind, selected, folders = [], onChange, onSe
 
   if (selected.kind === 'pipeline') {
     return <PipelineInspector config={config} name={selected.name} folders={folders} onChange={onChange} onSelect={onSelect}
-      onOverride={onOverride} />
+      onOverride={onOverride} onRename={onRename} />
   }
 
   return <StageInspector config={config} selected={selected} onChange={onChange} onSelect={onSelect} />

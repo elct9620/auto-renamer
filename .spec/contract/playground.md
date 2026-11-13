@@ -30,6 +30,14 @@ Read a configuration as the CLI reads it, answering why it is refused when it is
 pub fn check(kind: Configuration, text: &str) -> Result<(), String> {}
 ```
 
+## `check_folder`
+
+Read a folder configuration as `check` does, and refuse a pipeline no watch over its folder routes, which the CLI would leave unused.
+
+```rust
+pub fn check_folder(global: &str, folder: &str, text: &str) -> Result<(), String> {}
+```
+
 ## `read`
 
 The table a configuration text declares, for the page to edit.

@@ -683,6 +683,20 @@ impl Watch {
 }
 ```
 
+## `Watch::unused`
+
+The pipelines a folder configuration defines that none of the watch's routes uses, so they replace nothing.
+
+| Attribute | Value |
+| --- | --- |
+| internal | yes |
+
+```rust
+impl Watch {
+    pub fn unused(&self, folder: &FolderConfig) -> Vec<String> {}
+}
+```
+
 ## `FolderConfig`
 
 What a folder says of the files in it: variables, pipelines and a file limit.
