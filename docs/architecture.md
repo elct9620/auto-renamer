@@ -51,7 +51,7 @@ core 不碰檔案系統與通知，所以能編成 WASM 給 playground 用。
 | `stages` | 階段、宣告解析、批次與 effect 描述 | 否 |
 | `pipeline` | 階段清單與順序驗證 | 否 |
 | `engine` | 認領順序與每個檔案的結論 | 否 |
-| `reader` | 逐鍵讀取 TOML 表格，拒絕剩下的鍵 | 否 |
+| `reader` | 逐鍵讀取 TOML 表格，拒絕剩下的鍵並列出這張表能寫的鍵 | 否 |
 | `config` | 設定解析、層疊與驗證，路線與 target | 否 |
 | `effects` | 路線的效果 `move` 與 `cleanup`，與它們經過的 `Tree` | 否 |
 | `watcher` | 事件、單元與批次收束的狀態機 | 否 |
