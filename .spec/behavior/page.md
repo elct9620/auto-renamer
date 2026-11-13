@@ -975,3 +975,39 @@ Files arrive in batches, so each kept batch is undone on its own.
 | Given | the opening example, triggering the watch `series` |
 | When | a global configuration whose only watch is `anime` is imported |
 | Then | the watch to trigger is `anime` |
+
+## `PGE-120` The download names the file it saves
+
+| Attribute | Value |
+| --- | --- |
+| relates | `PGE-054` |
+
+| Step | Statement |
+| --- | --- |
+| Given | the page just opened, editing the global configuration |
+| When | the header is shown |
+| Then | the download reads `config.toml` |
+
+## `PGE-121` The download of a folder configuration says which folder it is
+
+| Attribute | Value |
+| --- | --- |
+| relates | `PGE-054` |
+
+| Step | Statement |
+| --- | --- |
+| Given | `Alpha/auto-renamer.toml` opened from the tree |
+| When | the header is shown |
+| Then | the download reads `auto-renamer.toml` and is described as downloading `/downloads/Alpha/auto-renamer.toml` |
+
+## `PGE-122` The download sits with the configuration it saves
+
+| Attribute | Value |
+| --- | --- |
+| relates | `PGE-054` |
+
+| Step | Statement |
+| --- | --- |
+| Given | the page just opened |
+| When | the header is shown |
+| Then | the choice of the configuration being edited, the import and the download are one group |

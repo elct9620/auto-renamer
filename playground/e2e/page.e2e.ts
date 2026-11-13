@@ -278,9 +278,30 @@ test('a download is the configuration being edited', async ({ page }) => {
   await openAlphaConfiguration(page)
 
   const download = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Download' }).click()
+  await page.getByRole('button', { name: 'Download /downloads/Alpha/auto-renamer.toml' }).click()
 
   expect((await download).suggestedFilename()).toBe('auto-renamer.toml')
+})
+
+// @behavior PGE-120
+test('the download names the file it saves', async ({ page }) => {
+  await expect(page.getByRole('button', { name: 'Download config.toml' })).toHaveText('config.toml')
+})
+
+// @behavior PGE-121
+test('the download of a folder configuration says which folder it is', async ({ page }) => {
+  await openAlphaConfiguration(page)
+
+  await expect(page.getByRole('button', { name: 'Download /downloads/Alpha/auto-renamer.toml' })).toHaveText('auto-renamer.toml')
+})
+
+// @behavior PGE-122
+test('the download sits with the configuration it saves', async ({ page }) => {
+  const group = page.getByRole('group', { name: 'Configuration file' })
+
+  await expect(group.getByRole('combobox', { name: 'Configuration being edited' })).toBeVisible()
+  await expect(group.getByText('Import')).toBeVisible()
+  await expect(group.getByRole('button', { name: 'Download config.toml' })).toBeVisible()
 })
 
 // @behavior PGE-055

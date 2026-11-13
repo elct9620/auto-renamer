@@ -1,11 +1,8 @@
 // The virtual tree as folders: the flat entries the core reads, drawn and edited as the source and the
 // targets of a watch.
 
-import { type Table, asTable, routesOf, targetsOf } from './config'
+import { FOLDER_CONFIGURATION, type Table, asTable, routesOf, targetsOf } from './config'
 import type { Entry, Simulation } from './core'
-
-/** The name a folder configuration goes by in the tree, as the CLI looks for it. */
-export const FOLDER_CONFIGURATION = 'auto-renamer.toml'
 
 export interface TreeNode {
   name: string

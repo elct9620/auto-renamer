@@ -10,13 +10,14 @@ import { Palette } from '@/components/Palette'
 import { TreePanel } from '@/components/TreePanel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { errorOf } from '@/lib/utils'
-import { type Table, asTable, download, folderStart, overridden, renameOverride, renamePipeline, routable, setIn } from './config'
+import { FOLDER_CONFIGURATION, type Table, asTable, download, fileNameOf, folderStart, overridden, renameOverride, renamePipeline, routable, setIn } from './config'
 import { type Entry, type Kind, type Simulation, builtIns, check, checkFolder, read, render, simulate } from './core'
 import { type Example, EXAMPLES, FIRST } from './examples'
 import type { Selected } from './graph'
 import { LANGUAGES } from './i18n'
-import { FOLDER_CONFIGURATION, changedUnder, foldersUnder, marksOf, revertFiles, rootsOf, startConfiguration, writeFile } from './tree'
+import { changedUnder, foldersUnder, marksOf, revertFiles, rootsOf, startConfiguration, writeFile } from './tree'
 
 // The values the configuration switcher gives the global configuration and a folder still to be configured.
 const GLOBAL = '\u0000global'
@@ -70,7 +71,8 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
   const runnable = useMemo(() => checked('global', globalText).ok, [globalText])
   const watches = Object.keys(asTable(config.watch))
   const roots = rootsOf(config, watch)
-  const fileName = kind === 'global' ? 'config.toml' : FOLDER_CONFIGURATION
+  const fileName = fileNameOf(kind)
+  const saving = t('download', { name: folder?.path ?? fileName })
 
   // A simulation answers for the configuration it ran, so any edit to a configuration clears it.
   const edit = (next: Table) => {
@@ -220,11 +222,20 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
     <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_minmax(0,20rem)] bg-background text-foreground">
       <header className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
         <h1 className="mr-2 text-sm font-semibold">Auto Renamer Playground</h1>
-        <Choice label={t('editing.label')} className="w-auto" value={editing ?? GLOBAL} options={editable} onChange={choose} />
-        <Button variant="outline" size="sm" asChild>
-          <label><Upload />{t('import')}<input type="file" accept=".toml" onChange={importFile} hidden /></label>
-        </Button>
-        <Button size="sm" onClick={save} disabled={!status.ok}><Download />{t('download')}</Button>
+        <div role="group" aria-label={t('editing.file')} className="flex items-center gap-1 rounded-md border p-0.5">
+          <Choice label={t('editing.label')} className="w-auto" value={editing ?? GLOBAL} options={editable} onChange={choose} />
+          <Button variant="outline" size="sm" asChild>
+            <label><Upload />{t('import')}<input type="file" accept=".toml" onChange={importFile} hidden /></label>
+          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button size="sm" onClick={save} disabled={!status.ok} aria-label={saving}>
+                <Download />{fileName}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{saving}</TooltipContent>
+          </Tooltip>
+        </div>
         <Choice label={t('examples.label')} placeholder={t('examples.label')} className="w-auto" value=""
           options={EXAMPLES.map((one) => ({ value: one.id, label: t(`examples.${one.id}`) }))}
           onChange={(id) => onChoose(EXAMPLES.find((one) => one.id === id)!)} />

@@ -276,6 +276,14 @@ export function newStage(kind: string, stages: Declaration[], read: (text: strin
   return example === '' ? kind : readStage(`{ ${kind} = ${example} }`, read)
 }
 
+/** The name a folder configuration goes by in the tree, as the CLI looks for it. */
+export const FOLDER_CONFIGURATION = 'auto-renamer.toml'
+
+/** The name a configuration of a kind is saved under. */
+export function fileNameOf(kind: 'global' | 'folder'): string {
+  return kind === 'global' ? 'config.toml' : FOLDER_CONFIGURATION
+}
+
 export interface Download {
   file?: { name: string; text: string }
   refused?: string
@@ -294,5 +302,5 @@ export function download(
   } catch (error) {
     return { refused: error instanceof Error ? error.message : String(error) }
   }
-  return { file: { name: kind === 'global' ? 'config.toml' : 'auto-renamer.toml', text } }
+  return { file: { name: fileNameOf(kind), text } }
 }

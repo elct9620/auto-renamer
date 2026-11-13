@@ -1,7 +1,7 @@
 {
   "language": "語言",
   "import": "匯入",
-  "download": "下載",
+  "download": "下載 {{name}}",
   "status": {
     "valid": "有效",
     "refused": "無效"
@@ -357,6 +357,7 @@
     "path": "路徑"
   },
   "editing": {
+    "file": "設定檔",
     "global": "全域設定",
     "folder": "{{folder}} 的目錄設定",
     "label": "正在編輯的設定",

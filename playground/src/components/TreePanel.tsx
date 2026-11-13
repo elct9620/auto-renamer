@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import type { Entry } from '../core'
-import { FOLDER_CONFIGURATION, type TreeNode, addEntry, foldersUnder, removeEntry, renameEntry, startConfiguration, treeOf } from '../tree'
+import { FOLDER_CONFIGURATION } from '../config'
+import { type TreeNode, addEntry, foldersUnder, removeEntry, renameEntry, startConfiguration, treeOf } from '../tree'
 
 type Edit = (change: (entries: Entry[]) => Entry[]) => void
 

@@ -1,7 +1,7 @@
 {
   "language": "Language",
   "import": "Import",
-  "download": "Download",
+  "download": "Download {{name}}",
   "status": {
     "valid": "valid",
     "refused": "refused"
@@ -357,6 +357,7 @@
     "path": "Path"
   },
   "editing": {
+    "file": "Configuration file",
     "global": "Global configuration",
     "folder": "Folder configuration of {{folder}}",
     "label": "Configuration being edited",
