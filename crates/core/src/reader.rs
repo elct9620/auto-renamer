@@ -15,8 +15,8 @@ pub(crate) trait Scope {
     /// A key whose value cannot be used.
     fn invalid(&self, key: &str, reason: String) -> Self::Error;
 
-    /// A key the table may not hold.
-    fn unknown(&self, key: &str) -> Self::Error;
+    /// A key the table may not hold, beside the keys it can, in the order they are read.
+    fn unknown(&self, key: &str, known: Vec<String>) -> Self::Error;
 
     /// Whether a key read from the table is one the scope's description lists.
     fn describes(&self, _key: &str) -> bool {
@@ -28,11 +28,17 @@ pub(crate) trait Scope {
 pub(crate) struct Reader<S> {
     scope: S,
     table: Table,
+    // Every key asked for, so a mistake is answered with what the table can hold.
+    asked: Vec<String>,
 }
 
 impl<S: Scope> Reader<S> {
     pub(crate) fn new(scope: S, table: Table) -> Reader<S> {
-        Reader { scope, table }
+        Reader {
+            scope,
+            table,
+            asked: Vec::new(),
+        }
     }
 
     pub(crate) fn invalid(&self, key: &str, reason: impl Into<String>) -> S::Error {
@@ -44,6 +50,9 @@ impl<S: Scope> Reader<S> {
             self.scope.describes(key),
             "`{key}` is read but not described"
         );
+        if !self.asked.iter().any(|asked| asked == key) {
+            self.asked.push(key.to_string());
+        }
         self.table.remove(key)
     }
 
@@ -161,7 +170,16 @@ impl<S: Scope> Reader<S> {
     pub(crate) fn finish(self) -> Result<(), S::Error> {
         match self.table.keys().next() {
             None => Ok(()),
-            Some(key) => Err(self.scope.unknown(key)),
+            Some(key) => Err(self.scope.unknown(key, self.asked)),
         }
     }
+}
+
+/// Names as a refusal lists them: each in backticks, separated by commas.
+pub(crate) fn listed<N: AsRef<str>>(names: &[N]) -> String {
+    names
+        .iter()
+        .map(|name| format!("`{}`", name.as_ref()))
+        .collect::<Vec<_>>()
+        .join(", ")
 }

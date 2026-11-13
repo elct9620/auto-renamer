@@ -132,3 +132,11 @@ A folder can carry its own `auto-renamer.toml` for the exceptions of what lies i
 | Given | a folder configuration with `group` |
 | When | it is read |
 | Then | it is refused, naming `group` |
+
+## `LAY-019` An unknown key's refusal lists what a folder can set
+
+| Step | Statement |
+| --- | --- |
+| Given | a folder configuration with the table `watch` |
+| When | the folder configuration is read |
+| Then | the refusal lists `vars`, `pipeline` and `max_files` |

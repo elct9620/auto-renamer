@@ -218,6 +218,15 @@ fn should_refuse_an_unknown_key_by_name() {
     assert!(names(&refused(&with_watch("colour = \"red\"")), "colour"));
 }
 
+// @behavior CFG-043
+#[test]
+fn should_list_the_keys_a_watch_can_hold_when_refusing_an_unknown_one() {
+    let message = refused(&with_watch("colour = \"red\"")).to_string();
+
+    assert!(message.contains("it can say `source`, "), "{message}");
+    assert!(message.contains("`routes`"), "{message}");
+}
+
 // @behavior CFG-021
 #[test]
 fn should_let_a_route_without_a_move_rename_in_place() {

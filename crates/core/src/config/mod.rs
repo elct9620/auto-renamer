@@ -12,7 +12,7 @@ use toml::{Table, Value as Toml};
 
 use crate::effects::{Cleanup, Effect};
 use crate::pipeline::{Pipeline, PipelineError};
-use crate::reader::{Reader, Scope};
+use crate::reader::{Reader, Scope, listed};
 use crate::record::Value;
 pub use unit::Unit;
 
@@ -39,6 +39,7 @@ pub enum ConfigError {
     Unknown {
         scope: String,
         key: String,
+        known: Vec<String>,
     },
     Invalid {
         scope: String,
@@ -56,9 +57,11 @@ impl fmt::Display for ConfigError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ConfigError::Syntax(message) => write!(f, "not valid TOML: {message}"),
-            ConfigError::Unknown { scope, key } => {
-                write!(f, "{scope}: `{key}` is not something it can say")
-            }
+            ConfigError::Unknown { scope, key, known } => write!(
+                f,
+                "{scope}: `{key}` is not something it can say; it can say {}",
+                listed(known)
+            ),
             ConfigError::Invalid { scope, key, reason } => write!(f, "{scope}: `{key}` {reason}"),
             ConfigError::Pipeline { name, error } => write!(f, "pipeline `{name}`: {error}"),
             ConfigError::TooLarge => write!(
@@ -642,10 +645,11 @@ impl Scope for String {
         invalid(self, key, reason)
     }
 
-    fn unknown(&self, key: &str) -> ConfigError {
+    fn unknown(&self, key: &str, known: Vec<String>) -> ConfigError {
         ConfigError::Unknown {
             scope: self.clone(),
             key: key.to_string(),
+            known,
         }
     }
 }

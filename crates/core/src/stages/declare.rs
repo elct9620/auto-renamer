@@ -8,7 +8,7 @@ use super::{
     Case, CaseKind, Declared, DefaultFields, Fields, Filter, Folder, Format, Lift, Next, Number,
     Pattern, Prefix, Rank, Replace, SetFields, Strip, Take,
 };
-use crate::reader::{Reader, Scope};
+use crate::reader::{Reader, Scope, listed};
 use crate::template::Template;
 
 /// The most a compiled regular expression may take, so a declaration cannot exhaust memory.
@@ -214,6 +214,11 @@ pub enum DeclareError {
     NotAStage,
     NotOneKey,
     UnknownStage(String),
+    UnknownParameter {
+        stage: String,
+        parameter: String,
+        known: Vec<String>,
+    },
     NeedsParameters(String),
     Invalid {
         stage: String,
@@ -229,7 +234,23 @@ impl fmt::Display for DeclareError {
             DeclareError::NotOneKey => {
                 write!(f, "a stage table needs exactly one key, the stage name")
             }
-            DeclareError::UnknownStage(name) => write!(f, "unknown stage `{name}`"),
+            DeclareError::UnknownStage(name) => {
+                let stages: Vec<&str> = DECLARATIONS.iter().map(|stage| stage.name).collect();
+                write!(
+                    f,
+                    "unknown stage `{name}`; a stage is one of {}",
+                    listed(&stages)
+                )
+            }
+            DeclareError::UnknownParameter {
+                stage,
+                parameter,
+                known,
+            } => write!(
+                f,
+                "stage `{stage}`, parameter `{parameter}`: is not a parameter of this stage; it takes {}",
+                listed(known)
+            ),
             DeclareError::NeedsParameters(name) => write!(f, "the stage `{name}` needs parameters"),
             DeclareError::Invalid {
                 stage,
@@ -302,12 +323,12 @@ impl Scope for &'static Declaration {
         invalid(self.name, Some(parameter), reason)
     }
 
-    fn unknown(&self, parameter: &str) -> DeclareError {
-        invalid(
-            self.name,
-            Some(parameter),
-            "is not a parameter of this stage",
-        )
+    fn unknown(&self, parameter: &str, known: Vec<String>) -> DeclareError {
+        DeclareError::UnknownParameter {
+            stage: self.name.to_string(),
+            parameter: parameter.to_string(),
+            known,
+        }
     }
 
     fn describes(&self, parameter: &str) -> bool {

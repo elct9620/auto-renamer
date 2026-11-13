@@ -126,6 +126,17 @@ fn should_refuse_an_unknown_key_by_name() {
     assert!(names(&refused("colour = \"red\""), "colour"));
 }
 
+// @behavior LAY-019
+#[test]
+fn should_list_what_a_folder_can_set_when_refusing_an_unknown_key() {
+    let message = refused("[watch.series]\nsource = \"/downloads\"\n").to_string();
+
+    assert!(
+        message.ends_with("it can say `vars`, `pipeline`, `max_files`"),
+        "{message}"
+    );
+}
+
 // @behavior LAY-012
 #[test]
 fn should_refuse_a_folder_configuration_that_is_too_large() {

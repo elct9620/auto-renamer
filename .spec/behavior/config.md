@@ -166,6 +166,7 @@ The configuration says which folders are watched, which routes take their files,
 | Given | a watch with a route of `video` that names no target |
 | When | the configuration is read |
 | Then | the route has no target |
+
 ## `CFG-022` A file limit must be a positive whole number
 
 | Step | Statement |
@@ -173,7 +174,6 @@ The configuration says which folders are watched, which routes take their files,
 | Given | a watch with the file limit 0 |
 | When | the configuration is read |
 | Then | the configuration is refused, naming `max_files` |
-
 ## `CFG-023` A document that is not TOML is refused
 
 | Step | Statement |
@@ -206,7 +206,6 @@ The configuration says which folders are watched, which routes take their files,
 | When | the configuration is read |
 | Then | the configuration is refused, naming `source` |
 
-
 ## `CFG-028` A file limit above the ceiling is refused
 
 | Step | Statement |
@@ -214,6 +213,7 @@ The configuration says which folders are watched, which routes take their files,
 | Given | a watch with the file limit 100001 |
 | When | the configuration is read |
 | Then | the configuration is refused, naming `max_files` |
+
 
 ## `CFG-029` The ceiling itself is accepted
 
@@ -318,3 +318,11 @@ The configuration says which folders are watched, which routes take their files,
 | Given | a default with `quiet`, `max_wait`, `max_files`, `dry_run` and `unit`, and a watch setting none of them |
 | When | the configuration is read |
 | Then | the watch has each value the default gives |
+
+## `CFG-043` An unknown key's refusal lists the keys its table can hold
+
+| Step | Statement |
+| --- | --- |
+| Given | a watch with the key `colour` |
+| When | the configuration is read |
+| Then | the refusal lists `source`, `routes` and the other keys a watch can hold |

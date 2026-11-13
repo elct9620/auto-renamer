@@ -68,12 +68,38 @@ fn should_refuse_an_unknown_stage_by_name() {
     );
 }
 
+// @behavior DEC-040
+#[test]
+fn should_list_every_stage_when_refusing_an_unknown_one() {
+    let message = refused_declaration(r#"["shred"]"#).to_string();
+
+    for stage in Declared::declarations() {
+        assert!(message.contains(&format!("`{}`", stage.name)), "{message}");
+    }
+}
+
 // @behavior DEC-005
 #[test]
 fn should_refuse_an_unknown_parameter_by_name() {
     let error = refused_declaration(r#"[{ filter = { ext = ["mkv"], colour = "red" } }]"#);
 
-    assert_invalid(error, "filter", Some("colour"));
+    assert!(
+        matches!(&error, DeclareError::UnknownParameter { stage, parameter, .. } if stage == "filter" && parameter == "colour"),
+        "{error:?}"
+    );
+}
+
+// @behavior DEC-041
+#[test]
+fn should_list_the_parameters_of_the_stage_when_refusing_an_unknown_one() {
+    let error = refused_declaration(r#"[{ filter = { ext = ["mkv"], colour = "red" } }]"#);
+
+    assert!(
+        error
+            .to_string()
+            .ends_with("it takes `ext`, `glob`, `reason`, `invert`"),
+        "{error}"
+    );
 }
 
 // @behavior DEC-007
@@ -302,13 +328,12 @@ fn should_accept_every_described_parameter_as_a_parameter_of_its_stage() {
                 table.insert(parameter.name.to_string(), sample(parameter.kind));
             });
 
-            if let Err(DeclareError::Invalid { reason, .. }) = &declared {
-                assert_ne!(
-                    reason, "is not a parameter of this stage",
-                    "{}.{}",
-                    stage.name, parameter.name
-                );
-            }
+            assert!(
+                !matches!(declared, Err(DeclareError::UnknownParameter { .. })),
+                "{}.{}",
+                stage.name,
+                parameter.name
+            );
         }
     }
 }

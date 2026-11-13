@@ -172,6 +172,7 @@ A pipeline is declared as a list of stages, each a bare name or a table with one
 | Given | the document `stages = "strip"` |
 | When | the pipeline is read |
 | Then | the pipeline is refused |
+
 ## `DEC-030` A literal replace needs something to look for
 
 | Step | Statement |
@@ -187,7 +188,6 @@ A pipeline is declared as a list of stages, each a bare name or a table with one
 | Given | the stage list `[{ next = { into = "episode", like = "{name}" } }]` |
 | When | the pipeline is read |
 | Then | the pipeline is refused, naming the parameter `like` |
-
 ## `DEC-032` A pipeline of too many stages is refused
 
 | Step | Statement |
@@ -251,3 +251,19 @@ A pipeline is declared as a list of stages, each a bare name or a table with one
 | Given | the stage list `["move"]` |
 | When | the pipeline is read |
 | Then | the pipeline is refused, naming the stage `move` |
+
+## `DEC-040` An unknown stage's refusal lists the stages there are
+
+| Step | Statement |
+| --- | --- |
+| Given | the stage list `["shred"]` |
+| When | the pipeline is read |
+| Then | the refusal lists every stage name |
+
+## `DEC-041` An unknown parameter's refusal lists the stage's parameters
+
+| Step | Statement |
+| --- | --- |
+| Given | the stage list `[{ filter = { ext = ["mkv"], colour = "red" } }]` |
+| When | the pipeline is read |
+| Then | the refusal lists `ext`, `glob`, `reason` and `invert` |
