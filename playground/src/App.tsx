@@ -78,6 +78,9 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
     else {
       setConfig(next)
       setSimulation(null)
+      // A configuration without the watch to trigger, such as one imported, offers its own first.
+      const named = Object.keys(asTable(next.watch))
+      if (!named.includes(watch) && named.length > 0) setWatch(named[0])
     }
   }
 

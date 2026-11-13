@@ -407,6 +407,17 @@ test('a folder configuration offers no pipeline to add', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Add pipeline' })).toHaveCount(0)
 })
 
+// @behavior PGE-119
+test('an imported configuration without the watch to trigger offers its own', async ({ page }) => {
+  await page.locator('input[type=file]').setInputFiles({
+    name: 'config.toml',
+    mimeType: 'application/toml',
+    buffer: Buffer.from('[pipeline.p]\nstages = [{ format = "x" }]\n\n[watch.anime]\nsource = "/media"\nroutes = [{ pipeline = "p" }]\n'),
+  })
+
+  await expect(page.getByRole('combobox', { name: 'Watch to trigger' })).toHaveText('anime')
+})
+
 // @behavior PGE-066
 test('choosing a result shows how its file was planned', async ({ page }) => {
   await page.getByRole('button', { name: 'Trigger' }).click()

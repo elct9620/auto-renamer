@@ -967,3 +967,11 @@ Files arrive in batches, so each kept batch is undone on its own.
 | Given | the opening example |
 | When | the folder configuration of `Alpha` is opened |
 | Then | the palette offers no pipeline to add |
+
+## `PGE-119` An imported configuration without the watch to trigger offers its own
+
+| Step | Statement |
+| --- | --- |
+| Given | the opening example, triggering the watch `series` |
+| When | a global configuration whose only watch is `anime` is imported |
+| Then | the watch to trigger is `anime` |
