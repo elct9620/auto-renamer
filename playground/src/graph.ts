@@ -160,6 +160,7 @@ export function toGraph(config: Table, builtIns: Table = {}): { nodes: Node<Node
   const edges: Edge[] = []
   const watches = Object.keys(asTable(config.watch))
   const targets = Object.keys(targetsOf(config))
+  const declared = new Set(targets)
   // Pipelines stand in the order the watches route them, so joints do not cross; unrouted ones come last.
   const routed = watches.flatMap((name) => routesOf(config, name).flatMap(pipelinesRouted))
   const pipelines = [...new Set([...routed, ...Object.keys(asTable(config.pipeline))])]
@@ -224,7 +225,7 @@ export function toGraph(config: Table, builtIns: Table = {}): { nodes: Node<Node
       // crossing the stages; a route whose pipeline is not drawn keeps them.
       const from = (planned: string) => (drawn.has(planned) ? { source: pipelineId(planned), sourceHandle: 'end' } : { source: id, sourceHandle: 'effects' })
       const named = sharedTargets.has(pipeline) ? `${name} ${index + 1}` : undefined
-      if (typeof route.move === 'string' && targets.includes(route.move)) {
+      if (typeof route.move === 'string' && declared.has(route.move)) {
         edges.push({ id: `${id}->${targetId(route.move)}`, ...from(pipeline), target: targetId(route.move), label: named,
           style: followed ? FOLLOWED : undefined, data: { watch: name, index } satisfies Move })
       }
@@ -234,7 +235,7 @@ export function toGraph(config: Table, builtIns: Table = {}): { nodes: Node<Node
         edges.push({ id: `${id}->${pipelineId(rejected.pipeline)}:rejected`, ...from(pipeline), target: pipelineId(rejected.pipeline),
           label: named, style: REJECTED, deletable: false })
       }
-      if (typeof rejected.move === 'string' && targets.includes(rejected.move)) {
+      if (typeof rejected.move === 'string' && declared.has(rejected.move)) {
         edges.push({ id: `${id}->${targetId(rejected.move)}:rejected`, ...from(refusedBy), target: targetId(rejected.move),
           label: named, style: REJECTED, deletable: false })
       }

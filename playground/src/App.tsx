@@ -126,10 +126,10 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
   }
 
   const add = (table: 'watch' | 'pipeline') => {
-    const existing = Object.keys(asTable(edited[table]))
+    const existing = new Set(Object.keys(asTable(edited[table])))
     const base = table === 'watch' ? 'new_watch' : 'new_pipeline'
     let name = base
-    for (let n = 2; existing.includes(name); n += 1) name = `${base}_${n}`
+    for (let n = 2; existing.has(name); n += 1) name = `${base}_${n}`
     const value: Table = table === 'watch' ? { source: '/downloads' } : { stages: [] }
     edit(setIn(edited, [table, name], value))
     setSelected({ kind: table, name })
