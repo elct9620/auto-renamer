@@ -238,18 +238,6 @@ test('going back to the global configuration edits it again', async ({ page }) =
   await expect(node(page, 'series')).toBeVisible()
 })
 
-// @behavior PGE-050
-test('an imported folder configuration lands at the source root while the global one is edited', async ({ page }) => {
-  await page.locator('input[type=file]').setInputFiles({
-    name: 'auto-renamer.toml',
-    mimeType: 'application/toml',
-    buffer: Buffer.from('[vars]\nshow = "Beta"\n'),
-  })
-
-  await expect(page.getByText('Folder configuration of /downloads', { exact: true })).toBeVisible()
-  await expect(source(page).getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(1)
-})
-
 // @behavior PGE-051
 test('a folder configuration added in a folder is opened', async ({ page }) => {
   await page.getByText('Alpha', { exact: true }).first().hover()
@@ -271,15 +259,16 @@ test('a stage is shown by its name beside the CLI\'s name', async ({ page }) => 
 })
 
 // @behavior PGE-053
-test('an imported folder configuration replaces the one being edited', async ({ page }) => {
+test('an imported file replaces the folder configuration being edited, whatever it is named', async ({ page }) => {
   await openAlphaConfiguration(page)
 
   await page.locator('input[type=file]').setInputFiles({
-    name: 'auto-renamer.toml',
+    name: 'auto-renamer (1).toml',
     mimeType: 'application/toml',
     buffer: Buffer.from('[vars]\nshow = "Beta"\n'),
   })
 
+  await expect(page.getByRole('combobox', { name: 'Configuration being edited' })).toHaveText('Folder configuration of /downloads/Alpha')
   await expect(source(page).getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(1)
   expect(await configText(page)).toContain('show = "Beta"')
 })
@@ -466,13 +455,14 @@ test('a default route is edited in full in the defaults form', async ({ page }) 
 })
 
 // @behavior PGE-092
-test('an imported global configuration replaces the one being edited', async ({ page }) => {
+test('an imported file replaces the global configuration being edited, whatever it is named', async ({ page }) => {
   await page.locator('input[type=file]').setInputFiles({
-    name: 'config.toml',
+    name: 'auto-renamer.toml',
     mimeType: 'application/toml',
     buffer: Buffer.from('[pipeline.p]\nstages = []\n\n[watch.movies]\nsource = "/movies"\nroutes = [{ pipeline = "p" }]\n'),
   })
 
+  await expect(page.getByRole('combobox', { name: 'Configuration being edited' })).toHaveText('Global configuration')
   const text = await configText(page)
   expect(text).toContain('[watch.movies]')
   expect(text).not.toContain('[watch.series]')

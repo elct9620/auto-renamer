@@ -402,14 +402,6 @@ The playground page draws a configuration for people who do not read TOML: each 
 | When | the global configuration is chosen in the header |
 | Then | the canvas draws the watch `series` again |
 
-## `PGE-050` An imported folder configuration lands at the source root while the global one is edited
-
-| Step | Statement |
-| --- | --- |
-| Given | the global configuration being edited |
-| When | a file named `auto-renamer.toml` is imported |
-| Then | the source holds `auto-renamer.toml` at its root, and it is the one being edited |
-
 ## `PGE-051` A folder configuration added in a folder is opened
 
 | Step | Statement |
@@ -426,12 +418,16 @@ The playground page draws a configuration for people who do not read TOML: each 
 | When | the palette is shown |
 | Then | the filter stage reads 篩選 with `filter` beside it |
 
-## `PGE-053` An imported folder configuration replaces the one being edited
+## `PGE-053` An imported file replaces the folder configuration being edited, whatever it is named
+
+| Attribute | Value |
+| --- | --- |
+| relates | `PGE-054` |
 
 | Step | Statement |
 | --- | --- |
 | Given | `Alpha/auto-renamer.toml` opened from the tree |
-| When | a file named `auto-renamer.toml` is imported |
+| When | a file named `auto-renamer (1).toml` is imported |
 | Then | the imported text is what `Alpha/auto-renamer.toml` holds, and no other folder configuration is added |
 
 ## `PGE-054` A download is the configuration being edited
@@ -738,12 +734,16 @@ The playground page draws a configuration for people who do not read TOML: each 
 | When | a folder configuration is started in `Alpha` |
 | Then | its text is unchanged |
 
-## `PGE-092` An imported global configuration replaces the one being edited
+## `PGE-092` An imported file replaces the global configuration being edited, whatever it is named
+
+| Attribute | Value |
+| --- | --- |
+| relates | `PGE-054` |
 
 | Step | Statement |
 | --- | --- |
 | Given | the global configuration being edited |
-| When | a `config.toml` declaring the watch `movies` is imported |
+| When | a file named `auto-renamer.toml` declaring the watch `movies` is imported |
 | Then | the configuration declares `movies` |
 
 ## `PGE-093` A removed watch is written nowhere

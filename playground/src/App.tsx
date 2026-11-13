@@ -88,15 +88,7 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
     event.target.value = ''
     if (!file) return
     try {
-      const table = read(await file.text())
-      if (file.name === FOLDER_CONFIGURATION) {
-        const path = folder?.path ?? `${roots.source}/${FOLDER_CONFIGURATION}`
-        editEntries((all) => writeFile(all, path, render(table)))
-        setEditing(path)
-      } else {
-        setConfig(table)
-        setEditing(null)
-      }
+      edit(read(await file.text()))
       setSelected(null)
       setMessage(t('message.imported', { name: file.name }))
     } catch (error) {
