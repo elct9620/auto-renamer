@@ -217,9 +217,12 @@ const CLEANUP: Example = {
   ],
 }
 
-// Downloads already sorted into a folder per show and season: each show folder answers its name, a
-// file outside a season folder stays put, a special between two episodes goes to season 0, and only the
-// Traditional Chinese subtitle joins its video while the others are set aside.
+// Downloads already sorted into a folder per show and season, moved into a library laid out the same way:
+// each show is named by its folder without the leading `[…]` and the trailing `(year)`, a file outside a season
+// folder stays put, a special between two episodes goes to season 0, and only the Traditional Chinese
+// subtitle joins its video while the others are set aside.
+const SHOW_FROM_FOLDER = `{ regex = { from = "path", pattern = '^(?:\\[[^\\]]*\\])?(?<show>[^/]+?)(?:\\(\\d{4}\\))?(?:/|$)' } },`
+
 const SORTED: Example = {
   id: 'sorted',
   watch: 'sorted',
@@ -229,9 +232,10 @@ path = "/leftover"
 [pipeline.special]
 stages = [
   { filter = { ext = ["mkv", "mp4"], glob = "* - *.5 *" } },
+  ${SHOW_FROM_FOLDER}
   { set = { season = 0 } },
-  { lift = { keep = 0 } },
-  { folder = "{show}/Season {season:02}" },
+  { lift = { keep = 1 } },
+  { folder = "Season {season:02}" },
   { next = { into = "episode", like = "{show} s{season:02}e{episode:02}" } },
   { format = "{show} s{season:02}e{episode:02}" },
 ]
@@ -239,20 +243,20 @@ stages = [
 [pipeline.sorted-video]
 stages = [
   { filter = { ext = ["mkv", "mp4"] } },
+  ${SHOW_FROM_FOLDER}
   { number = { from = "path", into = "season", prefix = "Season" } },
   { number = { into = "episode", exclude = ["season"] } },
-  { lift = { keep = 0 } },
-  { folder = "{show}/Season {season:02}" },
+  { lift = { to = "Season *" } },
   { format = "{show} s{season:02}e{episode:02}" },
 ]
 
 [pipeline.cht-subtitle]
 stages = [
   { filter = { ext = ["ass", "srt"], glob = "*cht*" } },
+  ${SHOW_FROM_FOLDER}
   { number = { from = "path", into = "season", prefix = "Season" } },
   { number = { into = "episode", exclude = ["season"] } },
-  { lift = { keep = 0 } },
-  { folder = "{show}/Season {season:02}" },
+  { lift = { to = "Season *" } },
   { format = "{show} s{season:02}e{episode:02}.zh" },
 ]
 
@@ -270,13 +274,10 @@ routes = [
 ]
 `,
   entries: [
-    file('/downloads/[秋｜冒險｜示範作品]Mu Show/auto-renamer.toml', 'vars = { show = "Mu Show" }\n'),
     file('/downloads/[秋｜冒險｜示範作品]Mu Show/Season 02(2026.10)/[Team] Mu Show S2 - 04 [WebRip 1080p].mkv'),
     file('/downloads/[秋｜冒險｜示範作品]Mu Show/[Team] Mu Show S2 - 03 [WebRip 1080p].mkv'),
-    file('/downloads/[夏｜日常｜示範作品]Nu Show/auto-renamer.toml', 'vars = { show = "Nu Show" }\n'),
-    file('/downloads/[夏｜日常｜示範作品]Nu Show/Season 01(2026.07)/[Team] Nu Show - 12 [1080P][WEB-DL].mkv'),
-    file('/downloads/[夏｜日常｜示範作品]Nu Show/Season 01(2026.07)/[Team] Nu Show - 12.5 [1080P][WEB-DL].mkv'),
-    file('/downloads/[春｜奇幻｜示範作品]Xi Show/auto-renamer.toml', 'vars = { show = "Xi Show" }\n'),
+    file('/downloads/[夏｜日常｜示範作品]Nu Show(2026)/Season 01(2026.07)/[Team] Nu Show - 12 [1080P][WEB-DL].mkv'),
+    file('/downloads/[夏｜日常｜示範作品]Nu Show(2026)/Season 01(2026.07)/[Team] Nu Show - 12.5 [1080P][WEB-DL].mkv'),
     ...['mkv', 'cht&jpn.ass', 'chs&jpn.ass'].map((ext) =>
       file(`/downloads/[春｜奇幻｜示範作品]Xi Show/Season 01(2026.04)/[Team][Xi_Show][36][1080p]/[Team][Xi_Show][36][1080p].${ext}`)),
   ],

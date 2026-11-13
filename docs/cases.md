@@ -218,7 +218,7 @@ target 原有 `Beta Show/Season 01/Beta Show s01e12.mp4` 與 Kappa 的 `s01e01`�
 
 ## 7 已分季的下載
 
-下載已按作品與季分好資料夾，作品名由各作品資料夾的目錄設定給答案。Playground 範例「已分季的下載」照這一章設定。
+下載已按作品與季分好資料夾，搬進同樣分好的片庫。作品名取自作品資料夾，去掉開頭的 `[…]` 與結尾的 `(年份)`；名稱不同時才在作品資料夾的 `vars` 給答案。Playground 範例「已分季的下載」照這一章設定。
 
 ### 7.1 路線
 
@@ -231,20 +231,20 @@ target 原有 `Beta Show/Season 01/Beta Show s01e12.mp4` 與 Kappa 的 `s01e01`�
 | 3 | `cht-subtitle` | 名稱含 `cht` 的字幕 | `/Video` |
 | 4 | `other-subtitle` | 其他字幕 | `/Leftover` |
 
-影片管線不寫 `default`，季數只來自 `Season` 資料夾；作品名只來自答案，沒給的作品留在 source。路徑以 `lift = { keep = 0 }` 清空，再依 `{show}/Season NN` 建立。
+影片管線不寫 `default`，季數只來自 `Season` 資料夾。正集與字幕以 `lift = { to = "Season *" }` 保留作品與季資料夾，片庫的路徑與 source 相同；特別篇保留作品資料夾，放進 `Season 00`。
 
 ### 7.2 去向
 
-作品資料夾的 `vars` 分別給 Mu Show、Nu Show、Xi Show。
+作品資料夾都沒有目錄設定，作品名都取自資料夾。
 
 | 情境 | 輸入 | 輸出 |
 |---|---|---|
-| 季資料夾 | `[秋｜冒險｜示範作品]Mu Show/Season 02(2026.10)/[Team] Mu Show S2 - 04 [WebRip 1080p].mkv` | `Mu Show/Season 02/Mu Show s02e04.mkv` |
+| 季資料夾 | `[秋｜冒險｜示範作品]Mu Show/Season 02(2026.10)/[Team] Mu Show S2 - 04 [WebRip 1080p].mkv` | `[秋｜冒險｜示範作品]Mu Show/Season 02(2026.10)/Mu Show s02e04.mkv` |
 | 放錯層 | `[秋｜冒險｜示範作品]Mu Show/[Team] Mu Show S2 - 03 [WebRip 1080p].mkv` | 缺季數，留在 source |
-| 正集 | `[夏｜日常｜示範作品]Nu Show/Season 01(2026.07)/[Team] Nu Show - 12 [1080P][WEB-DL].mkv` | `Nu Show/Season 01/Nu Show s01e12.mkv` |
-| 特別篇 | 同上，集數 `12.5` | `Nu Show/Season 00/Nu Show s00e01.mkv` |
-| 整包影片 | `[春｜奇幻｜示範作品]Xi Show/Season 01(2026.04)/[Team][Xi_Show][36][1080p]/` 下的 `.mkv` | `Xi Show/Season 01/Xi Show s01e36.mkv` |
-| 繁中字幕 | 同上，`.cht&jpn.ass` | `Xi Show/Season 01/Xi Show s01e36.zh.ass` |
+| 正集 | `[夏｜日常｜示範作品]Nu Show(2026)/Season 01(2026.07)/[Team] Nu Show - 12 [1080P][WEB-DL].mkv` | `[夏｜日常｜示範作品]Nu Show(2026)/Season 01(2026.07)/Nu Show s01e12.mkv` |
+| 特別篇 | 同上，集數 `12.5` | `[夏｜日常｜示範作品]Nu Show(2026)/Season 00/Nu Show s00e01.mkv` |
+| 整包影片 | `[春｜奇幻｜示範作品]Xi Show/Season 01(2026.04)/[Team][Xi_Show][36][1080p]/` 下的 `.mkv` | `[春｜奇幻｜示範作品]Xi Show/Season 01(2026.04)/Xi Show s01e36.mkv` |
+| 繁中字幕 | 同上，`.cht&jpn.ass` | `[春｜奇幻｜示範作品]Xi Show/Season 01(2026.04)/Xi Show s01e36.zh.ass` |
 | 其他字幕 | 同上，`.chs&jpn.ass` | `/Leftover` 的同一路徑 |
 
 整包資料夾搬空後刪除，季資料夾保留。
