@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.3.0](https://github.com/elct9620/auto-renamer/compare/v0.2.0...v0.3.0) (2026-11-13)
+
+
+### Features
+
+* list what a table can hold when refusing an unknown key ([1349df1](https://github.com/elct9620/auto-renamer/commit/1349df104910d87fd2ff81e0ef7cf07526b9e97d))
+* **playground:** name the download by the file it saves ([3ee222b](https://github.com/elct9620/auto-renamer/commit/3ee222b519fa3a8e4dbf9154213f3c8a577ea00a))
+* **playground:** say a copied built-in pipeline reaches every folder ([676aee4](https://github.com/elct9620/auto-renamer/commit/676aee4e70cbcf7c10ff45a38d9c7253403f756b))
+* **playground:** say what a folder override reaches ([23b6fc4](https://github.com/elct9620/auto-renamer/commit/23b6fc49a30f2578529f18aff57ba6d3235e6566))
+* **playground:** undo a kept result one batch at a time ([1fd153e](https://github.com/elct9620/auto-renamer/commit/1fd153ec4b8b64b4132a6ea10bec64d72e23de1b))
+* report folder pipelines that no route uses ([3d03ba7](https://github.com/elct9620/auto-renamer/commit/3d03ba7b4d88b1f7915bd6295acb5dad71207f25))
+
+
+### Bug Fixes
+
+* **playground:** import into the configuration being edited ([b200ac6](https://github.com/elct9620/auto-renamer/commit/b200ac6327d444820d862f9aed1c61bbf5ff857e))
+* **playground:** offer an imported configuration's own watch to trigger ([d1d1e4d](https://github.com/elct9620/auto-renamer/commit/d1d1e4d4fe958afcddaa4d3fb6bd1254aba60411))
+* **playground:** show a tree row's add and remove buttons without hovering ([a6c5122](https://github.com/elct9620/auto-renamer/commit/a6c5122034d06b6067edd2f0cec05b86063a9e0f))
+* **playground:** sort seasons into the library layout they came from ([a0c48c2](https://github.com/elct9620/auto-renamer/commit/a0c48c2166dde9a6c15e5c3e9d41fced0456d26a))
+
 ## [0.2.0](https://github.com/elct9620/auto-renamer/compare/auto-renamer-v0.1.0...auto-renamer-v0.2.0) (2026-10-15)
 
 
