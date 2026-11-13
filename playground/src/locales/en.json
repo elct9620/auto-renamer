@@ -51,6 +51,7 @@
     "removeTarget": "Remove target",
     "builtIn": "The core builds this pipeline in. Copy it to change it.",
     "copyBuiltIn": "Copy as own pipeline",
+    "copyReach": "A copy here changes every folder the watch takes. To give one folder its own value, such as its show name, add a folder configuration there and give the value in its variables.",
     "routeDetails": "Select a route on the canvas to set where it moves."
   },
   "tree": {

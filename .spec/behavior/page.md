@@ -1011,3 +1011,15 @@ Files arrive in batches, so each kept batch is undone on its own.
 | Given | the page just opened |
 | When | the header is shown |
 | Then | the choice of the configuration being edited, the import and the download are one group |
+
+## `PGE-123` Copying a built-in pipeline into the global configuration says it reaches every folder
+
+| Attribute | Value |
+| --- | --- |
+| relates | `PGE-114` |
+
+| Step | Statement |
+| --- | --- |
+| Given | the global configuration being edited |
+| When | the built-in pipeline `series-video` is selected |
+| Then | beside its copy, the page says a copy changes every folder the watch takes and that one folder's own value goes in its folder configuration's variables |

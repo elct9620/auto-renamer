@@ -124,8 +124,9 @@ function OverrideField({ pipeline, folders, onOverride }: {
 }
 
 /** A built-in pipeline, or one of its stages, copied in or overridden in a folder to be changed. */
-function BuiltInInspector({ config, pipeline, folders, onChange, onOverride }: {
+function BuiltInInspector({ config, kind, pipeline, folders, onChange, onOverride }: {
   config: Table
+  kind: Kind
   pipeline: string
   folders: string[]
   onChange: (config: Table) => void
@@ -139,6 +140,7 @@ function BuiltInInspector({ config, pipeline, folders, onChange, onOverride }: {
       <Button variant="outline" size="sm" onClick={() => onChange(ownPipeline(config, builtIns(), pipeline))}>
         <Copy />{t('inspector.copyBuiltIn')}
       </Button>
+      {kind === 'global' && <p className="text-xs text-muted-foreground">{t('inspector.copyReach')}</p>}
       {onOverride && <OverrideField pipeline={pipeline} folders={folders} onOverride={onOverride} />}
     </Section>
   )
@@ -275,7 +277,7 @@ export function Inspector({ config, kind, selected, folders = [], onChange, onSe
   // A built-in pipeline and its stages are changed only once copied in as the configuration's own.
   const pipeline = selected.kind === 'pipeline' ? selected.name : selected.pipeline
   if (!(pipeline in asTable(config.pipeline))) {
-    return <BuiltInInspector config={config} pipeline={pipeline} folders={folders} onChange={onChange} onOverride={onOverride} />
+    return <BuiltInInspector config={config} kind={kind} pipeline={pipeline} folders={folders} onChange={onChange} onOverride={onOverride} />
   }
 
   if (selected.kind === 'pipeline') {

@@ -374,6 +374,13 @@ test('overriding a pipeline says what a folder configuration reaches', async ({ 
   await expect(page.getByText('A folder configuration applies to files that arrive later.', { exact: false })).toBeVisible()
 })
 
+// @behavior PGE-123
+test('copying a built-in pipeline into the global configuration says it reaches every folder', async ({ page }) => {
+  await title(page, 'series-video').click()
+
+  await expect(page.getByText('A copy here changes every folder the watch takes.', { exact: false })).toBeVisible()
+})
+
 const UNUSED_PIPELINE = '[pipeline.extra]\nstages = [{ format = "x" }]\n'
 
 async function importIntoAlpha(page: Page, text: string) {
