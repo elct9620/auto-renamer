@@ -218,7 +218,7 @@ target 原有 `Beta Show/Season 01/Beta Show s01e12.mp4` 與 Kappa 的 `s01e01`�
 
 ## 7 已分季的下載
 
-下載已按作品與季分好資料夾，搬進同樣分好的片庫。作品名取自作品資料夾，去掉開頭的 `[…]` 與結尾的 `(年份)`；名稱不同時才在作品資料夾的 `vars` 給答案。Playground 範例「已分季的下載」照這一章設定。
+下載已按作品與季分好資料夾，搬進同樣分好的片庫。Playground 範例「已分季的下載」照這一章設定。
 
 ### 7.1 路線
 
@@ -231,7 +231,7 @@ target 原有 `Beta Show/Season 01/Beta Show s01e12.mp4` 與 Kappa 的 `s01e01`�
 | 3 | `cht-subtitle` | 名稱含 `cht` 的字幕 | `/Video` |
 | 4 | `other-subtitle` | 其他字幕 | `/Leftover` |
 
-影片管線不寫 `default`，季數只來自 `Season` 資料夾。正集與字幕以 `lift = { to = "Season *" }` 保留作品與季資料夾，片庫的路徑與 source 相同；特別篇保留作品資料夾，放進 `Season 00`。
+作品名取自作品資料夾，去掉開頭的 `[…]` 與結尾的 `(年份)`。影片管線不寫 `default`，季數只來自 `Season` 資料夾。正集與字幕以 `lift = { to = "Season *" }` 保留作品與季資料夾，片庫的路徑與 source 相同；特別篇保留作品資料夾，放進 `Season 00`。
 
 ### 7.2 去向
 
