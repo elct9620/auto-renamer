@@ -927,3 +927,11 @@ Files arrive in batches, so each kept batch is undone on its own.
 | Given | `Alpha/[Team] Alpha - 13 [1080p HEVC-10bit AAC].mkv` added, triggered and kept |
 | When | the keep is undone once |
 | Then | the source holds `Alpha/[Team] Alpha - 13 [1080p HEVC-10bit AAC].mkv` under the name it was added with |
+
+## `PGE-114` Overriding a pipeline says a folder configuration reaches later files and every route through its variables
+
+| Step | Statement |
+| --- | --- |
+| Given | the pipeline `series-video` copied in as the global configuration's own |
+| When | it is selected |
+| Then | beside its override in a folder, the page says the folder configuration applies to files that arrive later and that a value given in its variables reaches every route |

@@ -44,6 +44,7 @@
     "useDefault": "改回沿用預設",
     "override": "在資料夾覆寫",
     "chooseFolder": "選擇資料夾",
+    "overrideHint": "目錄設定只作用於之後進來的檔案。要換作品名之類的值，寫在資料夾的變數，每條路線都會用到。",
     "route": "{{watch}} 的第 {{position}} 條路線",
     "removeRoute": "移除路線",
     "target": "目標 {{name}}",

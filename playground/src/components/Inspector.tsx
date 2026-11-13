@@ -107,6 +107,22 @@ function TargetInspector({ config, name, onChange, onSelect }: {
   )
 }
 
+/** Overriding a pipeline in a folder, with what such an override reaches. */
+function OverrideField({ pipeline, folders, onOverride }: {
+  pipeline: string
+  folders: string[]
+  onOverride: (pipeline: string, folder: string) => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <Field label={t('inspector.override')}>
+      <Choice value="" placeholder={t('inspector.chooseFolder')} options={folders.map((folder) => ({ value: folder, label: folder }))}
+        onChange={(folder) => onOverride(pipeline, folder)} />
+      <p className="text-xs text-muted-foreground">{t('inspector.overrideHint')}</p>
+    </Field>
+  )
+}
+
 /** A built-in pipeline, or one of its stages, copied in or overridden in a folder to be changed. */
 function BuiltInInspector({ config, pipeline, folders, onChange, onOverride }: {
   config: Table
@@ -123,12 +139,7 @@ function BuiltInInspector({ config, pipeline, folders, onChange, onOverride }: {
       <Button variant="outline" size="sm" onClick={() => onChange(ownPipeline(config, builtIns(), pipeline))}>
         <Copy />{t('inspector.copyBuiltIn')}
       </Button>
-      {onOverride && (
-        <Field label={t('inspector.override')}>
-          <Choice value="" placeholder={t('inspector.chooseFolder')} options={folders.map((one) => ({ value: one, label: one }))}
-            onChange={(one) => onOverride(pipeline, one)} />
-        </Field>
-      )}
+      {onOverride && <OverrideField pipeline={pipeline} folders={folders} onOverride={onOverride} />}
     </Section>
   )
 }
@@ -163,12 +174,7 @@ function PipelineInspector({ config, name: pipeline, folders, onChange, onSelect
         <Choice value="" placeholder={t('inspector.choose')} options={stages().map(({ name }) => ({ value: name, label: name }))}
           onChange={(name) => onChange(addStage(config, pipeline, newStage(name, stages(), read)))} />
       </Field>
-      {onOverride && (
-        <Field label={t('inspector.override')}>
-          <Choice value="" placeholder={t('inspector.chooseFolder')} options={folders.map((folder) => ({ value: folder, label: folder }))}
-            onChange={(folder) => onOverride(pipeline, folder)} />
-        </Field>
-      )}
+      {onOverride && <OverrideField pipeline={pipeline} folders={folders} onOverride={onOverride} />}
       <Button variant="destructive" size="sm" onClick={() => { onChange(removePipeline(config, pipeline)); onSelect(null) }}>
         <Trash2 />{t('inspector.removePipeline')}
       </Button>

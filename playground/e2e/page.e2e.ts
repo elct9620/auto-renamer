@@ -345,6 +345,14 @@ test('overriding a pipeline in a folder opens that folder\'s configuration', asy
   await expect(node(page, 'series')).toHaveCount(0)
 })
 
+// @behavior PGE-114
+test('overriding a pipeline says what a folder configuration reaches', async ({ page }) => {
+  await ownSeriesVideo(page)
+  await title(page, 'series-video').click()
+
+  await expect(page.getByText('A folder configuration applies to files that arrive later.', { exact: false })).toBeVisible()
+})
+
 // @behavior PGE-066
 test('choosing a result shows how its file was planned', async ({ page }) => {
   await page.getByRole('button', { name: 'Trigger' }).click()

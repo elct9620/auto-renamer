@@ -44,6 +44,7 @@
     "useDefault": "Follow the default",
     "override": "Override in a folder",
     "chooseFolder": "Choose a folder",
+    "overrideHint": "A folder configuration applies to files that arrive later. To change a value such as the show name, give it in the folder's variables, which every route uses.",
     "route": "Route {{position}} of {{watch}}",
     "removeRoute": "Remove route",
     "target": "Target {{name}}",
