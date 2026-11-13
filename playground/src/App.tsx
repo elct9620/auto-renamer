@@ -26,12 +26,12 @@ const folderOf = (path: string) => path.slice(0, -FOLDER_CONFIGURATION.length - 
 
 /** Throws why a configuration is refused. A folder configuration, by its path, is read against the global
  * configuration, whose watches say which pipelines it may replace. */
-function verify(kind: Kind, text: string, globalText: string, path: string | undefined): void {
+function verify(kind: Kind, text: string, globalText = '', path?: string): void {
   if (kind === 'folder' && path !== undefined) checkFolder(globalText, folderOf(path), text)
   else check(kind, text)
 }
 
-function checked(kind: Kind, text: string, globalText: string, path?: string): { ok: boolean; lines: string[] } {
+function checked(kind: Kind, text: string, globalText = '', path?: string): { ok: boolean; lines: string[] } {
   try {
     verify(kind, text, globalText, path)
     return { ok: true, lines: [] }
@@ -67,7 +67,7 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
   const globalText = useMemo(() => render(config), [config])
   const text = useMemo(() => (folder ? render(edited) : globalText), [folder, edited, globalText])
   const status = useMemo(() => checked(kind, text, globalText, folder?.path), [kind, text, globalText, folder?.path])
-  const runnable = useMemo(() => checked('global', globalText, globalText).ok, [globalText])
+  const runnable = useMemo(() => checked('global', globalText).ok, [globalText])
   const watches = Object.keys(asTable(config.watch))
   const roots = rootsOf(config, watch)
   const fileName = kind === 'global' ? 'config.toml' : FOLDER_CONFIGURATION
