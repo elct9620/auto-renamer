@@ -61,6 +61,7 @@
     "remove": "移除 {{name}}",
     "trigger": "觸發",
     "keep": "保留結果",
+    "undo": "復原保留",
     "placeholder": "{{path}} 或 {{configuration}}",
     "watch": "要觸發的監控",
     "addHere": "在 {{name}} 裡新增",

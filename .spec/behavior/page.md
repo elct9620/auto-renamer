@@ -889,3 +889,41 @@ The playground page draws a configuration for people who do not read TOML: each 
 | Given | the files beside a selected stage, more than fit |
 | When | the wheel is turned over them |
 | Then | the list scrolls and the canvas keeps its zoom |
+
+## `PGE-111` Undoing a keep brings back the files it replaced
+
+| Step | Statement |
+| --- | --- |
+| Given | the opening example triggered and its result kept |
+| When | the keep is undone |
+| Then | the source holds `Alpha/[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv` again |
+
+## `PGE-112` A folder configuration added after a keep stays when the keep is undone
+
+Undoing a keep takes back the files it moved; a folder configuration is a rule, so it stays as it was edited since.
+
+| Attribute | Value |
+| --- | --- |
+| refines | `PGE-111` |
+
+| Step | Statement |
+| --- | --- |
+| Given | the opening example triggered and its result kept |
+| Given | a folder configuration added in `Alpha` |
+| When | the keep is undone |
+| Then | the source holds `Alpha/auto-renamer.toml` |
+
+## `PGE-113` Keeps are undone one at a time
+
+Files arrive in batches, so each kept batch is undone on its own.
+
+| Attribute | Value |
+| --- | --- |
+| refines | `PGE-111` |
+
+| Step | Statement |
+| --- | --- |
+| Given | the opening example triggered and its result kept |
+| Given | `Alpha/[Team] Alpha - 13 [1080p HEVC-10bit AAC].mkv` added, triggered and kept |
+| When | the keep is undone once |
+| Then | the source holds `Alpha/[Team] Alpha - 13 [1080p HEVC-10bit AAC].mkv` under the name it was added with |

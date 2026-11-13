@@ -645,3 +645,47 @@ test('the files beside a stage scroll without zooming the canvas', async ({ page
   await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
   expect(await zoom()).toBe(before)
 })
+
+// The opening example renames in place, so a kept result is read back in the source.
+async function triggerAndKeep(page: Page) {
+  await page.getByRole('button', { name: 'Trigger' }).click()
+  await page.getByRole('button', { name: 'Keep the result' }).click()
+  await page.getByRole('tab', { name: /^Source/ }).click()
+}
+
+const ALPHA_12 = '[Team] Alpha - 12 [1080p HEVC-10bit AAC].mkv'
+const ALPHA_13 = '[Team] Alpha - 13 [1080p HEVC-10bit AAC].mkv'
+
+// @behavior PGE-111
+test('undoing a keep brings back the files it replaced', async ({ page }) => {
+  await triggerAndKeep(page)
+  await expect(source(page).getByText(ALPHA_12, { exact: true })).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Undo keep' }).click()
+
+  await expect(source(page).getByText(ALPHA_12, { exact: true })).toBeVisible()
+})
+
+// @behavior PGE-112
+test('a folder configuration added after a keep stays when the keep is undone', async ({ page }) => {
+  await triggerAndKeep(page)
+  await openAlphaConfiguration(page)
+
+  await page.getByRole('button', { name: 'Undo keep' }).click()
+
+  await expect(source(page).getByText(ALPHA_12, { exact: true })).toBeVisible()
+  await expect(source(page).getByRole('button', { name: 'auto-renamer.toml', exact: true })).toHaveCount(1)
+})
+
+// @behavior PGE-113
+test('keeps are undone one at a time', async ({ page }) => {
+  await triggerAndKeep(page)
+  await source(page).getByRole('combobox', { name: 'Path of a new file or folder' }).fill(`Alpha/${ALPHA_13}`)
+  await source(page).getByRole('button', { name: 'Add file' }).click()
+  await triggerAndKeep(page)
+  await expect(source(page).getByText(ALPHA_13, { exact: true })).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Undo keep' }).click()
+
+  await expect(source(page).getByText(ALPHA_13, { exact: true })).toBeVisible()
+})

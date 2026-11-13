@@ -61,6 +61,7 @@
     "remove": "Remove {{name}}",
     "trigger": "Trigger",
     "keep": "Keep the result",
+    "undo": "Undo keep",
     "placeholder": "{{path}} or {{configuration}}",
     "watch": "Watch to trigger",
     "addHere": "Add in {{name}}",

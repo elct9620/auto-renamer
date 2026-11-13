@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import './setup.test-helper'
 import type { Entry } from './core'
 import { read, simulate } from './core'
-import { changedUnder, foldersUnder, marksOf, removeEntry, renameEntry, rootsOf, startConfiguration, treeOf } from './tree'
+import { changedUnder, foldersUnder, marksOf, removeEntry, renameEntry, revertFiles, rootsOf, startConfiguration, treeOf } from './tree'
 
 function file(path: string): Entry {
   return { path, folder: false, modified: 0, text: '' }
@@ -63,6 +63,19 @@ describe('editing the tree', () => {
     const entries = [file('/downloads/Alpha/x.mkv'), file('/downloads/Alphabet/y.mkv')]
 
     expect(paths(renameEntry(entries, '/downloads/Alpha', 'Beta'))).toEqual(['/downloads/Beta/x.mkv', '/downloads/Alphabet/y.mkv'])
+  })
+})
+
+describe('undoing a keep', () => {
+  // @behavior PGE-112
+  it('takes the files back and leaves the folder configurations as they are now', () => {
+    const before = [file('/downloads/A/x.mkv'), file('/downloads/A/auto-renamer.toml'), file('/downloads/B/auto-renamer.toml')]
+    const now = [file('/downloads/A/A.mkv'), { ...file('/downloads/A/auto-renamer.toml'), text: 'edited' }, file('/downloads/C/auto-renamer.toml')]
+
+    const reverted = revertFiles(now, before)
+
+    expect(paths(reverted).sort()).toEqual(['/downloads/A/auto-renamer.toml', '/downloads/A/x.mkv', '/downloads/C/auto-renamer.toml'])
+    expect(reverted.find((entry) => entry.path === '/downloads/A/auto-renamer.toml')?.text).toBe('edited')
   })
 })
 

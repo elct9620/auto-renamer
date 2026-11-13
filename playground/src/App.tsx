@@ -1,4 +1,4 @@
-import { Check, Download, Play, Upload } from 'lucide-react'
+import { Check, Download, Play, Undo2, Upload } from 'lucide-react'
 import { type ChangeEvent, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -16,7 +16,7 @@ import { type Entry, type Kind, type Simulation, builtIns, check, read, render, 
 import { type Example, EXAMPLES, FIRST } from './examples'
 import type { Selected } from './graph'
 import { LANGUAGES } from './i18n'
-import { FOLDER_CONFIGURATION, changedUnder, foldersUnder, marksOf, rootsOf, startConfiguration, writeFile } from './tree'
+import { FOLDER_CONFIGURATION, changedUnder, foldersUnder, marksOf, revertFiles, rootsOf, startConfiguration, writeFile } from './tree'
 
 // The values the configuration switcher gives the global configuration and a folder still to be configured.
 const GLOBAL = '\u0000global'
@@ -48,6 +48,8 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
   const [entries, setEntries] = useState<Entry[]>(example.entries)
   const [watch, setWatch] = useState(example.watch)
   const [simulation, setSimulation] = useState<Simulation | null>(null)
+  // The trees each keep replaced, the latest last, so files arriving in batches are undone one batch at a time.
+  const [replaced, setReplaced] = useState<Entry[][]>([])
   const [tab, setTab] = useState('source')
 
   const folder = entries.find((entry) => entry.path === editing)
@@ -126,6 +128,15 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
     setSimulation(null)
   }
   const marks = marksOf(simulation, roots.source)
+
+  const keep = (result: Simulation) => {
+    setReplaced([...replaced, entries])
+    editEntries(() => result.entries)
+  }
+  const undoKeep = () => {
+    setReplaced(replaced.slice(0, -1))
+    editEntries((all) => revertFiles(all, replaced[replaced.length - 1]))
+  }
 
   // The header offers the global configuration, every folder configuration of the source, and a new one for
   // each folder still without one.
@@ -226,7 +237,10 @@ function Playground({ example, onChoose }: { example: Example; onChoose: (exampl
             onChange={setWatch} />
           <Button size="sm" onClick={run} disabled={!runnable || !watches.includes(watch)}><Play />{t('tree.trigger')}</Button>
           {simulation && (
-            <Button size="sm" variant="outline" onClick={() => editEntries(() => simulation.entries)}><Check />{t('tree.keep')}</Button>
+            <Button size="sm" variant="outline" onClick={() => keep(simulation)}><Check />{t('tree.keep')}</Button>
+          )}
+          {replaced.length > 0 && (
+            <Button size="sm" variant="outline" onClick={undoKeep}><Undo2 />{t('tree.undo')}</Button>
           )}
         </>} />
     </div>

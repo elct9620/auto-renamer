@@ -107,6 +107,13 @@ export function renameEntry(entries: Entry[], path: string, name: string): Entry
       : entry)
 }
 
+/** Takes the files back to `before` while the folder configurations stay as `now` holds them, since they are rules
+ * edited apart from where the files went. */
+export function revertFiles(now: Entry[], before: Entry[]): Entry[] {
+  const configuration = (entry: Entry) => entry.path.endsWith(`/${FOLDER_CONFIGURATION}`)
+  return [...before.filter((entry) => !configuration(entry)), ...now.filter(configuration)]
+}
+
 /** What a simulation did to each file, by its path in the tree: where it was, and where it went. */
 export function marksOf(simulation: Simulation | null, source: string): Record<string, string> {
   const marks: Record<string, string> = {}
