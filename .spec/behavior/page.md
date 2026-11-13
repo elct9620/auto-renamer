@@ -482,13 +482,13 @@ The playground page draws a configuration for people who do not read TOML: each 
 | When | a folder configuration is started for `series` |
 | Then | its text sets `group = "Team"` and `show = "Alpha"` and nothing else |
 
-## `PGE-060` Adding a folder configuration is offered without hovering
+## `PGE-060` A tree's buttons are offered without hovering
 
 | Step | Statement |
 | --- | --- |
 | Given | the source tree of the opening example |
 | When | it is shown |
-| Then | each folder shows its button adding a folder configuration, and the tree says how to add one |
+| Then | each folder shows its buttons adding a folder configuration, adding in it and removing it, and the tree says how to add a folder configuration |
 
 ## `PGE-061` The header lists every folder configuration to edit
 

@@ -37,7 +37,7 @@ function Row({ node, mark, actions }: { node: TreeNode; mark?: string; actions: 
     actions.onOpen?.(path)
   }
   return (
-    <div className={cn('group flex items-center gap-1.5 rounded px-1 hover:bg-muted', actions.editing === node.path && 'bg-muted font-semibold')}>
+    <div className={cn('flex items-center gap-1.5 rounded px-1 hover:bg-muted', actions.editing === node.path && 'bg-muted font-semibold')}>
       <Icon className="size-3.5 shrink-0 text-muted-foreground" />
       {renaming ? (
         <Input autoFocus className="h-6 font-mono text-xs" defaultValue={node.name}
@@ -62,8 +62,6 @@ function Row({ node, mark, actions }: { node: TreeNode; mark?: string; actions: 
             <FileCog />
           </Button>
         )}
-      </span>
-      <span className="flex opacity-0 group-hover:opacity-100 focus-within:opacity-100">
         {node.folder && (
           <Button variant="ghost" size="icon-xs" aria-label={t('tree.addHere', { name: node.name })} onClick={() => actions.onStart(node.path)}>
             <Plus />
